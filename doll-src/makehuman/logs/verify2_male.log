@@ -1,0 +1,209 @@
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[verify] raw glTF: {
+ "asset": {
+  "generator": "Khronos glTF Blender I/O v4.3.47",
+  "version": "2.0"
+ },
+ "nodes": 75,
+ "meshes": 1,
+ "skins": 1,
+ "joints_per_skin": [
+  73
+ ],
+ "materials": [
+  "DollSkin"
+ ],
+ "textures": 0,
+ "images": 0,
+ "animations": 0,
+ "extensionsUsed": [],
+ "primitives": [
+  {
+   "mesh": "Body",
+   "mode": 4,
+   "index_count": 80268,
+   "triangles": 26756,
+   "attributes": [
+    "JOINTS_0",
+    "NORMAL",
+    "POSITION",
+    "TEXCOORD_0",
+    "WEIGHTS_0"
+   ],
+   "positions": 14517,
+   "position_min": [
+    -0.9151713848114014,
+    0,
+    -0.10080844908952713
+   ],
+   "position_max": [
+    0.9151713848114014,
+    1.749729037284851,
+    0.21260324120521545
+   ],
+   "targets": 0
+  }
+ ],
+ "triangles_total": 26756
+}
+[verify] PASS  single_mesh  meshes=1
+[verify] PASS  single_skin  skins=1
+[verify] PASS  no_animations  animations=0
+[verify] PASS  no_textures  
+[verify] PASS  one_material  materials=['DollSkin']
+[verify] PASS  no_morph_targets  
+[verify] PASS  triangles_le_50k  triangles=26756
+[verify] PASS  single_primitive  primitives=1
+[verify] PASS  raw_min_y_is_zero  min y = 0.00000 (glTF Y-up)
+[verify] PASS  raw_height  height = 1.7497 m; x [-0.915,0.915] z [-0.101,0.213]
+[verify] PASS  file_has_no_stray_mesh_nodes  mesh nodes=['Body']
+[verify] PASS  twist_LeftArmTwist  parent_ok=True leaf=True local_rot=0.000deg frac=0.347 (target 0.35) off_axis=0.08mm
+[verify] PASS  twist_LeftForeArmTwist  parent_ok=True leaf=True local_rot=0.000deg frac=0.647 (target 0.65) off_axis=0.08mm
+[verify] FAIL  twist_LeftUpLegTwist  parent_ok=True leaf=True local_rot=0.137deg frac=0.350 (target 0.35) off_axis=0.24mm
+[verify] FAIL  twist_LeftLegTwist  parent_ok=True leaf=True local_rot=0.125deg frac=0.650 (target 0.65) off_axis=0.24mm
+[verify] PASS  twist_RightArmTwist  parent_ok=True leaf=True local_rot=0.000deg frac=0.353 (target 0.35) off_axis=0.08mm
+[verify] PASS  twist_RightForeArmTwist  parent_ok=True leaf=True local_rot=0.000deg frac=0.653 (target 0.65) off_axis=0.08mm
+[verify] FAIL  twist_RightUpLegTwist  parent_ok=True leaf=True local_rot=0.131deg frac=0.350 (target 0.35) off_axis=0.24mm
+[verify] FAIL  twist_RightLegTwist  parent_ok=True leaf=True local_rot=0.119deg frac=0.650 (target 0.65) off_axis=0.24mm
+[verify] PASS  single_weight_set  attributes=['JOINTS_0', 'NORMAL', 'POSITION', 'TEXCOORD_0', 'WEIGHTS_0']
+[verify] PASS  raw_weights_normalised  sum range [1.00000, 1.00000]
+[verify] PASS  raw_no_zero_weight_vertex  zero=0
+[verify] PASS  raw_max_4_influences  histogram={1: 5971, 2: 5905, 3: 2188, 4: 453}
+[verify] PASS  end_bones_weightless  weighted end bones=[]
+[verify] PASS  twist_bones_weighted  {'LeftArmTwist': 528, 'LeftForeArmTwist': 269, 'LeftUpLegTwist': 499, 'LeftLegTwist': 270, 'RightArmTwist': 527, 'RightForeArmTwist': 269, 'RightUpLegTwist': 495, 'RightLegTwist': 266}
+[verify] PASS  no_normal_seams  max normal angle between co-located vertices = 0.000 deg over 1122 duplicate groups; 13380 unique positions
+00:02:59 | INFO: Data are loaded, start creating Blender stuff
+00:02:59 | INFO: Blender create Mesh node Body
+00:03:00 | INFO: glTF import finished in 0.05s
+[verify] PASS  one_armature_one_mesh  armatures=1 meshes=1
+[verify] bones (73):
+    Hips <- None
+    LeftUpLeg <- Hips
+    LeftLeg <- LeftUpLeg
+    LeftFoot <- LeftLeg
+    LeftToeBase <- LeftFoot
+    LeftToe_End <- LeftToeBase
+    LeftLegTwist <- LeftLeg
+    LeftUpLegTwist <- LeftUpLeg
+    RightUpLeg <- Hips
+    RightLeg <- RightUpLeg
+    RightFoot <- RightLeg
+    RightToeBase <- RightFoot
+    RightToe_End <- RightToeBase
+    RightLegTwist <- RightLeg
+    RightUpLegTwist <- RightUpLeg
+    Spine <- Hips
+    Spine1 <- Spine
+    Spine2 <- Spine1
+    LeftShoulder <- Spine2
+    LeftArm <- LeftShoulder
+    LeftForeArm <- LeftArm
+    LeftHand <- LeftForeArm
+    LeftHandIndex1 <- LeftHand
+    LeftHandIndex2 <- LeftHandIndex1
+    LeftHandIndex3 <- LeftHandIndex2
+    LeftHandIndex4 <- LeftHandIndex3
+    LeftHandMiddle1 <- LeftHand
+    LeftHandMiddle2 <- LeftHandMiddle1
+    LeftHandMiddle3 <- LeftHandMiddle2
+    LeftHandMiddle4 <- LeftHandMiddle3
+    LeftHandPinky1 <- LeftHand
+    LeftHandPinky2 <- LeftHandPinky1
+    LeftHandPinky3 <- LeftHandPinky2
+    LeftHandPinky4 <- LeftHandPinky3
+    LeftHandRing1 <- LeftHand
+    LeftHandRing2 <- LeftHandRing1
+    LeftHandRing3 <- LeftHandRing2
+    LeftHandRing4 <- LeftHandRing3
+    LeftHandThumb1 <- LeftHand
+    LeftHandThumb2 <- LeftHandThumb1
+    LeftHandThumb3 <- LeftHandThumb2
+    LeftHandThumb4 <- LeftHandThumb3
+    LeftForeArmTwist <- LeftForeArm
+    LeftArmTwist <- LeftArm
+    Neck <- Spine2
+    Head <- Neck
+    HeadTop_End <- Head
+    RightShoulder <- Spine2
+    RightArm <- RightShoulder
+    RightForeArm <- RightArm
+    RightHand <- RightForeArm
+    RightHandIndex1 <- RightHand
+    RightHandIndex2 <- RightHandIndex1
+    RightHandIndex3 <- RightHandIndex2
+    RightHandIndex4 <- RightHandIndex3
+    RightHandMiddle1 <- RightHand
+    RightHandMiddle2 <- RightHandMiddle1
+    RightHandMiddle3 <- RightHandMiddle2
+    RightHandMiddle4 <- RightHandMiddle3
+    RightHandPinky1 <- RightHand
+    RightHandPinky2 <- RightHandPinky1
+    RightHandPinky3 <- RightHandPinky2
+    RightHandPinky4 <- RightHandPinky3
+    RightHandRing1 <- RightHand
+    RightHandRing2 <- RightHandRing1
+    RightHandRing3 <- RightHandRing2
+    RightHandRing4 <- RightHandRing3
+    RightHandThumb1 <- RightHand
+    RightHandThumb2 <- RightHandThumb1
+    RightHandThumb3 <- RightHandThumb2
+    RightHandThumb4 <- RightHandThumb3
+    RightForeArmTwist <- RightForeArm
+    RightArmTwist <- RightArm
+[verify] PASS  required_bones_present  missing=[]
+[verify] PASS  parent_chain  wrong=[]
+[verify] PASS  no_extra_bones  extra=[]
+[verify] PASS  no_prefix  prefixed=[]
+[verify] PASS  finger_bones  missing optional=[]
+[verify] PASS  bone_count  73 bones (expected 73 = 65 Mixamo + 8 twist)
+[verify] PASS  skin_joints_match_bones  joints=[73] bones=73
+[verify] PASS  twist_leaf_LeftArmTwist  children=[]
+[verify] PASS  twist_leaf_LeftForeArmTwist  children=[]
+[verify] PASS  twist_leaf_LeftUpLegTwist  children=[]
+[verify] PASS  twist_leaf_LeftLegTwist  children=[]
+[verify] PASS  twist_leaf_RightArmTwist  children=[]
+[verify] PASS  twist_leaf_RightForeArmTwist  children=[]
+[verify] PASS  twist_leaf_RightUpLegTwist  children=[]
+[verify] PASS  twist_leaf_RightLegTwist  children=[]
+[verify] mesh: {'vertices': 14517, 'polygons': 26756, 'triangles': 26756, 'vertex_groups': 73, 'materials': ['DollSkin'], 'smooth_polys': 26756, 'has_custom_normals': True, 'sharp_edges': 0}
+[verify] PASS  all_faces_smooth  smooth 26756/26756, sharp edges 0
+[verify] PASS  height  height=1.7497 m  bbox(glTF) x[-0.915,0.915] y[0.000,1.750] z[-0.101,0.213]
+[verify] PASS  feet_on_ground  min y (glTF) = 0.00000
+[verify] PASS  centred_x  x centre = -0.0000
+[verify] PASS  facing_plus_z_gltf  feet dir (Blender) L=[-0.019, -0.959, -0.284] nose y=-0.169 head y=-0.018 back y=0.051
+[verify] PASS  tpose_LeftArm_along_+X  dir=[1.0, 0.0, -0.0] angle from +-X = 0.00 deg
+[verify] PASS  tpose_LeftForeArm_along_+X  dir=[1.0, -0.0, -0.0] angle from +-X = 0.00 deg
+[verify] PASS  tpose_LeftHand_along_+X  dir=[0.9878, -0.1493, 0.044] angle from +-X = 8.95 deg
+[verify] PASS  tpose_LeftArm_shoulder_height  arm head z=1.397 elbow z=1.397
+[verify] PASS  palm_down_Left  palm normal (Blender) = [-0.093, 0.035, -0.995]  dot(-Z) = 0.995  thumb dir = [0.597, -0.542, -0.592]
+[verify] PASS  tpose_RightArm_along_-X  dir=[-1.0, 0.0, 0.0] angle from +-X = 0.00 deg
+[verify] PASS  tpose_RightForeArm_along_-X  dir=[-1.0, -0.0, 0.0] angle from +-X = 0.00 deg
+[verify] PASS  tpose_RightHand_along_-X  dir=[-0.9895, -0.1189, 0.082] angle from +-X = 8.31 deg
+[verify] PASS  tpose_RightArm_shoulder_height  arm head z=1.397 elbow z=1.397
+[verify] PASS  palm_down_Right  palm normal (Blender) = [0.05, 0.038, -0.998]  dot(-Z) = 0.998  thumb dir = [-0.627, -0.526, -0.574]
+[verify] PASS  head_at_top  HeadTop_End z=1.752 of height 1.750
+[verify] PASS  LeftFoot_at_bottom  LeftFoot head z=0.072
+[verify] PASS  LeftLeg_straight_down  dir=[0.106, 0.029, -0.994]
+[verify] PASS  RightFoot_at_bottom  RightFoot head z=0.072
+[verify] PASS  RightLeg_straight_down  dir=[-0.109, 0.029, -0.994]
+[verify] PASS  all_vertices_weighted  unweighted=0
+[verify] PASS  max_4_influences  max influences per vertex = 4
+[verify] PASS  armature_modifier  
+[verify] PASS  no_weight_islands  all 60 weighted bones are single connected regions
+[verify] PASS  unique_positions_match_blender_body  unique positions=13380 (MakeHuman body = 13380)
+[verify] FAIL  hard_weight_steps  edges with max weight step > 0.5: 51 / 40134; histogram {'0.0': 27033, '0.1': 6854, '0.2': 4068, '0.3': 1388, '0.4': 367, '0.5': 402, '0.6': 21, '0.8': 1}
+[verify] PASS  twist_layout_LeftArmTwist  proximal: <0:1.0 0.0-0.1:0.974 0.1-0.2:0.838 0.2-0.3:0.635 0.3-0.4:0.386 0.4-0.5:0.174 0.5-0.6:0.025 0.6-0.7:0.0 0.7-0.8:0.0 0.8-0.9:0.0 0.9-1.0:0.0
+[verify] PASS  twist_layout_LeftForeArmTwist  distal: <0:0.0 0.0-0.1:0.0 0.1-0.2:0.0 0.2-0.3:0.017 0.3-0.4:0.07 0.4-0.5:0.244 0.5-0.6:0.473 0.6-0.7:0.592 0.7-0.8:0.754 0.8-0.9:0.908 0.9-1.0:0.995
+[verify] PASS  twist_layout_LeftUpLegTwist  proximal: <0:1.0 0.0-0.1:0.968 0.1-0.2:0.833 0.2-0.3:0.625 0.3-0.4:0.386 0.4-0.5:0.174 0.5-0.6:0.029 0.6-0.7:0.0 0.7-0.8:0.0 0.8-0.9:0.0 0.9-1.0:0.0
+[verify] PASS  twist_layout_LeftLegTwist  distal: <0:0.0 0.0-0.1:0.0 0.1-0.2:0.0 0.2-0.3:0.012 0.3-0.4:0.096 0.4-0.5:0.179 0.5-0.6:0.368 0.6-0.7:0.637 0.7-0.8:0.823 0.8-0.9:0.919 0.9-1.0:0.99
+[verify] PASS  twist_layout_RightArmTwist  proximal: <0:1.0 0.0-0.1:0.977 0.1-0.2:0.833 0.2-0.3:0.652 0.3-0.4:0.398 0.4-0.5:0.174 0.5-0.6:0.024 0.6-0.7:0.0 0.7-0.8:0.0 0.8-0.9:0.0 0.9-1.0:0.0
+[verify] PASS  twist_layout_RightForeArmTwist  distal: <0:0.0 0.0-0.1:0.0 0.1-0.2:0.0 0.2-0.3:0.011 0.3-0.4:0.067 0.4-0.5:0.244 0.5-0.6:0.468 0.6-0.7:0.563 0.7-0.8:0.733 0.8-0.9:0.907 0.9-1.0:0.995
+[verify] PASS  twist_layout_RightUpLegTwist  proximal: <0:1.0 0.0-0.1:0.969 0.1-0.2:0.831 0.2-0.3:0.626 0.3-0.4:0.393 0.4-0.5:0.176 0.5-0.6:0.029 0.6-0.7:0.0 0.7-0.8:0.0 0.8-0.9:0.0 0.9-1.0:0.0
+[verify] PASS  twist_layout_RightLegTwist  distal: <0:0.0 0.0-0.1:0.0 0.1-0.2:0.0 0.2-0.3:0.012 0.3-0.4:0.096 0.4-0.5:0.179 0.5-0.6:0.368 0.6-0.7:0.637 0.7-0.8:0.823 0.8-0.9:0.919 0.9-1.0:0.989
+[verify] OVERALL: FAIL
+[verify] wrote C:\dev\scene-doll\doll-src\makehuman\logs\verify2_male.json
+Blender 4.3.2 (hash 32f5fdce0a0a built 2024-12-17 03:35:23)
+
+Blender quit

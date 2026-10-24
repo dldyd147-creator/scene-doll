@@ -282,12 +282,17 @@ export class Interaction {
         if (!q) return;
         const v1 = q.sub(s.pivot);
         if (v1.lengthSq() < 1e-8) return;
+        s.moved = true;
+        // 팔꿈치·무릎 아래 뼈는 경첩이라 위 뼈 비틀기와 함께 푼다(관절 한계가 켜진 동안)
+        if (this.engine.settings.jointLimits && s.rig.aimHinge(s.bone, v1)) {
+          s.lever.copy(v1);
+          return;
+        }
         _q.setFromUnitVectors(s.lever.clone().normalize(), v1.clone().normalize());
         const speed = this.engine.settings.directDragSpeed;
         if (speed !== 1) _q.slerp(new Quaternion(), 1 - Math.min(1.5, Math.max(0.2, speed)));
         rotateObjectWorld(bone, _q);
         s.lever.copy(v1);
-        s.moved = true;
         this.engine.clampAfterChange(s.rig, [s.bone]);
         return;
       }

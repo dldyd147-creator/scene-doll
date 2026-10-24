@@ -783,13 +783,19 @@ shift = Vector((-(min(xs) + max(xs)) / 2.0, 0.0, -min(zs)))
 log("grounding shift:", [round(c, 5) for c in shift])
 if shift.length > 1e-7:
     mesh.transform(Matrix.Translation(shift))
-    activate(rig)
-    bpy.ops.object.mode_set(mode='EDIT')
-    for b in rig.data.edit_bones:
-        b.head += shift
-        b.tail += shift
-    bpy.ops.object.mode_set(mode='OBJECT')
+    # v1 shifted head/tail of every edit bone individually; for connected bones Blender keeps the shared joint point
+    # in sync, so the shared point moved twice and near-vertical bones (legs) tilted by shift/length (~0.1 deg).
+    # Armature.transform() moves every bone rigidly and keeps all relative orientations exact.
+    rig.data.transform(Matrix.Translation(shift))
 mesh.update()
+for name, parent_name in TWIST_BONES:
+    rel = rig.data.bones[parent_name].matrix_local.inverted() @ rig.data.bones[name].matrix_local
+    q = rel.to_quaternion()
+    ang = math.degrees(2.0 * math.acos(min(1.0, abs(q.w))))
+    assert ang < 0.01, f"{name} local rotation differs from parent by {ang} deg after grounding"
+for b in rig.data.bones:
+    if b.parent and b.use_connect:
+        assert (b.head_local - b.parent.tail_local).length < 1e-5, f"connected bone {b.name} detached from parent tail after grounding"
 
 zs = [v.co.z for v in mesh.vertices]
 xs = [v.co.x for v in mesh.vertices]

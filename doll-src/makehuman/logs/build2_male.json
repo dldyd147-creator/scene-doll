@@ -1,0 +1,3346 @@
+{
+  "options": {
+    "gender": "male",
+    "height": 1.75,
+    "out": "C:/dev/scene-doll/doll-src/makehuman/out/mh2_male.glb",
+    "log": "C:/dev/scene-doll/doll-src/makehuman/logs/build2_male.json",
+    "blend": "C:/dev/scene-doll/doll-src/makehuman/logs/mh2_male_debug.blend",
+    "race": "neutral"
+  },
+  "blender_version": "4.3.2",
+  "pipeline_version": 2,
+  "twist_parameters": {
+    "head_fraction": {
+      "ArmTwist": 0.35,
+      "ForeArmTwist": 0.65,
+      "UpLegTwist": 0.35,
+      "LegTwist": 0.65
+    },
+    "length_fraction": 0.2,
+    "proximal_ramp_smoothstep": [
+      0.0,
+      0.6
+    ],
+    "distal_ramp_smoothstep": [
+      0.2,
+      1.0
+    ],
+    "tiny_weight": 0.001,
+    "max_influences": 4
+  },
+  "mpfb_version": "2.0.18",
+  "basemesh_with_helpers": {
+    "vertices": 19158,
+    "polygons": 18486
+  },
+  "macro": {
+    "gender": 1.0,
+    "age": 0.5,
+    "muscle": 0.5,
+    "weight": 0.5,
+    "proportions": 0.5,
+    "height": 0.5244140625,
+    "cupsize": 0.5,
+    "firmness": 0.5,
+    "race": {
+      "asian": 0.33,
+      "caucasian": 0.33,
+      "african": 0.33
+    }
+  },
+  "height_tuning": {
+    "range_m": [
+      1.3735,
+      2.4308
+    ],
+    "iterations": [
+      [
+        0.75,
+        2.07279
+      ],
+      [
+        0.625,
+        1.89379
+      ],
+      [
+        0.5625,
+        1.80429
+      ],
+      [
+        0.53125,
+        1.75954
+      ],
+      [
+        0.515625,
+        1.73713
+      ],
+      [
+        0.523438,
+        1.74837
+      ],
+      [
+        0.527344,
+        1.75395
+      ],
+      [
+        0.525391,
+        1.75116
+      ],
+      [
+        0.524414,
+        1.74973
+      ]
+    ],
+    "final_macro": 0.524414,
+    "final_height_m": 1.7497
+  },
+  "source_rig": "mixamo",
+  "source_bones": [
+    [
+      "mixamorig:Hips",
+      null
+    ],
+    [
+      "mixamorig:LeftUpLeg",
+      "mixamorig:Hips"
+    ],
+    [
+      "mixamorig:LeftLeg",
+      "mixamorig:LeftUpLeg"
+    ],
+    [
+      "mixamorig:LeftFoot",
+      "mixamorig:LeftLeg"
+    ],
+    [
+      "mixamorig:LeftToeBase",
+      "mixamorig:LeftFoot"
+    ],
+    [
+      "mixamorig:RightUpLeg",
+      "mixamorig:Hips"
+    ],
+    [
+      "mixamorig:RightLeg",
+      "mixamorig:RightUpLeg"
+    ],
+    [
+      "mixamorig:RightFoot",
+      "mixamorig:RightLeg"
+    ],
+    [
+      "mixamorig:RightToeBase",
+      "mixamorig:RightFoot"
+    ],
+    [
+      "mixamorig:Spine",
+      "mixamorig:Hips"
+    ],
+    [
+      "mixamorig:Spine1",
+      "mixamorig:Spine"
+    ],
+    [
+      "mixamorig:Spine2",
+      "mixamorig:Spine1"
+    ],
+    [
+      "mixamorig:LeftShoulder",
+      "mixamorig:Spine2"
+    ],
+    [
+      "mixamorig:LeftArm",
+      "mixamorig:LeftShoulder"
+    ],
+    [
+      "mixamorig:LeftForeArm",
+      "mixamorig:LeftArm"
+    ],
+    [
+      "mixamorig:LeftHand",
+      "mixamorig:LeftForeArm"
+    ],
+    [
+      "mixamorig:LeftHandIndex1",
+      "mixamorig:LeftHand"
+    ],
+    [
+      "mixamorig:LeftHandIndex2",
+      "mixamorig:LeftHandIndex1"
+    ],
+    [
+      "mixamorig:LeftHandIndex3",
+      "mixamorig:LeftHandIndex2"
+    ],
+    [
+      "mixamorig:LeftHandMiddle1",
+      "mixamorig:LeftHand"
+    ],
+    [
+      "mixamorig:LeftHandMiddle2",
+      "mixamorig:LeftHandMiddle1"
+    ],
+    [
+      "mixamorig:LeftHandMiddle3",
+      "mixamorig:LeftHandMiddle2"
+    ],
+    [
+      "mixamorig:LeftHandPinky1",
+      "mixamorig:LeftHand"
+    ],
+    [
+      "mixamorig:LeftHandPinky2",
+      "mixamorig:LeftHandPinky1"
+    ],
+    [
+      "mixamorig:LeftHandPinky3",
+      "mixamorig:LeftHandPinky2"
+    ],
+    [
+      "mixamorig:LeftHandRing1",
+      "mixamorig:LeftHand"
+    ],
+    [
+      "mixamorig:LeftHandRing2",
+      "mixamorig:LeftHandRing1"
+    ],
+    [
+      "mixamorig:LeftHandRing3",
+      "mixamorig:LeftHandRing2"
+    ],
+    [
+      "mixamorig:LeftHandThumb1",
+      "mixamorig:LeftHand"
+    ],
+    [
+      "mixamorig:LeftHandThumb2",
+      "mixamorig:LeftHandThumb1"
+    ],
+    [
+      "mixamorig:LeftHandThumb3",
+      "mixamorig:LeftHandThumb2"
+    ],
+    [
+      "mixamorig:Neck",
+      "mixamorig:Spine2"
+    ],
+    [
+      "mixamorig:Head",
+      "mixamorig:Neck"
+    ],
+    [
+      "mixamorig:RightShoulder",
+      "mixamorig:Spine2"
+    ],
+    [
+      "mixamorig:RightArm",
+      "mixamorig:RightShoulder"
+    ],
+    [
+      "mixamorig:RightForeArm",
+      "mixamorig:RightArm"
+    ],
+    [
+      "mixamorig:RightHand",
+      "mixamorig:RightForeArm"
+    ],
+    [
+      "mixamorig:RightHandIndex1",
+      "mixamorig:RightHand"
+    ],
+    [
+      "mixamorig:RightHandIndex2",
+      "mixamorig:RightHandIndex1"
+    ],
+    [
+      "mixamorig:RightHandIndex3",
+      "mixamorig:RightHandIndex2"
+    ],
+    [
+      "mixamorig:RightHandMiddle1",
+      "mixamorig:RightHand"
+    ],
+    [
+      "mixamorig:RightHandMiddle2",
+      "mixamorig:RightHandMiddle1"
+    ],
+    [
+      "mixamorig:RightHandMiddle3",
+      "mixamorig:RightHandMiddle2"
+    ],
+    [
+      "mixamorig:RightHandPinky1",
+      "mixamorig:RightHand"
+    ],
+    [
+      "mixamorig:RightHandPinky2",
+      "mixamorig:RightHandPinky1"
+    ],
+    [
+      "mixamorig:RightHandPinky3",
+      "mixamorig:RightHandPinky2"
+    ],
+    [
+      "mixamorig:RightHandRing1",
+      "mixamorig:RightHand"
+    ],
+    [
+      "mixamorig:RightHandRing2",
+      "mixamorig:RightHandRing1"
+    ],
+    [
+      "mixamorig:RightHandRing3",
+      "mixamorig:RightHandRing2"
+    ],
+    [
+      "mixamorig:RightHandThumb1",
+      "mixamorig:RightHand"
+    ],
+    [
+      "mixamorig:RightHandThumb2",
+      "mixamorig:RightHandThumb1"
+    ],
+    [
+      "mixamorig:RightHandThumb3",
+      "mixamorig:RightHandThumb2"
+    ]
+  ],
+  "apose_bbox": {
+    "x": [
+      -0.571,
+      0.571
+    ],
+    "y": [
+      -0.3804,
+      0.1008
+    ],
+    "z": [
+      -0.0001,
+      1.7496
+    ]
+  },
+  "raw_weight_sum_range": [
+    0.2,
+    1.498
+  ],
+  "unweighted_body_vertices_before": 0,
+  "tpose": {
+    "Left": {
+      "before": {
+        "n_points": 121,
+        "palm_normal": [
+          -0.8871,
+          0.1119,
+          -0.4479
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 63.18,
+        "thumb_dir": [
+          -0.4197,
+          -0.814,
+          -0.4017
+        ],
+        "hand_dir": [
+          0.4507,
+          -0.6673,
+          -0.593
+        ],
+        "palm_down_dot": 0.4479
+      },
+      "Arm_residual_deg": 0.0,
+      "ForeArm_residual_deg": 0.0,
+      "Hand_residual_deg": 0.0,
+      "after_align": {
+        "n_points": 121,
+        "palm_normal": [
+          -0.1943,
+          -0.0979,
+          -0.976
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 48.54,
+        "thumb_dir": [
+          0.5922,
+          -0.6005,
+          -0.5373
+        ],
+        "hand_dir": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "palm_down_dot": 0.976
+      },
+      "forearm_twist_deg": 5.729,
+      "after_twist": {
+        "n_points": 121,
+        "palm_normal": [
+          -0.1943,
+          -0.0,
+          -0.9809
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 48.54,
+        "thumb_dir": [
+          0.5922,
+          -0.5439,
+          -0.5946
+        ],
+        "hand_dir": [
+          1.0,
+          -0.0,
+          0.0
+        ],
+        "palm_down_dot": 0.9809
+      },
+      "arm_dir_world": [
+        1.0,
+        -0.0,
+        0.0
+      ],
+      "hand_dir_world": [
+        1.0,
+        -0.0,
+        0.0
+      ],
+      "UpLeg_dir_world": [
+        0.1015,
+        -0.0809,
+        -0.9915
+      ],
+      "Leg_dir_world": [
+        0.1075,
+        0.0292,
+        -0.9938
+      ],
+      "Foot_dir_world": [
+        -0.0188,
+        -0.9586,
+        -0.284
+      ],
+      "ToeBase_dir_world": [
+        0.046,
+        -0.9601,
+        -0.2758
+      ]
+    },
+    "Right": {
+      "before": {
+        "n_points": 121,
+        "palm_normal": [
+          0.8871,
+          0.1119,
+          -0.4479
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 63.18,
+        "thumb_dir": [
+          0.4197,
+          -0.814,
+          -0.4017
+        ],
+        "hand_dir": [
+          -0.4069,
+          -0.6892,
+          -0.5995
+        ],
+        "palm_down_dot": 0.4479
+      },
+      "Arm_residual_deg": 0.0,
+      "ForeArm_residual_deg": 0.0,
+      "Hand_residual_deg": 0.0,
+      "after_align": {
+        "n_points": 121,
+        "palm_normal": [
+          0.1512,
+          -0.1056,
+          -0.9828
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 48.14,
+        "thumb_dir": [
+          -0.631,
+          -0.5818,
+          -0.5131
+        ],
+        "hand_dir": [
+          -1.0,
+          -0.0,
+          0.0
+        ],
+        "palm_down_dot": 0.9828
+      },
+      "forearm_twist_deg": 6.131,
+      "after_twist": {
+        "n_points": 121,
+        "palm_normal": [
+          0.1512,
+          -0.0,
+          -0.9885
+        ],
+        "palm_normal_vs_thumb_estimate_deg": 48.14,
+        "thumb_dir": [
+          -0.631,
+          -0.5237,
+          -0.5723
+        ],
+        "hand_dir": [
+          -1.0,
+          -0.0,
+          0.0
+        ],
+        "palm_down_dot": 0.9885
+      },
+      "arm_dir_world": [
+        -1.0,
+        -0.0,
+        0.0
+      ],
+      "hand_dir_world": [
+        -1.0,
+        -0.0,
+        0.0
+      ],
+      "UpLeg_dir_world": [
+        -0.1015,
+        -0.0809,
+        -0.9915
+      ],
+      "Leg_dir_world": [
+        -0.1075,
+        0.0292,
+        -0.9938
+      ],
+      "Foot_dir_world": [
+        0.0188,
+        -0.9586,
+        -0.284
+      ],
+      "ToeBase_dir_world": [
+        -0.046,
+        -0.9601,
+        -0.2758
+      ]
+    }
+  },
+  "rename_map": {
+    "mixamorig:Hips": "Hips",
+    "mixamorig:LeftUpLeg": "LeftUpLeg",
+    "mixamorig:LeftLeg": "LeftLeg",
+    "mixamorig:LeftFoot": "LeftFoot",
+    "mixamorig:LeftToeBase": "LeftToeBase",
+    "mixamorig:RightUpLeg": "RightUpLeg",
+    "mixamorig:RightLeg": "RightLeg",
+    "mixamorig:RightFoot": "RightFoot",
+    "mixamorig:RightToeBase": "RightToeBase",
+    "mixamorig:Spine": "Spine",
+    "mixamorig:Spine1": "Spine1",
+    "mixamorig:Spine2": "Spine2",
+    "mixamorig:LeftShoulder": "LeftShoulder",
+    "mixamorig:LeftArm": "LeftArm",
+    "mixamorig:LeftForeArm": "LeftForeArm",
+    "mixamorig:LeftHand": "LeftHand",
+    "mixamorig:LeftHandIndex1": "LeftHandIndex1",
+    "mixamorig:LeftHandIndex2": "LeftHandIndex2",
+    "mixamorig:LeftHandIndex3": "LeftHandIndex3",
+    "mixamorig:LeftHandMiddle1": "LeftHandMiddle1",
+    "mixamorig:LeftHandMiddle2": "LeftHandMiddle2",
+    "mixamorig:LeftHandMiddle3": "LeftHandMiddle3",
+    "mixamorig:LeftHandPinky1": "LeftHandPinky1",
+    "mixamorig:LeftHandPinky2": "LeftHandPinky2",
+    "mixamorig:LeftHandPinky3": "LeftHandPinky3",
+    "mixamorig:LeftHandRing1": "LeftHandRing1",
+    "mixamorig:LeftHandRing2": "LeftHandRing2",
+    "mixamorig:LeftHandRing3": "LeftHandRing3",
+    "mixamorig:LeftHandThumb1": "LeftHandThumb1",
+    "mixamorig:LeftHandThumb2": "LeftHandThumb2",
+    "mixamorig:LeftHandThumb3": "LeftHandThumb3",
+    "mixamorig:Neck": "Neck",
+    "mixamorig:Head": "Head",
+    "mixamorig:RightShoulder": "RightShoulder",
+    "mixamorig:RightArm": "RightArm",
+    "mixamorig:RightForeArm": "RightForeArm",
+    "mixamorig:RightHand": "RightHand",
+    "mixamorig:RightHandIndex1": "RightHandIndex1",
+    "mixamorig:RightHandIndex2": "RightHandIndex2",
+    "mixamorig:RightHandIndex3": "RightHandIndex3",
+    "mixamorig:RightHandMiddle1": "RightHandMiddle1",
+    "mixamorig:RightHandMiddle2": "RightHandMiddle2",
+    "mixamorig:RightHandMiddle3": "RightHandMiddle3",
+    "mixamorig:RightHandPinky1": "RightHandPinky1",
+    "mixamorig:RightHandPinky2": "RightHandPinky2",
+    "mixamorig:RightHandPinky3": "RightHandPinky3",
+    "mixamorig:RightHandRing1": "RightHandRing1",
+    "mixamorig:RightHandRing2": "RightHandRing2",
+    "mixamorig:RightHandRing3": "RightHandRing3",
+    "mixamorig:RightHandThumb1": "RightHandThumb1",
+    "mixamorig:RightHandThumb2": "RightHandThumb2",
+    "mixamorig:RightHandThumb3": "RightHandThumb3"
+  },
+  "twist_geometry": {
+    "LeftArmTwist": {
+      "parent": "LeftArm",
+      "head_fraction": 0.35,
+      "length_m": 0.0511,
+      "parent_length_m": 0.2555,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        -0.0,
+        0.08941,
+        -0.0
+      ]
+    },
+    "LeftForeArmTwist": {
+      "parent": "LeftForeArm",
+      "head_fraction": 0.65,
+      "length_m": 0.0539,
+      "parent_length_m": 0.2695,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        -0.0,
+        0.17514,
+        -0.0
+      ]
+    },
+    "LeftUpLegTwist": {
+      "parent": "LeftUpLeg",
+      "head_fraction": 0.35,
+      "length_m": 0.0851,
+      "parent_length_m": 0.4257,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        0.0,
+        0.14901,
+        0.0
+      ]
+    },
+    "LeftLegTwist": {
+      "parent": "LeftLeg",
+      "head_fraction": 0.65,
+      "length_m": 0.0878,
+      "parent_length_m": 0.439,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        0.0,
+        0.28534,
+        0.0
+      ]
+    },
+    "RightArmTwist": {
+      "parent": "RightArm",
+      "head_fraction": 0.35,
+      "length_m": 0.0511,
+      "parent_length_m": 0.2555,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        0.0,
+        0.08941,
+        0.0
+      ]
+    },
+    "RightForeArmTwist": {
+      "parent": "RightForeArm",
+      "head_fraction": 0.65,
+      "length_m": 0.0539,
+      "parent_length_m": 0.2695,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        -0.0,
+        0.17514,
+        0.0
+      ]
+    },
+    "RightUpLegTwist": {
+      "parent": "RightUpLeg",
+      "head_fraction": 0.35,
+      "length_m": 0.0851,
+      "parent_length_m": 0.4257,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        -0.0,
+        0.14901,
+        -0.0
+      ]
+    },
+    "RightLegTwist": {
+      "parent": "RightLeg",
+      "head_fraction": 0.65,
+      "length_m": 0.0878,
+      "parent_length_m": 0.439,
+      "local_rotation_deg_vs_parent": 0.0,
+      "local_translation": [
+        0.0,
+        0.28534,
+        -0.0
+      ]
+    }
+  },
+  "removed_vertex_groups": [
+    "HelperGeometry",
+    "JointCubes",
+    "Left",
+    "Mid",
+    "Right",
+    "body",
+    "helper-genital",
+    "helper-hair",
+    "helper-l-eye",
+    "helper-l-eyelashes-1",
+    "helper-l-eyelashes-2",
+    "helper-lower-teeth",
+    "helper-r-eye",
+    "helper-r-eyelashes-1",
+    "helper-r-eyelashes-2",
+    "helper-skirt",
+    "helper-tights",
+    "helper-tongue",
+    "helper-upper-teeth",
+    "joint-ground",
+    "joint-head",
+    "joint-head-2",
+    "joint-jaw",
+    "joint-l-ankle",
+    "joint-l-clavicle",
+    "joint-l-elbow",
+    "joint-l-eye",
+    "joint-l-eye-target",
+    "joint-l-finger-1-1",
+    "joint-l-finger-1-2",
+    "joint-l-finger-1-3",
+    "joint-l-finger-1-4",
+    "joint-l-finger-2-1",
+    "joint-l-finger-2-2",
+    "joint-l-finger-2-3",
+    "joint-l-finger-2-4",
+    "joint-l-finger-3-1",
+    "joint-l-finger-3-2",
+    "joint-l-finger-3-3",
+    "joint-l-finger-3-4",
+    "joint-l-finger-4-1",
+    "joint-l-finger-4-2",
+    "joint-l-finger-4-3",
+    "joint-l-finger-4-4",
+    "joint-l-finger-5-1",
+    "joint-l-finger-5-2",
+    "joint-l-finger-5-3",
+    "joint-l-finger-5-4",
+    "joint-l-foot-1",
+    "joint-l-foot-2",
+    "joint-l-hand",
+    "joint-l-hand-2",
+    "joint-l-hand-3",
+    "joint-l-knee",
+    "joint-l-lowerlid",
+    "joint-l-scapula",
+    "joint-l-shoulder",
+    "joint-l-toe-1-1",
+    "joint-l-toe-1-2",
+    "joint-l-toe-1-3",
+    "joint-l-toe-2-1",
+    "joint-l-toe-2-2",
+    "joint-l-toe-2-3",
+    "joint-l-toe-2-4",
+    "joint-l-toe-3-1",
+    "joint-l-toe-3-2",
+    "joint-l-toe-3-3",
+    "joint-l-toe-3-4",
+    "joint-l-toe-4-1",
+    "joint-l-toe-4-2",
+    "joint-l-toe-4-3",
+    "joint-l-toe-4-4",
+    "joint-l-toe-5-1",
+    "joint-l-toe-5-2",
+    "joint-l-toe-5-3",
+    "joint-l-toe-5-4",
+    "joint-l-upper-leg",
+    "joint-l-upperlid",
+    "joint-mouth",
+    "joint-neck",
+    "joint-pelvis",
+    "joint-r-ankle",
+    "joint-r-clavicle",
+    "joint-r-elbow",
+    "joint-r-eye",
+    "joint-r-eye-target",
+    "joint-r-finger-1-1",
+    "joint-r-finger-1-2",
+    "joint-r-finger-1-3",
+    "joint-r-finger-1-4",
+    "joint-r-finger-2-1",
+    "joint-r-finger-2-2",
+    "joint-r-finger-2-3",
+    "joint-r-finger-2-4",
+    "joint-r-finger-3-1",
+    "joint-r-finger-3-2",
+    "joint-r-finger-3-3",
+    "joint-r-finger-3-4",
+    "joint-r-finger-4-1",
+    "joint-r-finger-4-2",
+    "joint-r-finger-4-3",
+    "joint-r-finger-4-4",
+    "joint-r-finger-5-1",
+    "joint-r-finger-5-2",
+    "joint-r-finger-5-3",
+    "joint-r-finger-5-4",
+    "joint-r-foot-1",
+    "joint-r-foot-2",
+    "joint-r-hand",
+    "joint-r-hand-2",
+    "joint-r-hand-3",
+    "joint-r-knee",
+    "joint-r-lowerlid",
+    "joint-r-scapula",
+    "joint-r-shoulder",
+    "joint-r-toe-1-1",
+    "joint-r-toe-1-2",
+    "joint-r-toe-1-3",
+    "joint-r-toe-2-1",
+    "joint-r-toe-2-2",
+    "joint-r-toe-2-3",
+    "joint-r-toe-2-4",
+    "joint-r-toe-3-1",
+    "joint-r-toe-3-2",
+    "joint-r-toe-3-3",
+    "joint-r-toe-3-4",
+    "joint-r-toe-4-1",
+    "joint-r-toe-4-2",
+    "joint-r-toe-4-3",
+    "joint-r-toe-4-4",
+    "joint-r-toe-5-1",
+    "joint-r-toe-5-2",
+    "joint-r-toe-5-3",
+    "joint-r-toe-5-4",
+    "joint-r-upper-leg",
+    "joint-r-upperlid",
+    "joint-spine-1",
+    "joint-spine-2",
+    "joint-spine-3",
+    "joint-spine-4",
+    "joint-tongue-1",
+    "joint-tongue-2",
+    "joint-tongue-3",
+    "joint-tongue-4",
+    "nippleTip",
+    "nipple",
+    "lips",
+    "fingernails",
+    "toenails",
+    "ears",
+    "scalp",
+    "genitals"
+  ],
+  "tiny_weights_removed": 126,
+  "bone_vertex_counts_before_twist": {
+    "Head": 4275,
+    "HeadTop_End": 0,
+    "Hips": 607,
+    "LeftArm": 644,
+    "LeftArmTwist": 0,
+    "LeftFoot": 1007,
+    "LeftForeArm": 400,
+    "LeftForeArmTwist": 0,
+    "LeftHand": 395,
+    "LeftHandIndex1": 201,
+    "LeftHandIndex2": 210,
+    "LeftHandIndex3": 157,
+    "LeftHandIndex4": 0,
+    "LeftHandMiddle1": 237,
+    "LeftHandMiddle2": 205,
+    "LeftHandMiddle3": 158,
+    "LeftHandMiddle4": 0,
+    "LeftHandPinky1": 241,
+    "LeftHandPinky2": 201,
+    "LeftHandPinky3": 205,
+    "LeftHandPinky4": 0,
+    "LeftHandRing1": 236,
+    "LeftHandRing2": 186,
+    "LeftHandRing3": 152,
+    "LeftHandRing4": 0,
+    "LeftHandThumb1": 101,
+    "LeftHandThumb2": 185,
+    "LeftHandThumb3": 136,
+    "LeftHandThumb4": 0,
+    "LeftLeg": 425,
+    "LeftLegTwist": 0,
+    "LeftShoulder": 239,
+    "LeftToeBase": 833,
+    "LeftToe_End": 0,
+    "LeftUpLeg": 659,
+    "LeftUpLegTwist": 0,
+    "Neck": 384,
+    "RightArm": 650,
+    "RightArmTwist": 0,
+    "RightFoot": 775,
+    "RightForeArm": 399,
+    "RightForeArmTwist": 0,
+    "RightHand": 506,
+    "RightHandIndex1": 201,
+    "RightHandIndex2": 210,
+    "RightHandIndex3": 156,
+    "RightHandIndex4": 0,
+    "RightHandMiddle1": 231,
+    "RightHandMiddle2": 205,
+    "RightHandMiddle3": 158,
+    "RightHandMiddle4": 0,
+    "RightHandPinky1": 241,
+    "RightHandPinky2": 201,
+    "RightHandPinky3": 205,
+    "RightHandPinky4": 0,
+    "RightHandRing1": 236,
+    "RightHandRing2": 186,
+    "RightHandRing3": 152,
+    "RightHandRing4": 0,
+    "RightHandThumb1": 101,
+    "RightHandThumb2": 185,
+    "RightHandThumb3": 136,
+    "RightHandThumb4": 0,
+    "RightLeg": 421,
+    "RightLegTwist": 0,
+    "RightShoulder": 222,
+    "RightToeBase": 835,
+    "RightToe_End": 0,
+    "RightUpLeg": 658,
+    "RightUpLegTwist": 0,
+    "Spine": 448,
+    "Spine1": 797,
+    "Spine2": 1247
+  },
+  "twist_weights": {
+    "LeftArmTwist": {
+      "kind": "proximal",
+      "parent": "LeftArm",
+      "vertices": 499,
+      "weight_sum": 131.374,
+      "parent_vertices_after": 316,
+      "parent_weight_sum_after": 167.802,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 328,
+          "mean_share": 1.0
+        },
+        "0.0-0.1": {
+          "n": 41,
+          "mean_share": 0.976
+        },
+        "0.1-0.2": {
+          "n": 30,
+          "mean_share": 0.843
+        },
+        "0.2-0.3": {
+          "n": 32,
+          "mean_share": 0.64
+        },
+        "0.3-0.4": {
+          "n": 28,
+          "mean_share": 0.39
+        },
+        "0.4-0.5": {
+          "n": 20,
+          "mean_share": 0.174
+        },
+        "0.5-0.6": {
+          "n": 20,
+          "mean_share": 0.024
+        },
+        "0.6-0.7": {
+          "n": 21,
+          "mean_share": 0.0
+        },
+        "0.7-0.8": {
+          "n": 25,
+          "mean_share": 0.0
+        },
+        "0.8-0.9": {
+          "n": 32,
+          "mean_share": 0.0
+        },
+        "0.9-1.0": {
+          "n": 67,
+          "mean_share": 0.0
+        }
+      }
+    },
+    "LeftForeArmTwist": {
+      "kind": "distal",
+      "parent": "LeftForeArm",
+      "vertices": 237,
+      "weight_sum": 127.793,
+      "parent_vertices_after": 339,
+      "parent_weight_sum_after": 135.728,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 109,
+          "mean_share": 0.0
+        },
+        "0.0-0.1": {
+          "n": 28,
+          "mean_share": 0.0
+        },
+        "0.1-0.2": {
+          "n": 26,
+          "mean_share": 0.0
+        },
+        "0.2-0.3": {
+          "n": 15,
+          "mean_share": 0.017
+        },
+        "0.3-0.4": {
+          "n": 14,
+          "mean_share": 0.07
+        },
+        "0.4-0.5": {
+          "n": 20,
+          "mean_share": 0.244
+        },
+        "0.5-0.6": {
+          "n": 11,
+          "mean_share": 0.471
+        },
+        "0.6-0.7": {
+          "n": 12,
+          "mean_share": 0.569
+        },
+        "0.7-0.8": {
+          "n": 20,
+          "mean_share": 0.738
+        },
+        "0.8-0.9": {
+          "n": 37,
+          "mean_share": 0.909
+        },
+        "0.9-1.0": {
+          "n": 108,
+          "mean_share": 0.997
+        }
+      }
+    },
+    "LeftUpLegTwist": {
+      "kind": "proximal",
+      "parent": "LeftUpLeg",
+      "vertices": 472,
+      "weight_sum": 130.251,
+      "parent_vertices_after": 456,
+      "parent_weight_sum_after": 228.494,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 203,
+          "mean_share": 1.0
+        },
+        "0.0-0.1": {
+          "n": 43,
+          "mean_share": 0.972
+        },
+        "0.1-0.2": {
+          "n": 76,
+          "mean_share": 0.833
+        },
+        "0.2-0.3": {
+          "n": 54,
+          "mean_share": 0.63
+        },
+        "0.3-0.4": {
+          "n": 36,
+          "mean_share": 0.393
+        },
+        "0.4-0.5": {
+          "n": 30,
+          "mean_share": 0.176
+        },
+        "0.5-0.6": {
+          "n": 30,
+          "mean_share": 0.029
+        },
+        "0.6-0.7": {
+          "n": 25,
+          "mean_share": 0.0
+        },
+        "0.7-0.8": {
+          "n": 27,
+          "mean_share": 0.0
+        },
+        "0.8-0.9": {
+          "n": 37,
+          "mean_share": 0.0
+        },
+        "0.9-1.0": {
+          "n": 98,
+          "mean_share": 0.0
+        }
+      }
+    },
+    "LeftLegTwist": {
+      "kind": "distal",
+      "parent": "LeftLeg",
+      "vertices": 236,
+      "weight_sum": 115.359,
+      "parent_vertices_after": 381,
+      "parent_weight_sum_after": 144.34,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 118,
+          "mean_share": 0.0
+        },
+        "0.0-0.1": {
+          "n": 34,
+          "mean_share": 0.0
+        },
+        "0.1-0.2": {
+          "n": 37,
+          "mean_share": 0.0
+        },
+        "0.2-0.3": {
+          "n": 21,
+          "mean_share": 0.012
+        },
+        "0.3-0.4": {
+          "n": 19,
+          "mean_share": 0.096
+        },
+        "0.4-0.5": {
+          "n": 10,
+          "mean_share": 0.179
+        },
+        "0.5-0.6": {
+          "n": 20,
+          "mean_share": 0.368
+        },
+        "0.6-0.7": {
+          "n": 20,
+          "mean_share": 0.637
+        },
+        "0.7-0.8": {
+          "n": 16,
+          "mean_share": 0.823
+        },
+        "0.8-0.9": {
+          "n": 27,
+          "mean_share": 0.92
+        },
+        "0.9-1.0": {
+          "n": 103,
+          "mean_share": 0.993
+        }
+      }
+    },
+    "RightArmTwist": {
+      "kind": "proximal",
+      "parent": "RightArm",
+      "vertices": 499,
+      "weight_sum": 132.542,
+      "parent_vertices_after": 324,
+      "parent_weight_sum_after": 168.913,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 326,
+          "mean_share": 1.0
+        },
+        "0.0-0.1": {
+          "n": 44,
+          "mean_share": 0.974
+        },
+        "0.1-0.2": {
+          "n": 28,
+          "mean_share": 0.827
+        },
+        "0.2-0.3": {
+          "n": 33,
+          "mean_share": 0.643
+        },
+        "0.3-0.4": {
+          "n": 28,
+          "mean_share": 0.39
+        },
+        "0.4-0.5": {
+          "n": 20,
+          "mean_share": 0.174
+        },
+        "0.5-0.6": {
+          "n": 20,
+          "mean_share": 0.024
+        },
+        "0.6-0.7": {
+          "n": 21,
+          "mean_share": 0.0
+        },
+        "0.7-0.8": {
+          "n": 25,
+          "mean_share": 0.0
+        },
+        "0.8-0.9": {
+          "n": 32,
+          "mean_share": 0.0
+        },
+        "0.9-1.0": {
+          "n": 73,
+          "mean_share": 0.0
+        }
+      }
+    },
+    "RightForeArmTwist": {
+      "kind": "distal",
+      "parent": "RightForeArm",
+      "vertices": 237,
+      "weight_sum": 131.221,
+      "parent_vertices_after": 338,
+      "parent_weight_sum_after": 135.522,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 108,
+          "mean_share": 0.0
+        },
+        "0.0-0.1": {
+          "n": 28,
+          "mean_share": 0.0
+        },
+        "0.1-0.2": {
+          "n": 26,
+          "mean_share": 0.0
+        },
+        "0.2-0.3": {
+          "n": 15,
+          "mean_share": 0.017
+        },
+        "0.3-0.4": {
+          "n": 14,
+          "mean_share": 0.07
+        },
+        "0.4-0.5": {
+          "n": 20,
+          "mean_share": 0.244
+        },
+        "0.5-0.6": {
+          "n": 11,
+          "mean_share": 0.471
+        },
+        "0.6-0.7": {
+          "n": 12,
+          "mean_share": 0.569
+        },
+        "0.7-0.8": {
+          "n": 20,
+          "mean_share": 0.738
+        },
+        "0.8-0.9": {
+          "n": 37,
+          "mean_share": 0.909
+        },
+        "0.9-1.0": {
+          "n": 108,
+          "mean_share": 0.997
+        }
+      }
+    },
+    "RightUpLegTwist": {
+      "kind": "proximal",
+      "parent": "RightUpLeg",
+      "vertices": 471,
+      "weight_sum": 129.905,
+      "parent_vertices_after": 456,
+      "parent_weight_sum_after": 230.334,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 202,
+          "mean_share": 1.0
+        },
+        "0.0-0.1": {
+          "n": 43,
+          "mean_share": 0.972
+        },
+        "0.1-0.2": {
+          "n": 76,
+          "mean_share": 0.833
+        },
+        "0.2-0.3": {
+          "n": 54,
+          "mean_share": 0.63
+        },
+        "0.3-0.4": {
+          "n": 36,
+          "mean_share": 0.393
+        },
+        "0.4-0.5": {
+          "n": 30,
+          "mean_share": 0.176
+        },
+        "0.5-0.6": {
+          "n": 30,
+          "mean_share": 0.029
+        },
+        "0.6-0.7": {
+          "n": 25,
+          "mean_share": 0.0
+        },
+        "0.7-0.8": {
+          "n": 27,
+          "mean_share": 0.0
+        },
+        "0.8-0.9": {
+          "n": 37,
+          "mean_share": 0.0
+        },
+        "0.9-1.0": {
+          "n": 98,
+          "mean_share": 0.0
+        }
+      }
+    },
+    "RightLegTwist": {
+      "kind": "distal",
+      "parent": "RightLeg",
+      "vertices": 232,
+      "weight_sum": 113.589,
+      "parent_vertices_after": 380,
+      "parent_weight_sum_after": 142.234,
+      "profile_by_t_bin": {
+        "<0": {
+          "n": 118,
+          "mean_share": 0.0
+        },
+        "0.0-0.1": {
+          "n": 34,
+          "mean_share": 0.0
+        },
+        "0.1-0.2": {
+          "n": 37,
+          "mean_share": 0.0
+        },
+        "0.2-0.3": {
+          "n": 21,
+          "mean_share": 0.012
+        },
+        "0.3-0.4": {
+          "n": 19,
+          "mean_share": 0.096
+        },
+        "0.4-0.5": {
+          "n": 10,
+          "mean_share": 0.179
+        },
+        "0.5-0.6": {
+          "n": 20,
+          "mean_share": 0.368
+        },
+        "0.6-0.7": {
+          "n": 20,
+          "mean_share": 0.637
+        },
+        "0.7-0.8": {
+          "n": 16,
+          "mean_share": 0.823
+        },
+        "0.8-0.9": {
+          "n": 27,
+          "mean_share": 0.92
+        },
+        "0.9-1.0": {
+          "n": 99,
+          "mean_share": 0.993
+        }
+      }
+    }
+  },
+  "influence_limit": {
+    "vertices_over_limit_before": 47,
+    "max_dropped_weight": 0.0534,
+    "influences_histogram_before": {
+      "1": 5601,
+      "2": 5342,
+      "3": 2022,
+      "4": 368,
+      "5": 47
+    },
+    "examples": [
+      {
+        "vertex": 759,
+        "dropped": [
+          [
+            "RightArmTwist",
+            0.0318
+          ]
+        ],
+        "kept": [
+          [
+            "Spine2",
+            0.402
+          ],
+          [
+            "Neck",
+            0.272
+          ],
+          [
+            "RightShoulder",
+            0.2567
+          ],
+          [
+            "Head",
+            0.0374
+          ]
+        ]
+      },
+      {
+        "vertex": 1410,
+        "dropped": [
+          [
+            "RightArm",
+            0.0164
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.5121
+          ],
+          [
+            "RightShoulder",
+            0.2132
+          ],
+          [
+            "Spine1",
+            0.1514
+          ],
+          [
+            "Spine2",
+            0.1069
+          ]
+        ]
+      },
+      {
+        "vertex": 1411,
+        "dropped": [
+          [
+            "RightArm",
+            0.0021
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.3853
+          ],
+          [
+            "Spine1",
+            0.2286
+          ],
+          [
+            "RightShoulder",
+            0.2286
+          ],
+          [
+            "Spine2",
+            0.1553
+          ]
+        ]
+      },
+      {
+        "vertex": 1420,
+        "dropped": [
+          [
+            "RightArm",
+            0.0161
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.445
+          ],
+          [
+            "Spine1",
+            0.2154
+          ],
+          [
+            "RightShoulder",
+            0.2154
+          ],
+          [
+            "Spine2",
+            0.1079
+          ]
+        ]
+      },
+      {
+        "vertex": 1421,
+        "dropped": [
+          [
+            "RightArm",
+            0.0046
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.3262
+          ],
+          [
+            "Spine2",
+            0.2405
+          ],
+          [
+            "Spine1",
+            0.2144
+          ],
+          [
+            "RightShoulder",
+            0.2143
+          ]
+        ]
+      },
+      {
+        "vertex": 1446,
+        "dropped": [
+          [
+            "RightArm",
+            0.016
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.4478
+          ],
+          [
+            "RightShoulder",
+            0.2187
+          ],
+          [
+            "Spine1",
+            0.208
+          ],
+          [
+            "Spine2",
+            0.1095
+          ]
+        ]
+      },
+      {
+        "vertex": 1447,
+        "dropped": [
+          [
+            "RightArm",
+            0.0023
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.3333
+          ],
+          [
+            "Spine1",
+            0.2221
+          ],
+          [
+            "RightShoulder",
+            0.2221
+          ],
+          [
+            "Spine2",
+            0.2202
+          ]
+        ]
+      },
+      {
+        "vertex": 1622,
+        "dropped": [
+          [
+            "RightArm",
+            0.0048
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.3743
+          ],
+          [
+            "Spine1",
+            0.2112
+          ],
+          [
+            "RightShoulder",
+            0.2112
+          ],
+          [
+            "Spine2",
+            0.1985
+          ]
+        ]
+      },
+      {
+        "vertex": 1633,
+        "dropped": [
+          [
+            "RightArm",
+            0.0061
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.3551
+          ],
+          [
+            "Spine1",
+            0.2205
+          ],
+          [
+            "RightShoulder",
+            0.2205
+          ],
+          [
+            "Spine2",
+            0.1977
+          ]
+        ]
+      },
+      {
+        "vertex": 1665,
+        "dropped": [
+          [
+            "RightArm",
+            0.018
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.4531
+          ],
+          [
+            "Spine1",
+            0.2114
+          ],
+          [
+            "RightShoulder",
+            0.2114
+          ],
+          [
+            "Spine2",
+            0.1061
+          ]
+        ]
+      },
+      {
+        "vertex": 1666,
+        "dropped": [
+          [
+            "RightArm",
+            0.0032
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.4573
+          ],
+          [
+            "Spine1",
+            0.18
+          ],
+          [
+            "RightShoulder",
+            0.18
+          ],
+          [
+            "Spine2",
+            0.1796
+          ]
+        ]
+      },
+      {
+        "vertex": 1668,
+        "dropped": [
+          [
+            "RightArm",
+            0.0179
+          ]
+        ],
+        "kept": [
+          [
+            "RightArmTwist",
+            0.4714
+          ],
+          [
+            "Spine1",
+            0.1984
+          ],
+          [
+            "RightShoulder",
+            0.1984
+          ],
+          [
+            "Spine2",
+            0.1138
+          ]
+        ]
+      }
+    ]
+  },
+  "weight_islands_removed": [
+    {
+      "stage": "source_weights",
+      "bone": "Head",
+      "size": 3,
+      "max_weight": 0.0566,
+      "sum_weight": 0.0717,
+      "centroid_blender": [
+        -0.03,
+        0.035,
+        1.482
+      ],
+      "main_component_size": 4276
+    },
+    {
+      "stage": "source_weights",
+      "bone": "Head",
+      "size": 1,
+      "max_weight": 0.0809,
+      "sum_weight": 0.0809,
+      "centroid_blender": [
+        -0.08,
+        0.004,
+        1.488
+      ],
+      "main_component_size": 4276
+    },
+    {
+      "stage": "source_weights",
+      "bone": "Head",
+      "size": 1,
+      "max_weight": 0.0021,
+      "sum_weight": 0.0021,
+      "centroid_blender": [
+        0.083,
+        -0.016,
+        1.473
+      ],
+      "main_component_size": 4276
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftHandIndex1",
+      "size": 1,
+      "max_weight": 0.0177,
+      "sum_weight": 0.0177,
+      "centroid_blender": [
+        0.821,
+        0.012,
+        1.384
+      ],
+      "main_component_size": 201
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftHandMiddle1",
+      "size": 1,
+      "max_weight": 0.0006,
+      "sum_weight": 0.0006,
+      "centroid_blender": [
+        -0.831,
+        -0.059,
+        1.379
+      ],
+      "main_component_size": 237
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftHandPinky1",
+      "size": 2,
+      "max_weight": 0.0117,
+      "sum_weight": 0.0196,
+      "centroid_blender": [
+        0.861,
+        0.023,
+        1.37
+      ],
+      "main_component_size": 242
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftHandPinky3",
+      "size": 1,
+      "max_weight": 0.0021,
+      "sum_weight": 0.0021,
+      "centroid_blender": [
+        0.824,
+        0.022,
+        1.389
+      ],
+      "main_component_size": 205
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftHandRing3",
+      "size": 1,
+      "max_weight": 0.0207,
+      "sum_weight": 0.0207,
+      "centroid_blender": [
+        0.902,
+        -0.03,
+        1.364
+      ],
+      "main_component_size": 152
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 6,
+      "max_weight": 0.0239,
+      "sum_weight": 0.1349,
+      "centroid_blender": [
+        0.231,
+        -0.157,
+        0.008
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 5,
+      "max_weight": 0.0412,
+      "sum_weight": 0.109,
+      "centroid_blender": [
+        0.184,
+        -0.195,
+        0.005
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 3,
+      "max_weight": 0.007,
+      "sum_weight": 0.0167,
+      "centroid_blender": [
+        0.228,
+        -0.174,
+        0.006
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 3,
+      "max_weight": 0.0109,
+      "sum_weight": 0.0263,
+      "centroid_blender": [
+        0.196,
+        -0.144,
+        0.002
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 2,
+      "max_weight": 0.031,
+      "sum_weight": 0.0506,
+      "centroid_blender": [
+        0.241,
+        -0.159,
+        0.007
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 1,
+      "max_weight": 0.0051,
+      "sum_weight": 0.0051,
+      "centroid_blender": [
+        -0.2,
+        -0.049,
+        0.477
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 1,
+      "max_weight": 0.0458,
+      "sum_weight": 0.0458,
+      "centroid_blender": [
+        0.177,
+        -0.166,
+        0.005
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "LeftLeg",
+      "size": 1,
+      "max_weight": 0.0165,
+      "sum_weight": 0.0165,
+      "centroid_blender": [
+        0.246,
+        -0.173,
+        0.017
+      ],
+      "main_component_size": 425
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightForeArm",
+      "size": 5,
+      "max_weight": 0.026,
+      "sum_weight": 0.0741,
+      "centroid_blender": [
+        -0.805,
+        -0.085,
+        1.351
+      ],
+      "main_component_size": 399
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightForeArm",
+      "size": 1,
+      "max_weight": 0.0057,
+      "sum_weight": 0.0057,
+      "centroid_blender": [
+        -0.795,
+        -0.079,
+        1.357
+      ],
+      "main_component_size": 399
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightHandIndex1",
+      "size": 1,
+      "max_weight": 0.0177,
+      "sum_weight": 0.0177,
+      "centroid_blender": [
+        -0.821,
+        0.015,
+        1.389
+      ],
+      "main_component_size": 201
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightHandMiddle1",
+      "size": 1,
+      "max_weight": 0.0545,
+      "sum_weight": 0.0545,
+      "centroid_blender": [
+        -0.822,
+        -0.058,
+        1.382
+      ],
+      "main_component_size": 231
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightHandPinky1",
+      "size": 2,
+      "max_weight": 0.0117,
+      "sum_weight": 0.0196,
+      "centroid_blender": [
+        -0.861,
+        0.028,
+        1.376
+      ],
+      "main_component_size": 242
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightHandPinky3",
+      "size": 1,
+      "max_weight": 0.0017,
+      "sum_weight": 0.0017,
+      "centroid_blender": [
+        -0.823,
+        0.025,
+        1.393
+      ],
+      "main_component_size": 205
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightHandRing3",
+      "size": 1,
+      "max_weight": 0.0207,
+      "sum_weight": 0.0207,
+      "centroid_blender": [
+        -0.904,
+        -0.024,
+        1.372
+      ],
+      "main_component_size": 152
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 6,
+      "max_weight": 0.0239,
+      "sum_weight": 0.1349,
+      "centroid_blender": [
+        -0.231,
+        -0.157,
+        0.008
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 5,
+      "max_weight": 0.0412,
+      "sum_weight": 0.1358,
+      "centroid_blender": [
+        -0.184,
+        -0.195,
+        0.005
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 3,
+      "max_weight": 0.0109,
+      "sum_weight": 0.0263,
+      "centroid_blender": [
+        -0.196,
+        -0.144,
+        0.002
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 3,
+      "max_weight": 0.007,
+      "sum_weight": 0.0167,
+      "centroid_blender": [
+        -0.228,
+        -0.174,
+        0.006
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 2,
+      "max_weight": 0.031,
+      "sum_weight": 0.0506,
+      "centroid_blender": [
+        -0.241,
+        -0.159,
+        0.007
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 1,
+      "max_weight": 0.0051,
+      "sum_weight": 0.0051,
+      "centroid_blender": [
+        0.2,
+        -0.049,
+        0.477
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 1,
+      "max_weight": 0.0458,
+      "sum_weight": 0.0458,
+      "centroid_blender": [
+        -0.177,
+        -0.166,
+        0.005
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "source_weights",
+      "bone": "RightLeg",
+      "size": 1,
+      "max_weight": 0.0165,
+      "sum_weight": 0.0165,
+      "centroid_blender": [
+        -0.246,
+        -0.173,
+        0.017
+      ],
+      "main_component_size": 421
+    },
+    {
+      "stage": "after_influence_limit",
+      "bone": "RightArm",
+      "size": 4,
+      "max_weight": 0.0027,
+      "sum_weight": 0.0056,
+      "centroid_blender": [
+        -0.193,
+        -0.014,
+        1.286
+      ],
+      "main_component_size": 307
+    }
+  ],
+  "weights_final": {
+    "sum_min": 1.0,
+    "sum_max": 1.0,
+    "sum_mean": 1.0,
+    "unweighted_vertices": 0,
+    "influences_histogram": {
+      "1": 5601,
+      "2": 5342,
+      "3": 2026,
+      "4": 411
+    },
+    "max_influences": 4,
+    "islands_after_cleanup": {},
+    "edge_step_histogram": {
+      "0.0": 19215,
+      "0.1": 4270,
+      "0.2": 2177,
+      "0.3": 705,
+      "0.4": 170,
+      "0.5": 214,
+      "0.6": 5
+    },
+    "edges_with_step_gt_0_5": 18,
+    "hard_step_bones": {
+      "RightArm": 1,
+      "RightFoot": 2,
+      "RightForeArm": 2,
+      "RightForeArmTwist": 1,
+      "RightHandIndex1": 1,
+      "LeftHand": 2,
+      "LeftArm": 1,
+      "LeftHandRing1": 1,
+      "LeftForeArm": 2,
+      "LeftForeArmTwist": 1,
+      "RightHand": 2,
+      "RightUpLeg": 1,
+      "LeftHandIndex1": 1
+    },
+    "bone_vertex_counts": {
+      "Head": 4275,
+      "HeadTop_End": 0,
+      "Hips": 607,
+      "LeftArm": 300,
+      "LeftArmTwist": 499,
+      "LeftFoot": 1007,
+      "LeftForeArm": 339,
+      "LeftForeArmTwist": 237,
+      "LeftHand": 395,
+      "LeftHandIndex1": 201,
+      "LeftHandIndex2": 210,
+      "LeftHandIndex3": 157,
+      "LeftHandIndex4": 0,
+      "LeftHandMiddle1": 237,
+      "LeftHandMiddle2": 205,
+      "LeftHandMiddle3": 158,
+      "LeftHandMiddle4": 0,
+      "LeftHandPinky1": 241,
+      "LeftHandPinky2": 201,
+      "LeftHandPinky3": 205,
+      "LeftHandPinky4": 0,
+      "LeftHandRing1": 236,
+      "LeftHandRing2": 186,
+      "LeftHandRing3": 152,
+      "LeftHandRing4": 0,
+      "LeftHandThumb1": 101,
+      "LeftHandThumb2": 185,
+      "LeftHandThumb3": 136,
+      "LeftHandThumb4": 0,
+      "LeftLeg": 381,
+      "LeftLegTwist": 236,
+      "LeftShoulder": 239,
+      "LeftToeBase": 833,
+      "LeftToe_End": 0,
+      "LeftUpLeg": 451,
+      "LeftUpLegTwist": 472,
+      "Neck": 384,
+      "RightArm": 307,
+      "RightArmTwist": 498,
+      "RightFoot": 775,
+      "RightForeArm": 338,
+      "RightForeArmTwist": 237,
+      "RightHand": 506,
+      "RightHandIndex1": 201,
+      "RightHandIndex2": 210,
+      "RightHandIndex3": 156,
+      "RightHandIndex4": 0,
+      "RightHandMiddle1": 231,
+      "RightHandMiddle2": 205,
+      "RightHandMiddle3": 158,
+      "RightHandMiddle4": 0,
+      "RightHandPinky1": 241,
+      "RightHandPinky2": 201,
+      "RightHandPinky3": 205,
+      "RightHandPinky4": 0,
+      "RightHandRing1": 236,
+      "RightHandRing2": 186,
+      "RightHandRing3": 152,
+      "RightHandRing4": 0,
+      "RightHandThumb1": 101,
+      "RightHandThumb2": 185,
+      "RightHandThumb3": 136,
+      "RightHandThumb4": 0,
+      "RightLeg": 380,
+      "RightLegTwist": 232,
+      "RightShoulder": 222,
+      "RightToeBase": 835,
+      "RightToe_End": 0,
+      "RightUpLeg": 447,
+      "RightUpLegTwist": 468,
+      "Spine": 448,
+      "Spine1": 797,
+      "Spine2": 1247
+    },
+    "bone_weight_sums": {
+      "Head": 4126.71,
+      "HeadTop_End": 0,
+      "Hips": 314.77,
+      "LeftArm": 167.7,
+      "LeftArmTwist": 131.42,
+      "LeftFoot": 581.62,
+      "LeftForeArm": 135.73,
+      "LeftForeArmTwist": 127.79,
+      "LeftHand": 182.44,
+      "LeftHandIndex1": 101.87,
+      "LeftHandIndex2": 88.47,
+      "LeftHandIndex3": 111.06,
+      "LeftHandIndex4": 0,
+      "LeftHandMiddle1": 98.81,
+      "LeftHandMiddle2": 86.65,
+      "LeftHandMiddle3": 116.61,
+      "LeftHandMiddle4": 0,
+      "LeftHandPinky1": 94.06,
+      "LeftHandPinky2": 81.34,
+      "LeftHandPinky3": 117.06,
+      "LeftHandPinky4": 0,
+      "LeftHandRing1": 103.34,
+      "LeftHandRing2": 81.26,
+      "LeftHandRing3": 111.78,
+      "LeftHandRing4": 0,
+      "LeftHandThumb1": 28.13,
+      "LeftHandThumb2": 89.98,
+      "LeftHandThumb3": 94.75,
+      "LeftHandThumb4": 0,
+      "LeftLeg": 144.34,
+      "LeftLegTwist": 115.36,
+      "LeftShoulder": 59.23,
+      "LeftToeBase": 464.5,
+      "LeftToe_End": 0,
+      "LeftUpLeg": 228.27,
+      "LeftUpLegTwist": 130.31,
+      "Neck": 136.38,
+      "RightArm": 168.8,
+      "RightArmTwist": 132.56,
+      "RightFoot": 466.86,
+      "RightForeArm": 135.52,
+      "RightForeArmTwist": 131.22,
+      "RightHand": 202.86,
+      "RightHandIndex1": 96.23,
+      "RightHandIndex2": 88.49,
+      "RightHandIndex3": 111.04,
+      "RightHandIndex4": 0,
+      "RightHandMiddle1": 93.37,
+      "RightHandMiddle2": 86.65,
+      "RightHandMiddle3": 116.61,
+      "RightHandMiddle4": 0,
+      "RightHandPinky1": 91.62,
+      "RightHandPinky2": 81.19,
+      "RightHandPinky3": 117.06,
+      "RightHandPinky4": 0,
+      "RightHandRing1": 98.56,
+      "RightHandRing2": 81.25,
+      "RightHandRing3": 111.78,
+      "RightHandRing4": 0,
+      "RightHandThumb1": 27.85,
+      "RightHandThumb2": 84.73,
+      "RightHandThumb3": 94.69,
+      "RightHandThumb4": 0,
+      "RightLeg": 142.23,
+      "RightLegTwist": 113.59,
+      "RightShoulder": 57.36,
+      "RightToeBase": 581.0,
+      "RightToe_End": 0,
+      "RightUpLeg": 230.24,
+      "RightUpLegTwist": 129.96,
+      "Spine": 209.56,
+      "Spine1": 282.39,
+      "Spine2": 563.0
+    }
+  },
+  "shading": {
+    "smooth_polys": 13378,
+    "polys": 13378,
+    "sharp_edges": 0,
+    "custom_normals": false
+  },
+  "final_mesh": {
+    "vertices": 13380,
+    "polygons": 13378,
+    "triangles": 26756,
+    "quads": 13378,
+    "tris": 0,
+    "ngons": 0,
+    "bbox_blender": {
+      "x": [
+        -0.9152,
+        0.9152
+      ],
+      "y": [
+        -0.2126,
+        0.1008
+      ],
+      "z": [
+        0.0,
+        1.7497
+      ]
+    },
+    "height_m": 1.7497,
+    "vertex_groups": 73,
+    "materials": [
+      "DollSkin"
+    ],
+    "uv_layers": [
+      "UVMap"
+    ]
+  },
+  "final_bones": [
+    [
+      "Hips",
+      null,
+      [
+        -0.0009,
+        -0.009,
+        0.9809
+      ],
+      [
+        0.0007,
+        -0.0237,
+        1.0681
+      ]
+    ],
+    [
+      "LeftUpLeg",
+      "Hips",
+      [
+        0.1101,
+        0.0072,
+        0.9308
+      ],
+      [
+        0.154,
+        -0.0272,
+        0.5087
+      ]
+    ],
+    [
+      "LeftLeg",
+      "LeftUpLeg",
+      [
+        0.154,
+        -0.0272,
+        0.5087
+      ],
+      [
+        0.2005,
+        -0.0144,
+        0.0724
+      ]
+    ],
+    [
+      "LeftFoot",
+      "LeftLeg",
+      [
+        0.2005,
+        -0.0144,
+        0.0724
+      ],
+      [
+        0.1977,
+        -0.1594,
+        0.0294
+      ]
+    ],
+    [
+      "LeftToeBase",
+      "LeftFoot",
+      [
+        0.1977,
+        -0.1594,
+        0.0294
+      ],
+      [
+        0.2009,
+        -0.2133,
+        0.0141
+      ]
+    ],
+    [
+      "LeftToe_End",
+      "LeftToeBase",
+      [
+        0.2009,
+        -0.2133,
+        0.0141
+      ],
+      [
+        0.2012,
+        -0.2325,
+        0.0085
+      ]
+    ],
+    [
+      "LeftLegTwist",
+      "LeftLeg",
+      [
+        0.184,
+        -0.0189,
+        0.2251
+      ],
+      [
+        0.1934,
+        -0.0164,
+        0.1378
+      ]
+    ],
+    [
+      "LeftUpLegTwist",
+      "LeftUpLeg",
+      [
+        0.1252,
+        -0.0048,
+        0.783
+      ],
+      [
+        0.1339,
+        -0.0117,
+        0.6986
+      ]
+    ],
+    [
+      "RightUpLeg",
+      "Hips",
+      [
+        -0.1087,
+        0.0072,
+        0.9308
+      ],
+      [
+        -0.1513,
+        -0.0272,
+        0.5087
+      ]
+    ],
+    [
+      "RightLeg",
+      "RightUpLeg",
+      [
+        -0.1513,
+        -0.0272,
+        0.5087
+      ],
+      [
+        -0.1991,
+        -0.0144,
+        0.0724
+      ]
+    ],
+    [
+      "RightFoot",
+      "RightLeg",
+      [
+        -0.1991,
+        -0.0144,
+        0.0724
+      ],
+      [
+        -0.1963,
+        -0.1594,
+        0.0294
+      ]
+    ],
+    [
+      "RightToeBase",
+      "RightFoot",
+      [
+        -0.1963,
+        -0.1594,
+        0.0294
+      ],
+      [
+        -0.1982,
+        -0.2133,
+        0.0141
+      ]
+    ],
+    [
+      "RightToe_End",
+      "RightToeBase",
+      [
+        -0.1982,
+        -0.2133,
+        0.0141
+      ],
+      [
+        -0.1998,
+        -0.2325,
+        0.0085
+      ]
+    ],
+    [
+      "RightLegTwist",
+      "RightLeg",
+      [
+        -0.1826,
+        -0.0189,
+        0.2251
+      ],
+      [
+        -0.1921,
+        -0.0164,
+        0.1378
+      ]
+    ],
+    [
+      "RightUpLegTwist",
+      "RightUpLeg",
+      [
+        -0.1239,
+        -0.0048,
+        0.783
+      ],
+      [
+        -0.1325,
+        -0.0117,
+        0.6986
+      ]
+    ],
+    [
+      "Spine",
+      "Hips",
+      [
+        0.0007,
+        -0.0237,
+        1.0681
+      ],
+      [
+        0.0014,
+        -0.0035,
+        1.1704
+      ]
+    ],
+    [
+      "Spine1",
+      "Spine",
+      [
+        0.0014,
+        -0.0035,
+        1.1704
+      ],
+      [
+        0.0014,
+        0.0495,
+        1.2933
+      ]
+    ],
+    [
+      "Spine2",
+      "Spine1",
+      [
+        0.0014,
+        0.0495,
+        1.2933
+      ],
+      [
+        0.0007,
+        -0.0115,
+        1.5011
+      ]
+    ],
+    [
+      "LeftShoulder",
+      "Spine2",
+      [
+        0.0647,
+        -0.0118,
+        1.4661
+      ],
+      [
+        0.189,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "LeftArm",
+      "LeftShoulder",
+      [
+        0.189,
+        -0.0179,
+        1.3966
+      ],
+      [
+        0.4444,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "LeftForeArm",
+      "LeftArm",
+      [
+        0.4444,
+        -0.0179,
+        1.3966
+      ],
+      [
+        0.7139,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "LeftHand",
+      "LeftForeArm",
+      [
+        0.7139,
+        -0.0179,
+        1.3966
+      ],
+      [
+        0.8126,
+        -0.0179,
+        1.3965
+      ]
+    ],
+    [
+      "LeftHandIndex1",
+      "LeftHand",
+      [
+        0.8219,
+        -0.0628,
+        1.3942
+      ],
+      [
+        0.8487,
+        -0.0702,
+        1.3873
+      ]
+    ],
+    [
+      "LeftHandIndex2",
+      "LeftHandIndex1",
+      [
+        0.8487,
+        -0.0702,
+        1.3873
+      ],
+      [
+        0.8713,
+        -0.0749,
+        1.3763
+      ]
+    ],
+    [
+      "LeftHandIndex3",
+      "LeftHandIndex2",
+      [
+        0.8713,
+        -0.0749,
+        1.3763
+      ],
+      [
+        0.8962,
+        -0.0797,
+        1.3604
+      ]
+    ],
+    [
+      "LeftHandIndex4",
+      "LeftHandIndex3",
+      [
+        0.8962,
+        -0.0797,
+        1.3604
+      ],
+      [
+        0.9079,
+        -0.0821,
+        1.3523
+      ]
+    ],
+    [
+      "LeftHandMiddle1",
+      "LeftHand",
+      [
+        0.8251,
+        -0.0347,
+        1.4016
+      ],
+      [
+        0.8609,
+        -0.034,
+        1.3913
+      ]
+    ],
+    [
+      "LeftHandMiddle2",
+      "LeftHandMiddle1",
+      [
+        0.8609,
+        -0.034,
+        1.3913
+      ],
+      [
+        0.8889,
+        -0.035,
+        1.3798
+      ]
+    ],
+    [
+      "LeftHandMiddle3",
+      "LeftHandMiddle2",
+      [
+        0.8889,
+        -0.035,
+        1.3798
+      ],
+      [
+        0.9154,
+        -0.0346,
+        1.3653
+      ]
+    ],
+    [
+      "LeftHandMiddle4",
+      "LeftHandMiddle3",
+      [
+        0.9154,
+        -0.0346,
+        1.3653
+      ],
+      [
+        0.9277,
+        -0.0344,
+        1.3578
+      ]
+    ],
+    [
+      "LeftHandPinky1",
+      "LeftHand",
+      [
+        0.8145,
+        0.0095,
+        1.3994
+      ],
+      [
+        0.8358,
+        0.0165,
+        1.3923
+      ]
+    ],
+    [
+      "LeftHandPinky2",
+      "LeftHandPinky1",
+      [
+        0.8358,
+        0.0165,
+        1.3923
+      ],
+      [
+        0.8505,
+        0.0207,
+        1.3845
+      ]
+    ],
+    [
+      "LeftHandPinky3",
+      "LeftHandPinky2",
+      [
+        0.8505,
+        0.0207,
+        1.3845
+      ],
+      [
+        0.8699,
+        0.0265,
+        1.3749
+      ]
+    ],
+    [
+      "LeftHandPinky4",
+      "LeftHandPinky3",
+      [
+        0.8699,
+        0.0265,
+        1.3749
+      ],
+      [
+        0.8821,
+        0.0305,
+        1.3682
+      ]
+    ],
+    [
+      "LeftHandRing1",
+      "LeftHand",
+      [
+        0.8217,
+        -0.0126,
+        1.4036
+      ],
+      [
+        0.8531,
+        -0.0065,
+        1.3961
+      ]
+    ],
+    [
+      "LeftHandRing2",
+      "LeftHandRing1",
+      [
+        0.8531,
+        -0.0065,
+        1.3961
+      ],
+      [
+        0.8785,
+        -0.0034,
+        1.3864
+      ]
+    ],
+    [
+      "LeftHandRing3",
+      "LeftHandRing2",
+      [
+        0.8785,
+        -0.0034,
+        1.3864
+      ],
+      [
+        0.9046,
+        0.0021,
+        1.373
+      ]
+    ],
+    [
+      "LeftHandRing4",
+      "LeftHandRing3",
+      [
+        0.9046,
+        0.0021,
+        1.373
+      ],
+      [
+        0.917,
+        0.0049,
+        1.366
+      ]
+    ],
+    [
+      "LeftHandThumb1",
+      "LeftHand",
+      [
+        0.7504,
+        -0.0502,
+        1.392
+      ],
+      [
+        0.7609,
+        -0.0717,
+        1.368
+      ]
+    ],
+    [
+      "LeftHandThumb2",
+      "LeftHandThumb1",
+      [
+        0.7609,
+        -0.0717,
+        1.368
+      ],
+      [
+        0.7866,
+        -0.0952,
+        1.3478
+      ]
+    ],
+    [
+      "LeftHandThumb3",
+      "LeftHandThumb2",
+      [
+        0.7866,
+        -0.0952,
+        1.3478
+      ],
+      [
+        0.8111,
+        -0.1054,
+        1.3318
+      ]
+    ],
+    [
+      "LeftHandThumb4",
+      "LeftHandThumb3",
+      [
+        0.8111,
+        -0.1054,
+        1.3318
+      ],
+      [
+        0.8221,
+        -0.1104,
+        1.3238
+      ]
+    ],
+    [
+      "LeftForeArmTwist",
+      "LeftForeArm",
+      [
+        0.6189,
+        -0.0179,
+        1.3965
+      ],
+      [
+        0.6728,
+        -0.0179,
+        1.3965
+      ]
+    ],
+    [
+      "LeftArmTwist",
+      "LeftArm",
+      [
+        0.2777,
+        -0.0179,
+        1.3965
+      ],
+      [
+        0.3288,
+        -0.0179,
+        1.3965
+      ]
+    ],
+    [
+      "Neck",
+      "Spine2",
+      [
+        0.0007,
+        -0.0115,
+        1.5011
+      ],
+      [
+        0.0007,
+        0.0038,
+        1.5508
+      ]
+    ],
+    [
+      "Head",
+      "Neck",
+      [
+        0.0032,
+        -0.0184,
+        1.5432
+      ],
+      [
+        0.0014,
+        -0.0218,
+        1.7524
+      ]
+    ],
+    [
+      "HeadTop_End",
+      "Head",
+      [
+        0.0014,
+        -0.0218,
+        1.7524
+      ],
+      [
+        -0.0005,
+        -0.0234,
+        1.8523
+      ]
+    ],
+    [
+      "RightShoulder",
+      "Spine2",
+      [
+        -0.0627,
+        -0.0157,
+        1.4555
+      ],
+      [
+        -0.1862,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "RightArm",
+      "RightShoulder",
+      [
+        -0.1862,
+        -0.0179,
+        1.3966
+      ],
+      [
+        -0.4417,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "RightForeArm",
+      "RightArm",
+      [
+        -0.4417,
+        -0.0179,
+        1.3966
+      ],
+      [
+        -0.7111,
+        -0.0179,
+        1.3966
+      ]
+    ],
+    [
+      "RightHand",
+      "RightForeArm",
+      [
+        -0.7111,
+        -0.0179,
+        1.3966
+      ],
+      [
+        -0.8001,
+        -0.0179,
+        1.3965
+      ]
+    ],
+    [
+      "RightHandIndex1",
+      "RightHand",
+      [
+        -0.8218,
+        -0.0596,
+        1.3984
+      ],
+      [
+        -0.849,
+        -0.0662,
+        1.3926
+      ]
+    ],
+    [
+      "RightHandIndex2",
+      "RightHandIndex1",
+      [
+        -0.849,
+        -0.0662,
+        1.3926
+      ],
+      [
+        -0.8722,
+        -0.0702,
+        1.3824
+      ]
+    ],
+    [
+      "RightHandIndex3",
+      "RightHandIndex2",
+      [
+        -0.8722,
+        -0.0702,
+        1.3824
+      ],
+      [
+        -0.8965,
+        -0.0742,
+        1.3675
+      ]
+    ],
+    [
+      "RightHandIndex4",
+      "RightHandIndex3",
+      [
+        -0.8965,
+        -0.0742,
+        1.3675
+      ],
+      [
+        -0.91,
+        -0.0762,
+        1.3598
+      ]
+    ],
+    [
+      "RightHandMiddle1",
+      "RightHand",
+      [
+        -0.8239,
+        -0.0315,
+        1.406
+      ],
+      [
+        -0.86,
+        -0.0297,
+        1.3971
+      ]
+    ],
+    [
+      "RightHandMiddle2",
+      "RightHandMiddle1",
+      [
+        -0.86,
+        -0.0297,
+        1.3971
+      ],
+      [
+        -0.8885,
+        -0.0298,
+        1.3868
+      ]
+    ],
+    [
+      "RightHandMiddle3",
+      "RightHandMiddle2",
+      [
+        -0.8885,
+        -0.0298,
+        1.3868
+      ],
+      [
+        -0.9141,
+        -0.0286,
+        1.3733
+      ]
+    ],
+    [
+      "RightHandMiddle4",
+      "RightHandMiddle3",
+      [
+        -0.9141,
+        -0.0286,
+        1.3733
+      ],
+      [
+        -0.9281,
+        -0.028,
+        1.3663
+      ]
+    ],
+    [
+      "RightHandPinky1",
+      "RightHand",
+      [
+        -0.812,
+        0.0124,
+        1.4035
+      ],
+      [
+        -0.8334,
+        0.0201,
+        1.3973
+      ]
+    ],
+    [
+      "RightHandPinky2",
+      "RightHandPinky1",
+      [
+        -0.8334,
+        0.0201,
+        1.3973
+      ],
+      [
+        -0.8483,
+        0.0248,
+        1.3901
+      ]
+    ],
+    [
+      "RightHandPinky3",
+      "RightHandPinky2",
+      [
+        -0.8483,
+        0.0248,
+        1.3901
+      ],
+      [
+        -0.8666,
+        0.0312,
+        1.3813
+      ]
+    ],
+    [
+      "RightHandPinky4",
+      "RightHandPinky3",
+      [
+        -0.8666,
+        0.0312,
+        1.3813
+      ],
+      [
+        -0.8802,
+        0.0356,
+        1.3751
+      ]
+    ],
+    [
+      "RightHandRing1",
+      "RightHand",
+      [
+        -0.8198,
+        -0.0095,
+        1.4079
+      ],
+      [
+        -0.8512,
+        -0.0024,
+        1.4017
+      ]
+    ],
+    [
+      "RightHandRing2",
+      "RightHandRing1",
+      [
+        -0.8512,
+        -0.0024,
+        1.4017
+      ],
+      [
+        -0.8762,
+        0.0015,
+        1.3931
+      ]
+    ],
+    [
+      "RightHandRing3",
+      "RightHandRing2",
+      [
+        -0.8762,
+        0.0015,
+        1.3931
+      ],
+      [
+        -0.902,
+        0.0077,
+        1.3807
+      ]
+    ],
+    [
+      "RightHandRing4",
+      "RightHandRing3",
+      [
+        -0.902,
+        0.0077,
+        1.3807
+      ],
+      [
+        -0.9159,
+        0.011,
+        1.3742
+      ]
+    ],
+    [
+      "RightHandThumb1",
+      "RightHand",
+      [
+        -0.7501,
+        -0.0491,
+        1.3934
+      ],
+      [
+        -0.7622,
+        -0.0701,
+        1.3698
+      ]
+    ],
+    [
+      "RightHandThumb2",
+      "RightHandThumb1",
+      [
+        -0.7622,
+        -0.0701,
+        1.3698
+      ],
+      [
+        -0.7893,
+        -0.0928,
+        1.3505
+      ]
+    ],
+    [
+      "RightHandThumb3",
+      "RightHandThumb2",
+      [
+        -0.7893,
+        -0.0928,
+        1.3505
+      ],
+      [
+        -0.8134,
+        -0.1022,
+        1.3355
+      ]
+    ],
+    [
+      "RightHandThumb4",
+      "RightHandThumb3",
+      [
+        -0.8134,
+        -0.1022,
+        1.3355
+      ],
+      [
+        -0.8262,
+        -0.1068,
+        1.3279
+      ]
+    ],
+    [
+      "RightForeArmTwist",
+      "RightForeArm",
+      [
+        -0.6175,
+        -0.0179,
+        1.3965
+      ],
+      [
+        -0.6714,
+        -0.0179,
+        1.3965
+      ]
+    ],
+    [
+      "RightArmTwist",
+      "RightArm",
+      [
+        -0.2763,
+        -0.0179,
+        1.3965
+      ],
+      [
+        -0.3274,
+        -0.0179,
+        1.3965
+      ]
+    ]
+  ],
+  "bone_count": 73,
+  "glb": {
+    "path": "C:\\dev\\scene-doll\\doll-src\\makehuman\\out\\mh2_male.glb",
+    "bytes": 940404
+  }
+}

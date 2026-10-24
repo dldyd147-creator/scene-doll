@@ -26,7 +26,7 @@ const COMMON: Record<string, JointLimit> = {
   Neck: { cone: 30, twist: 35 },
   Head: { cone: 40, twist: 45 },
   Shoulder: { cone: 25, twist: 15 },
-  Arm: { cone: 125, twist: 80 },
+  Arm: { cone: 125, twist: 95 },
   Hand: { cone: 70, twist: 30 },
   UpLeg: { cone: 115, twist: 45 },
   Leg: knee,

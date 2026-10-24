@@ -578,6 +578,12 @@ export class Engine {
     rotateObjectWorld(upper, res.upper);
     rotateObjectWorld(lower, res.lower);
     end.updateWorldMatrix(true, false);
+    if (this.settings.jointLimits) {
+      // 아래 뼈가 가리키는 방향을 경첩 평면이 품도록 위 뼈를 비틀어 둔다(팔꿈치·무릎이 옆으로 꺾이지 않게)
+      const dir = rig.worldPos(chain.end).sub(rig.worldPos(chain.lower));
+      if (dir.lengthSq() > 1e-8) rig.aimHinge(chain.lower, dir);
+      rig.root.updateMatrixWorld(true);
+    }
     if (keepEnd) {
       end.getWorldQuaternion(_q);
       rotateObjectWorld(end, endWorldQ.multiply(_q.invert()));

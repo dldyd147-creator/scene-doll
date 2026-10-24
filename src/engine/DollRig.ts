@@ -1,4 +1,4 @@
-import { Box3, Color, DoubleSide, Group, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection } from 'three';
+import { Box3, Color, DoubleSide, Group, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection } from 'three';
 import type { DollInstance, Gender, JointRotations, Quat } from '../model/types';
 import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkeleton } from './skeleton';
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
@@ -330,6 +330,58 @@ export abstract class DollRig {
     const fixed = clampJointRotation(J, this.skel.rest.get(name)!.dir, limit);
     if (!fixed) return false;
     this.setJointDelta(name, P.clone().multiply(fixed));
+    return true;
+  }
+
+  /**
+   * 경첩 관절(팔꿈치·무릎)의 아래 뼈가 월드 방향 dWorld를 가리키게 한다.
+   * 경첩은 한 평면에서만 굽으므로, 먼저 위 뼈(위팔·허벅지)를 제 축 둘레로 비틀어 경첩 평면이 그 방향을 품게 하고 나서 굽힌다.
+   * 디자인돌처럼 아래팔을 끌면 위팔이 알아서 돌아가는 느낌을 만든다. 경첩 한계가 없는 뼈면 false.
+   */
+  aimHinge(child: string, dWorld: Vector3): boolean {
+    const limit = limitFor(child);
+    const parent = this.skel.parents.get(child) ?? null;
+    if (!limit?.hinge || !parent) return false;
+    const deltas = this.jointDeltas();
+    const Rp = deltas.get(parent)!;
+    const a0 = this.skel.rest.get(parent)!.dir;
+    const h0 = new Vector3(limit.hinge.axis[0], limit.hinge.axis[1], limit.hinge.axis[2]).normalize();
+    const dDoll = dWorld.clone().applyQuaternion(this.root.quaternion.clone().invert()).normalize();
+    // 부모 휴식 좌표계에서 본 목표 방향
+    const dP = dDoll.clone().applyQuaternion(Rp.clone().invert());
+    const dPerp = dP.clone().sub(a0.clone().multiplyScalar(dP.dot(a0)));
+    if (dPerp.lengthSq() < 1e-6) return false;
+    const u = dPerp.normalize();
+    const n = new Vector3().crossVectors(a0, u).normalize();
+    // 두 후보(경첩 법선 ±n) 중 굽힘이 허용 범위에 들고 비틀림이 작은 쪽
+    const min = MathUtils.degToRad(limit.hinge.min);
+    const max = MathUtils.degToRad(limit.hinge.max);
+    let best: { tau: number; theta: number } | null = null;
+    for (const cand of [n, n.clone().negate()]) {
+      const tau = Math.atan2(h0.clone().cross(cand).dot(a0), h0.dot(cand));
+      const twist = new Quaternion().setFromAxisAngle(a0, tau);
+      const dAfter = dP.clone().applyQuaternion(twist.clone().invert());
+      const dpp = dAfter.sub(h0.clone().multiplyScalar(dAfter.dot(h0)));
+      if (dpp.lengthSq() < 1e-8) continue;
+      const theta = Math.atan2(a0.clone().cross(dpp).dot(h0), a0.dot(dpp));
+      const inRange = theta >= min - 1e-3 && theta <= max + 1e-3;
+      const score = (inRange ? 0 : 10) + Math.abs(tau);
+      if (!best || score < (best.theta >= min - 1e-3 && best.theta <= max + 1e-3 ? 0 : 10) + Math.abs(best.tau)) best = { tau, theta };
+    }
+    if (!best) return false;
+    // 위 뼈 비틀기(한계 안에서)
+    this.setJointDelta(parent, Rp.clone().multiply(new Quaternion().setFromAxisAngle(a0, best.tau)));
+    this.clampJoint(parent);
+    // 비틀린 뒤 실제 경첩 평면에서 굽힘각을 다시 재서 적용
+    const Rp2 = this.jointDelta(parent);
+    const dP2 = dDoll.clone().applyQuaternion(Rp2.clone().invert());
+    const dpp2 = dP2.sub(h0.clone().multiplyScalar(dP2.dot(h0)));
+    if (dpp2.lengthSq() < 1e-8) return true;
+    const theta = Math.min(max, Math.max(min, Math.atan2(a0.clone().cross(dpp2).dot(h0), a0.dot(dpp2))));
+    // 아래 뼈의 기존 비틀림(손목 회내 등)은 유지한다
+    const Jc = Rp2.clone().invert().multiply(deltas.get(child)!);
+    const keepTwist = swingTwist(Jc, this.skel.rest.get(child)!.dir).twist;
+    this.setJointDelta(child, Rp2.clone().multiply(new Quaternion().setFromAxisAngle(h0, theta)).multiply(keepTwist));
     return true;
   }
 

@@ -1,0 +1,82 @@
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[build    0.0s] MPFB package: bl_ext.user_default.mpfb dir: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\user_default\mpfb
+[build    0.0s] MPFB version: 2.0.18 | Blender: 4.3.2
+[build    0.0s] creating human with macro {'gender': 0.0, 'age': 0.5, 'muscle': 0.5, 'weight': 0.5, 'proportions': 0.5, 'height': 0.5, 'cupsize': 0.5, 'firmness': 0.5, 'race': {'asian': 0.33, 'caucasian': 0.33, 'african': 0.33}}
+[build    0.1s] human: Human verts 19158 polys 18486
+[build    0.2s] height macro range: 0.0 -> 1.2352 m, 1.0 -> 2.2923 m, target 1.620 m
+[build    0.3s] height macro = 0.53027 -> body height 1.6202 m (target 1.620)
+[build    0.4s] rig: Human.rig bones: 52
+[build    0.5s] body vertices without bone weights: 0 | raw weight sum range: [0.2, 1.498]
+[build    0.5s] T-pose Left: arm_dir=[1.0, 0.0, 0.0] palm_down_dot before=0.4379 after_align=0.979 twist=3.399 deg -> after=0.9808
+[build    0.5s] T-pose Right: arm_dir=[-1.0, 0.0, 0.0] palm_down_dot before=0.4379 after_align=0.9861 twist=3.749 deg -> after=0.9883
+[build    0.6s] rest pose applied; shape keys: None modifiers: [('Armature', 'ARMATURE'), ('Hide helpers', 'MASK')]
+Info: Applied modifier was not first, result may not be as expected
+[build    0.6s] after helper removal: verts 13380 polys 13378 modifiers [('Armature', 'ARMATURE')]
+[build    0.6s] bones after adding end + twist bones: 73
+[build    0.6s] removed non-bone vertex groups: 152
+[build    0.6s] [source_weights] weight islands removed: 31 entries; total weight removed 1.246
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'Head', 'size': 3, 'max_weight': 0.0566, 'sum_weight': 0.0717, 'centroid_blender': [-0.025, 0.028, 1.371], 'main_component_size': 4276}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'Head', 'size': 1, 'max_weight': 0.0809, 'sum_weight': 0.0809, 'centroid_blender': [-0.061, -0.001, 1.369], 'main_component_size': 4276}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'Head', 'size': 1, 'max_weight': 0.0021, 'sum_weight': 0.0021, 'centroid_blender': [0.058, -0.015, 1.355], 'main_component_size': 4276}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftHandIndex1', 'size': 1, 'max_weight': 0.0177, 'sum_weight': 0.0177, 'centroid_blender': [0.699, 0.004, 1.278], 'main_component_size': 201}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftHandMiddle1', 'size': 1, 'max_weight': 0.0006, 'sum_weight': 0.0006, 'centroid_blender': [-0.707, -0.055, 1.274], 'main_component_size': 237}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftHandPinky1', 'size': 2, 'max_weight': 0.0117, 'sum_weight': 0.0196, 'centroid_blender': [0.732, 0.013, 1.266], 'main_component_size': 242}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftHandPinky3', 'size': 1, 'max_weight': 0.0021, 'sum_weight': 0.0021, 'centroid_blender': [0.701, 0.012, 1.282], 'main_component_size': 205}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftHandRing3', 'size': 1, 'max_weight': 0.0207, 'sum_weight': 0.0207, 'centroid_blender': [0.767, -0.031, 1.261], 'main_component_size': 152}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 6, 'max_weight': 0.0239, 'sum_weight': 0.1349, 'centroid_blender': [0.2, -0.155, 0.008], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 5, 'max_weight': 0.0412, 'sum_weight': 0.109, 'centroid_blender': [0.158, -0.191, 0.009], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 3, 'max_weight': 0.007, 'sum_weight': 0.0167, 'centroid_blender': [0.198, -0.172, 0.005], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 3, 'max_weight': 0.0109, 'sum_weight': 0.0263, 'centroid_blender': [0.172, -0.152, 0.005], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 2, 'max_weight': 0.031, 'sum_weight': 0.0506, 'centroid_blender': [0.208, -0.149, 0.009], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 1, 'max_weight': 0.0051, 'sum_weight': 0.0051, 'centroid_blender': [-0.163, -0.077, 0.418], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 1, 'max_weight': 0.0458, 'sum_weight': 0.0458, 'centroid_blender': [0.15, -0.167, 0.006], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'LeftLeg', 'size': 1, 'max_weight': 0.0165, 'sum_weight': 0.0165, 'centroid_blender': [0.211, -0.162, 0.017], 'main_component_size': 425}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightForeArm', 'size': 5, 'max_weight': 0.026, 'sum_weight': 0.0741, 'centroid_blender': [-0.685, -0.077, 1.25], 'main_component_size': 399}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightForeArm', 'size': 1, 'max_weight': 0.0057, 'sum_weight': 0.0057, 'centroid_blender': [-0.677, -0.071, 1.255], 'main_component_size': 399}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightHandIndex1', 'size': 1, 'max_weight': 0.0177, 'sum_weight': 0.0177, 'centroid_blender': [-0.698, 0.007, 1.282], 'main_component_size': 201}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightHandMiddle1', 'size': 1, 'max_weight': 0.0545, 'sum_weight': 0.0545, 'centroid_blender': [-0.699, -0.054, 1.276], 'main_component_size': 231}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightHandPinky1', 'size': 2, 'max_weight': 0.0117, 'sum_weight': 0.0196, 'centroid_blender': [-0.732, 0.017, 1.271], 'main_component_size': 242}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightHandPinky3', 'size': 1, 'max_weight': 0.0017, 'sum_weight': 0.0017, 'centroid_blender': [-0.701, 0.015, 1.286], 'main_component_size': 205}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightHandRing3', 'size': 1, 'max_weight': 0.0207, 'sum_weight': 0.0207, 'centroid_blender': [-0.768, -0.026, 1.268], 'main_component_size': 152}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 6, 'max_weight': 0.0239, 'sum_weight': 0.1349, 'centroid_blender': [-0.2, -0.155, 0.008], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 5, 'max_weight': 0.0412, 'sum_weight': 0.1358, 'centroid_blender': [-0.158, -0.191, 0.009], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 3, 'max_weight': 0.0109, 'sum_weight': 0.0263, 'centroid_blender': [-0.172, -0.152, 0.005], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 3, 'max_weight': 0.007, 'sum_weight': 0.0167, 'centroid_blender': [-0.198, -0.172, 0.005], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 2, 'max_weight': 0.031, 'sum_weight': 0.0506, 'centroid_blender': [-0.208, -0.149, 0.009], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 1, 'max_weight': 0.0051, 'sum_weight': 0.0051, 'centroid_blender': [0.163, -0.077, 0.418], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 1, 'max_weight': 0.0458, 'sum_weight': 0.0458, 'centroid_blender': [-0.15, -0.167, 0.006], 'main_component_size': 421}
+[build    0.6s]    island {'stage': 'source_weights', 'bone': 'RightLeg', 'size': 1, 'max_weight': 0.0165, 'sum_weight': 0.0165, 'centroid_blender': [-0.211, -0.162, 0.017], 'main_component_size': 421}
+[build    0.7s] twist LeftArmTwist: 488 verts, weight sum 110.22; parent LeftArm keeps 333 verts
+[build    0.7s] twist LeftForeArmTwist: 228 verts, weight sum 124.69; parent LeftForeArm keeps 339 verts
+[build    0.7s] twist LeftUpLegTwist: 442 verts, weight sum 115.16; parent LeftUpLeg keeps 441 verts
+[build    0.7s] twist LeftLegTwist: 245 verts, weight sum 110.04; parent LeftLeg keeps 383 verts
+[build    0.7s] twist RightArmTwist: 488 verts, weight sum 111.35; parent RightArm keeps 340 verts
+[build    0.7s] twist RightForeArmTwist: 228 verts, weight sum 128.09; parent RightForeArm keeps 338 verts
+[build    0.7s] twist RightUpLegTwist: 441 verts, weight sum 114.82; parent RightUpLeg keeps 441 verts
+[build    0.7s] twist RightLegTwist: 241 verts, weight sum 108.25; parent RightLeg keeps 383 verts
+[build    0.7s] [after_twist_split] weight islands removed: 0 entries; total weight removed 0.000
+Info: 53 vertex weights limited
+[build    0.8s] vertices with > 4 influences before limiting: 53 (max dropped weight 0.0582)
+[build    0.8s] [after_influence_limit] weight islands removed: 1 entries; total weight removed 0.007
+[build    0.8s]    island {'stage': 'after_influence_limit', 'bone': 'RightArm', 'size': 5, 'max_weight': 0.0032, 'sum_weight': 0.0074, 'centroid_blender': [-0.162, -0.015, 1.212], 'main_component_size': 319}
+[build    1.0s] final weights: sums [1.000000, 1.000000], influences {1: 5667, 2: 5313, 3: 1967, 4: 433}, hard steps 18 {'RightArm': 1, 'RightFoot': 2, 'RightForeArm': 2, 'RightForeArmTwist': 1, 'RightHandIndex1': 1, 'LeftHand': 2, 'LeftArm': 1, 'LeftHandRing1': 1, 'LeftForeArm': 2, 'LeftForeArmTwist': 1, 'RightHand': 2, 'RightUpLeg': 1, 'LeftHandIndex1': 1}
+[build    1.0s] shading: {'smooth_polys': 13378, 'polys': 13378, 'sharp_edges': 0, 'custom_normals': False}
+[build    1.0s] grounding shift: [0.00057, 0.0, 7e-05]
+[build    1.0s] final mesh: {'vertices': 13380, 'polygons': 13378, 'triangles': 26756, 'quads': 13378, 'tris': 0, 'ngons': 0, 'bbox_blender': {'x': [-0.7774, 0.7774], 'y': [-0.2026, 0.0926], 'z': [0.0, 1.6202]}, 'height_m': 1.6202, 'vertex_groups': 73, 'materials': ['DollSkin'], 'uv_layers': ['UVMap']} | bones: 73
+INFO Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 4.3\4.3\python\lib\site-packages\extern_draco.dll
+00:03:04 | INFO: Starting glTF 2.0 export
+00:03:04 | INFO: Extracting primitive: Body
+00:03:04 | INFO: Primitives created: 1
+00:03:04 | INFO: Finished glTF 2.0 export in 0.10444259643554688 s
+
+[build    1.3s] exported C:\dev\scene-doll\doll-src\makehuman\out\mh2_female.glb 940324 bytes
+Info: Saved "mh2_female_debug.blend"
+[build    1.3s] saved debug blend C:/dev/scene-doll/doll-src/makehuman/logs/mh2_female_debug.blend
+[build    1.3s] wrote C:/dev/scene-doll/doll-src/makehuman/logs/build2_female.json
+[build    1.3s] DONE
+Blender 4.3.2 (hash 32f5fdce0a0a built 2024-12-17 03:35:23)
+OBJ import of 'base.obj' took 9.10 ms
+
+Blender quit
