@@ -93,13 +93,14 @@ export interface RestTransform {
   length: number;
 }
 
+/** 돌 하나의 뼈대 정보. 코드 마네킹과 GLB 돌이 같은 구조를 쓴다 */
 export interface BuiltSkeleton {
   root: Bone;
   bones: Map<string, Bone>;
   rest: Map<string, RestTransform>;
   /** 부모 → 자식 순서 */
   order: string[];
-  specs: Map<string, BoneSpec>;
+  parents: Map<string, string | null>;
 }
 
 /** 로컬 +Y = dir, 로컬 +Z = hint에서 dir 성분을 뺀 것 */
@@ -123,6 +124,7 @@ export function buildSkeleton(specList: BoneSpec[]): BuiltSkeleton {
   const specs = new Map(specList.map((s) => [s.name, s]));
   const rest = new Map<string, RestTransform>();
   const bones = new Map<string, Bone>();
+  const parents = new Map<string, string | null>();
   const order: string[] = [];
 
   const dirOf = (s: BoneSpec): Vector3 => {
@@ -134,7 +136,6 @@ export function buildSkeleton(specList: BoneSpec[]): BuiltSkeleton {
     return new Vector3(0, 1, 0);
   };
 
-  // 부모가 먼저 오도록 정렬(입력이 이미 그 순서지만 안전하게)
   const pending = [...specList];
   while (pending.length) {
     const i = pending.findIndex((s) => s.parent === null || rest.has(s.parent));
@@ -160,12 +161,54 @@ export function buildSkeleton(specList: BoneSpec[]): BuiltSkeleton {
       bone.quaternion.copy(quat);
     }
     bones.set(s.name, bone);
+    parents.set(s.name, s.parent);
     order.push(s.name);
   }
 
   const root = bones.get(order[0])!;
   root.updateMatrixWorld(true);
-  return { root, bones, rest, order, specs };
+  return { root, bones, rest, order, parents };
+}
+
+/** GLB 뼈 이름을 표준 이름으로: 매핑표 → mixamorig 접두어 제거 */
+export function normalizeBoneName(name: string, boneMap: Record<string, string>): string {
+  if (boneMap[name]) return boneMap[name];
+  return name.replace(/^mixamorig[:_]?/i, '');
+}
+
+/**
+ * 이미 있는 Bone 계층(GLB에서 불러온 것)에서 뼈대 정보를 뽑는다.
+ * 휴식 자세는 지금의 자세로 보고, 돌 공간은 루트 뼈의 부모(아마추어) 기준이다.
+ */
+export function skeletonFromHierarchy(rootBone: Bone, boneMap: Record<string, string> = {}): BuiltSkeleton {
+  const bones = new Map<string, Bone>();
+  const rest = new Map<string, RestTransform>();
+  const parents = new Map<string, string | null>();
+  const order: string[] = [];
+  rootBone.updateWorldMatrix(true, true);
+  const baseInv = rootBone.parent ? rootBone.parent.matrixWorld.clone().invert() : new Matrix4();
+  const scale = new Vector3();
+
+  const visit = (b: Bone, parentName: string | null) => {
+    b.name = normalizeBoneName(b.name, boneMap);
+    const m = baseInv.clone().multiply(b.matrixWorld);
+    const pos = new Vector3();
+    const quat = new Quaternion();
+    m.decompose(pos, quat, scale);
+    const childBone = b.children.find((c) => (c as Bone).isBone) as Bone | undefined;
+    let length = 0;
+    if (childBone) {
+      const cm = baseInv.clone().multiply(childBone.matrixWorld);
+      length = new Vector3().setFromMatrixPosition(cm).distanceTo(pos);
+    }
+    bones.set(b.name, b);
+    rest.set(b.name, { pos, quat, length });
+    parents.set(b.name, parentName);
+    order.push(b.name);
+    for (const c of b.children) if ((c as Bone).isBone) visit(c as Bone, b.name);
+  };
+  visit(rootBone, null);
+  return { root: rootBone, bones, rest, order, parents };
 }
 
 /** IK 끝점과 그 2-뼈 사슬(위 뼈, 아래 뼈, 끝 뼈). pole은 곧게 펴진 상태에서 팔꿈치/무릎이 향할 방향(돌 공간) */
@@ -193,3 +236,13 @@ export const BONE_LABELS: Record<string, string> = {
   LeftUpLeg: '왼다리 위', LeftLeg: '왼다리 아래', LeftFoot: '왼발', LeftToeBase: '왼발 앞', LeftToe_End: '왼발 끝',
   RightUpLeg: '오른다리 위', RightLeg: '오른다리 아래', RightFoot: '오른발', RightToeBase: '오른발 앞', RightToe_End: '오른발 끝',
 };
+
+const FINGER_LABELS: Record<string, string> = { Thumb: '엄지', Index: '검지', Middle: '중지', Ring: '약지', Pinky: '소지' };
+
+/** 손가락 뼈 등 표에 없는 이름도 읽을 수 있게 */
+export function boneLabel(name: string): string {
+  if (BONE_LABELS[name]) return BONE_LABELS[name];
+  const m = /^(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)(\d)$/.exec(name);
+  if (m) return `${m[1] === 'Left' ? '왼손' : '오른손'} ${FINGER_LABELS[m[2]]} ${m[3]}마디`;
+  return name;
+}

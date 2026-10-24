@@ -1,8 +1,8 @@
 import { Color, MeshBasicMaterial, Plane, Quaternion, Raycaster, Vector2, Vector3, type Intersection, type Object3D } from 'three';
 import type { Engine } from './Engine';
-import type { DollHandle, DollPart, DollRig } from './DollRig';
+import type { DollHandle, DollRig } from './DollRig';
 import { HANDLE_ACTIVE_COLOR, HANDLE_COLOR, HANDLE_HOVER_COLOR } from './materials';
-import { BONE_LABELS, IK_CHAINS } from './skeleton';
+import { boneLabel, IK_CHAINS } from './skeleton';
 import { rotateObjectWorld } from './three-utils';
 
 type DragState =
@@ -91,16 +91,20 @@ export class Interaction {
     return best;
   }
 
-  private pickPart(e: PointerEvent): { rig: DollRig; part: DollPart; point: Vector3 } | null {
+  private pickPart(e: PointerEvent): { rig: DollRig; bone: string; point: Vector3 } | null {
     this.setRay(e);
     const targets: Object3D[] = [];
-    for (const rig of this.engine.dolls.values()) targets.push(...rig.parts);
+    for (const rig of this.engine.dolls.values()) targets.push(...rig.pickTargets);
     const hits: Intersection[] = _ray.intersectObjects(targets, false);
-    if (!hits.length) return null;
-    const part = hits[0].object as DollPart;
-    const rig = this.engine.dolls.get(part.userData.dollId);
-    if (!rig) return null;
-    return { rig, part, point: hits[0].point.clone() };
+    for (const hit of hits) {
+      const dollId = (hit.object.userData as { dollId?: string }).dollId;
+      const rig = dollId ? this.engine.dolls.get(dollId) : undefined;
+      if (!rig) continue;
+      const bone = rig.boneFromHit(hit);
+      if (!bone) continue;
+      return { rig, bone, point: hit.point.clone() };
+    }
+    return null;
   }
 
   private rayOnPlane(e: PointerEvent, plane: Plane): Vector3 | null {
@@ -139,9 +143,8 @@ export class Interaction {
 
     const hit = this.pickPart(e);
     if (hit) {
-      const bone = hit.part.userData.bone;
-      this.engine.callbacks.select({ dollId: hit.rig.id, bone });
-      this.state = { kind: 'pending', rig: hit.rig, bone, point: hit.point, x: e.clientX, y: e.clientY, alt: e.altKey };
+      this.engine.callbacks.select({ dollId: hit.rig.id, bone: hit.bone });
+      this.state = { kind: 'pending', rig: hit.rig, bone: hit.bone, point: hit.point, x: e.clientX, y: e.clientY, alt: e.altKey };
       this.capture(e);
       return;
     }
@@ -261,15 +264,14 @@ export class Interaction {
     }
     if (handle) {
       this.el.style.cursor = 'grab';
-      const label = BONE_LABELS[IK_CHAINS[handle.userData.effector].end] ?? handle.userData.effector;
+      const label = boneLabel(IK_CHAINS[handle.userData.effector].end);
       this.engine.callbacks.hint(`${label} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
       return;
     }
     const hit = this.pickPart(e);
     if (hit) {
       this.el.style.cursor = 'grab';
-      const label = BONE_LABELS[hit.part.userData.bone] ?? hit.part.userData.bone;
-      this.engine.callbacks.hint(`${label} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · E: 회전 링`);
+      this.engine.callbacks.hint(`${boneLabel(hit.bone)} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · E: 회전 링`);
       return;
     }
     this.el.style.cursor = '';

@@ -61,12 +61,16 @@ function DollTab() {
   const [heights, setHeights] = useState<Record<string, number>>(() => Object.fromEntries(DOLL_ASSETS.map((d) => [d.id, d.baseHeightCm])));
   return (
     <>
-      <div className="muted small">내장 돌. 키(cm)를 정하고 추가하면 조작뷰 가운데에 놓입니다. 추가할 때마다 구분색이 자동 배정됩니다.</div>
+      <div className="muted small">
+        내장 돌. 키(cm)를 정하고 추가하면 조작뷰 가운데에 놓입니다. 추가할 때마다 구분색이 자동 배정됩니다. 마네킹은 코드로 만든 캡슐 돌, MakeHuman은 실제 인체 메시(CC0)입니다. 둘 다 같은 뼈대라 포즈가 호환됩니다.
+      </div>
       {DOLL_ASSETS.map((d) => (
         <div key={d.id} className="card">
           <div className="row">
             <b className="grow">{d.name}</b>
-            <span className="muted small">{d.gender === 'male' ? '남' : '여'} · 기준 {d.baseHeightCm}cm</span>
+            <span className="muted small">
+              {d.gender === 'male' ? '남' : '여'} · 기준 {d.baseHeightCm}cm{d.glbPath ? ' · GLB' : ''}
+            </span>
           </div>
           <div className="row">
             <label className="field">
@@ -75,7 +79,7 @@ function DollTab() {
               cm
             </label>
             <span className="grow" />
-            <button className="primary" onClick={() => addDoll(d.gender, Math.max(50, Math.min(250, heights[d.id] || d.baseHeightCm)))}>
+            <button className="primary" onClick={() => addDoll(d.id, Math.max(50, Math.min(250, heights[d.id] || d.baseHeightCm)))}>
               + 조작뷰에 추가
             </button>
           </div>
@@ -124,7 +128,7 @@ function SceneDolls() {
               </button>
             </div>
             <div className="row small">
-              <span className="muted">{chr?.info.gender === 'female' ? '여' : '남'}</span>
+              <span className="muted">{DOLL_ASSETS.find((a) => a.id === d.dollId)?.name ?? d.dollId}</span>
               <label className="field">
                 키
                 <input className="h" type="number" min={50} max={250} value={d.heightCm} onChange={(e) => setDollHeight(d.id, Number(e.target.value))} onClick={(e) => e.stopPropagation()} />

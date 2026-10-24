@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Character, Cut, DollInstance, Episode, Gender, Work } from '../model/types';
-import { createCut, createEpisode, createTemporaryCharacter, createWork, defaultDollFor, nowIso, pickColor } from '../model/defaults';
+import type { Character, Cut, DollInstance, Episode, Work } from '../model/types';
+import { createCut, createEpisode, createTemporaryCharacter, createWork, dollAsset, nowIso, pickColor } from '../model/defaults';
 import { newId } from '../model/ids';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
 
@@ -42,7 +42,8 @@ export interface StoreState extends Document {
   redo: () => void;
   select: (sel: Selection) => void;
   setMode: (mode: ToolMode) => void;
-  addDoll: (gender: Gender, heightCm: number) => string;
+  /** 내장 돌(dollId)을 현재 컷에 추가하고 임시 캐릭터를 등록한다 */
+  addDoll: (dollId: string, heightCm: number) => string;
   removeDoll: (id: string) => void;
   /** 돌 복제. offsetX=0이면 같은 자리에 붙여넣기 */
   duplicateDoll: (id: string, offsetX?: number) => string | null;
@@ -134,19 +135,20 @@ export const useStore = create<StoreState>()(
 
     setMode: (mode) => set({ mode }),
 
-    addDoll: (gender, heightCm) => {
+    addDoll: (dollId, heightCm) => {
       const s = get();
       const cut = s.currentCut();
       const used = s.characters.map((c) => c.color);
       const color = pickColor(used);
-      const character = createTemporaryCharacter(s.work.code, gender, heightCm, color, s.characters.length + 1);
+      const asset = dollAsset(dollId);
+      const character = createTemporaryCharacter(s.work.code, asset.id, heightCm, color, s.characters.length + 1);
       const id = newId('doll');
       // 새 돌은 기존 돌과 겹치지 않게 옆으로 비켜 놓는다
       const offsetX = cut.dolls.length === 0 ? 0 : (cut.dolls.length % 2 === 1 ? 1 : -1) * Math.ceil(cut.dolls.length / 2) * 0.7;
       const inst: DollInstance = {
         id,
         characterId: character.id,
-        dollId: defaultDollFor(gender).id,
+        dollId: asset.id,
         heightCm,
         color,
         position: [offsetX, 0, 0],
@@ -173,15 +175,8 @@ export const useStore = create<StoreState>()(
       const s = get();
       const src = s.currentCut().dolls.find((d) => d.id === id);
       if (!src) return null;
-      const srcChar = s.characters.find((c) => c.id === src.characterId);
       const color = pickColor(s.characters.map((c) => c.color));
-      const character = createTemporaryCharacter(
-        s.work.code,
-        srcChar?.info.gender === 'female' ? 'female' : 'male',
-        src.heightCm,
-        color,
-        s.characters.length + 1,
-      );
+      const character = createTemporaryCharacter(s.work.code, src.dollId, src.heightCm, color, s.characters.length + 1);
       const newId_ = newId('doll');
       const copy: DollInstance = structuredClone(src);
       copy.id = newId_;

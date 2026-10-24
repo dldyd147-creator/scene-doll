@@ -31,10 +31,12 @@ export function pickColor(used: string[]): string {
   return (free ?? CHARACTER_COLORS[used.length % CHARACTER_COLORS.length]).hex;
 }
 
-/** 내장 돌 목록. 1단계: 코드 마네킹 남·여 2종 */
+/** 내장 돌 목록. 코드 마네킹 남·여 + MakeHuman(CC0) 남·여 */
 export const DOLL_ASSETS: DollAsset[] = [
   { id: 'mannequin_m', name: '마네킹 남', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: null, boneMap: {} },
   { id: 'mannequin_f', name: '마네킹 여', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: null, boneMap: {} },
+  { id: 'mh_m', name: 'MakeHuman 남', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: 'dolls/mh_male.glb', boneMap: {} },
+  { id: 'mh_f', name: 'MakeHuman 여', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: 'dolls/mh_female.glb', boneMap: {} },
 ];
 
 export function dollAsset(id: string): DollAsset {
@@ -83,16 +85,17 @@ export function createCut(number: number): Cut {
   };
 }
 
-export function createTemporaryCharacter(workCode: string, gender: Gender, heightCm: number, color: string, index: number): Character {
+export function createTemporaryCharacter(workCode: string, dollId: string, heightCm: number, color: string, index: number): Character {
+  const asset = dollAsset(dollId);
   return {
     id: newId('chr'),
     workCode,
     name: `임시${index}`,
     color,
-    info: { gender },
+    info: { gender: asset.gender },
     appearanceTags: [],
     heightCm,
-    dollId: defaultDollFor(gender).id,
+    dollId: asset.id,
     referenceImages: [],
     temporary: true,
   };

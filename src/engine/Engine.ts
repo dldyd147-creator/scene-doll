@@ -16,11 +16,12 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import type { Cut } from '../model/types';
+import type { Cut, DollAsset } from '../model/types';
 import { dollAsset } from '../model/defaults';
 import type { Selection, ToolMode } from '../state/store';
 import { DEFAULT_SETTINGS, type Settings } from '../state/settings';
-import { DollRig } from './DollRig';
+import type { DollRig } from './DollRig';
+import { createDollRig, loadDollTemplate } from './dollTemplates';
 import { ManuscriptCamera } from './ManuscriptCamera';
 import { KEY_LIGHT_INTENSITY, LAYER_HELPERS } from './materials';
 import { IK_CHAINS } from './skeleton';
@@ -67,6 +68,7 @@ export class Engine {
 
   private views: Record<ViewKind, HTMLElement | null> = { work: null, manuscript: null };
   private dollKeys = new Map<string, string>();
+  private loadingTemplates = new Set<string>();
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
   private gizmoTarget: 'bone' | 'root' | 'ik' | null = null;
@@ -224,7 +226,14 @@ export class Engine {
       seen.add(inst.id);
       let rig = this.dolls.get(inst.id);
       if (!rig) {
-        rig = new DollRig(inst.id, dollAsset(inst.dollId).gender, inst.color, inst.heightCm);
+        const asset = dollAsset(inst.dollId);
+        const created = createDollRig(inst.id, asset, inst.color, inst.heightCm);
+        if (!created) {
+          // GLB 템플릿을 아직 안 불러왔다: 불러온 뒤 다시 반영
+          this.ensureTemplate(asset);
+          continue;
+        }
+        rig = created;
         rig.setHandleRadius(0.022 * this.settings.handleSize);
         this.scene.add(rig.root, rig.helpers);
         this.dolls.set(inst.id, rig);
@@ -251,6 +260,20 @@ export class Engine {
     this.updateGizmo();
   }
 
+  private ensureTemplate(asset: DollAsset): void {
+    if (this.loadingTemplates.has(asset.id)) return;
+    this.loadingTemplates.add(asset.id);
+    loadDollTemplate(asset)
+      .then(() => {
+        this.loadingTemplates.delete(asset.id);
+        if (!this.disposed && this.cut) this.applyCut(this.cut);
+      })
+      .catch((e: unknown) => {
+        this.loadingTemplates.delete(asset.id);
+        this.callbacks.hint(`돌을 불러오지 못했습니다: ${asset.name} (${e instanceof Error ? e.message : String(e)})`);
+      });
+  }
+
   applySettings(s: Settings): void {
     this.settings = s;
     if (this.orbit) {
@@ -263,7 +286,8 @@ export class Engine {
           ? { LEFT: null, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.ROTATE }
           : { LEFT: null, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN };
     }
-    this.gizmo?.setSize(s.gizmoSize);
+    // 관절 링이 돌을 다 덮지 않도록 기본은 three.js 기본 크기의 60%
+    this.gizmo?.setSize(0.6 * s.gizmoSize);
     for (const rig of this.dolls.values()) rig.setHandleRadius(0.022 * s.handleSize);
     this.grid.visible = s.showGrid;
     this.manu.setFrustumVisible(s.showFrustum);
