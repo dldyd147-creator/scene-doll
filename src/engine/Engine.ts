@@ -87,7 +87,6 @@ export class Engine {
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
   private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | null = null;
-  private plantedFeet: Map<string, Vector3> | null = null;
   private disposed = false;
 
   constructor(readonly callbacks: EngineCallbacks) {
@@ -485,9 +484,8 @@ export class Engine {
     }
   }
 
-  /** 발 고정이 켜져 있으면(force면 항상) 지금 발 위치를 기억한다(돌 이동·골반 끌기 전에) */
-  capturePlantedFeet(rig: DollRig, force = false): Map<string, Vector3> | null {
-    if (!this.settings.plantFeet && !force) return null;
+  /** 지금 발 위치를 기억한다(골반 끌기 전에) */
+  capturePlantedFeet(rig: DollRig): Map<string, Vector3> {
     const feet = new Map<string, Vector3>();
     for (const eff of ['LeftFoot', 'RightFoot']) if (rig.skel.bones.has(eff)) feet.set(eff, rig.worldPos(eff));
     return feet;
@@ -509,17 +507,14 @@ export class Engine {
     return worst;
   }
 
-  private onGizmoStart(): void {
-    const rig = this.selectedRig();
-    this.plantedFeet = rig && this.gizmoTarget === 'root' ? this.capturePlantedFeet(rig) : null;
-  }
+  private onGizmoStart(): void {}
 
   private onGizmoChange(): void {
     const rig = this.selectedRig();
     if (this.gizmoTarget === 'ik') {
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
     } else if (this.gizmoTarget === 'root' && rig) {
-      this.keepFeet(rig, this.plantedFeet);
+      // 돌 전체 이동·회전은 자세를 건드리지 않는다. 바닥 아래로만 안 내려가게
       this.enforceFloor(rig);
     } else if (this.gizmoTarget === 'bone' && rig && this.selection.bone) {
       this.clampAfterChange(rig, [this.selection.bone]);
@@ -530,7 +525,6 @@ export class Engine {
   }
 
   private onGizmoEnd(): void {
-    this.plantedFeet = null;
     if (this.gizmoTarget === 'camera') {
       this.commitCamera();
       return;
@@ -702,6 +696,20 @@ export class Engine {
     if (!rig) return;
     rig.resetAll();
     this.commitDoll(rig.id);
+  }
+
+  /** 선택한 돌 초기화: 전체(위치·회전·자세) 또는 하나만. 위치는 원점, 회전은 정면, 자세는 T포즈 */
+  resetSelectedDoll(what: 'all' | 'position' | 'rotation' | 'pose' = 'all'): void {
+    const rig = this.selectedRig();
+    if (!rig) return;
+    if (what === 'all' || what === 'pose') rig.resetAll();
+    if (what === 'all' || what === 'rotation') rig.root.quaternion.identity();
+    if (what === 'all' || what === 'position') rig.root.position.set(0, 0, 0);
+    rig.root.updateMatrixWorld(true);
+    this.enforceFloor(rig);
+    this.commitDoll(rig.id);
+    const label = { all: '위치·회전·자세를 모두', position: '위치를 원점으로', rotation: '회전을 정면으로', pose: '자세를 T포즈로' }[what];
+    this.callbacks.hint(`돌 ${label} 초기화했습니다`);
   }
 
   snapSelectedToGround(): void {

@@ -38,9 +38,6 @@ interface ModalState {
   startQuat: Quaternion;
   /** 이동용: 시작 시 바닥 평면 위의 포인터 점 */
   startHit: Vector3 | null;
-  feet: Map<string, Vector3> | null;
-  /** 돌 저장 상태(취소 복구용) */
-  snapshot: { position: Vector3; quaternion: Quaternion; joints: ReturnType<DollRig['getJoints']> } | null;
 }
 
 const DRAG_THRESHOLD_PX = 3;
@@ -168,7 +165,8 @@ export class Interaction {
       for (const bone of selected.jointDotBones) {
         const pos = selected.worldPos(bone);
         const d = this.screenDist(e, pos);
-        if (d < bd && !this.occluded(pos, 0.1 * s, targets)) {
+        // 몸통 제어점은 가려져도 보이고 잡힌다
+        if (d < bd && (selected.isTorsoDot(bone) || !this.occluded(pos, 0.1 * s, targets))) {
           bd = d;
           best = { kind: 'joint', rig: selected, bone, pos };
         }
@@ -224,7 +222,7 @@ export class Interaction {
       plane: this.viewPlaneAt(point),
       startHit: point,
       startPos: rig.root.position.clone(),
-      feet: this.engine.capturePlantedFeet(rig, true) ?? new Map(),
+      feet: this.engine.capturePlantedFeet(rig),
       joints: rig.getJoints(),
       moved: false,
     };
@@ -449,8 +447,6 @@ export class Interaction {
       startPos: obj.position.clone(),
       startQuat: obj.quaternion.clone(),
       startHit,
-      feet: rig ? this.engine.capturePlantedFeet(rig) : null,
-      snapshot: rig ? { position: rig.root.position.clone(), quaternion: rig.root.quaternion.clone(), joints: rig.getJoints() } : null,
     };
     if (this.engine.orbit) this.engine.orbit.enabled = false;
     window.addEventListener('pointermove', this.onModalMove);
@@ -560,15 +556,8 @@ export class Interaction {
       obj.rotateOnWorldAxis(axis, angle);
       obj.updateMatrixWorld(true);
     }
-    if (!('camera' in m.target)) {
-      const rig = m.target.rig;
-      // 발 고정이 켜져 있으면 다리를 다시 풀고, 바닥 아래로는 내려가지 않게
-      if (m.feet) {
-        rig.setJoints(m.snapshot!.joints);
-        this.engine.keepFeet(rig, m.feet);
-      }
-      this.engine.enforceFloor(rig);
-    }
+    // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다
+    if (!('camera' in m.target)) this.engine.enforceFloor(m.target.rig);
   }
 
   private endModal(): void {
@@ -597,7 +586,6 @@ export class Interaction {
     const obj = this.modalObject();
     obj.position.copy(m.startPos);
     obj.quaternion.copy(m.startQuat);
-    if (!('camera' in m.target) && m.snapshot) m.target.rig.setJoints(m.snapshot.joints);
     obj.updateMatrixWorld(true);
     this.endModal();
   }

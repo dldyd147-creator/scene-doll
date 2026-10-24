@@ -61,6 +61,9 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedJoint(true)} title={selection.bone ? '선택한 관절과 그 아래 초기화' : '모든 관절 초기화(T포즈)'}>
             <Icon name="reset" />
           </button>
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedDoll('all')} title="돌 전체 초기화: 위치 원점·회전 정면·자세 T포즈 (Alt+G: 위치만, Alt+R: 회전만)">
+            <Icon name="resetAll" />
+          </button>
           <button className="icon" disabled={!hasDoll} onClick={() => engine.fixJoints()} title="관절을 사람 관절 한계 안으로 교정">
             <Icon name="fix" />
           </button>
@@ -109,9 +112,6 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className={`icon ${settings.shoulderLink ? 'active' : ''}`} onClick={() => updateSettings({ shoulderLink: !settings.shoulderLink })} title="어깨 연동: 손을 끌 때 쇄골이 조금 따라옴">
             <Icon name="shoulder" />
           </button>
-          <button className={`icon ${settings.plantFeet ? 'active' : ''}`} onClick={() => updateSettings({ plantFeet: !settings.plantFeet })} title="발 고정: 돌을 옮기거나 골반을 돌릴 때 발이 제자리(다리 IK)">
-            <Icon name="feet" />
-          </button>
           <button className={`icon ${settings.lockEndOrientation ? 'active' : ''}`} onClick={() => updateSettings({ lockEndOrientation: !settings.lockEndOrientation })} title="손·발 방향 고정: IK로 끌 때 손·발 방향 유지">
             <Icon name="wrist" />
           </button>
@@ -119,7 +119,7 @@ export function WorkView({ engine }: { engine: Engine }) {
       </div>
       {settings.showHints && (
         <div className="work-hints">
-          G: 돌 이동 · R: 돌 회전(X/Y/Z 축 고정, Z가 위아래) · 골반 드래그: 발 고정 몸통 이동(앉기) · 부위 드래그: 관절 회전 · 관절점 드래그: 관절 이동 · 손발 핸들: IK · Alt+부위: 비틀기
+          G: 돌 이동 · R: 돌 회전(X/Y/Z 축 고정, Z가 위아래. 자세는 그대로) · 골반 드래그: 발 고정 몸통 이동(앉기) · 부위 드래그: 관절 회전 · 관절점 드래그: 관절 이동 · 손발 핸들: IK · Alt+부위: 비틀기 · Alt+G/Alt+R: 위치/회전 초기화
           <br />
           {settings.orbitMode === 'designdoll' ? '우클릭 드래그: 시점 회전 · 휠 드래그: 팬' : '휠 드래그: 시점 회전 · Shift+휠 드래그: 팬 · 우클릭 드래그: 팬'} · 휠: 줌 · Ctrl+Z/Y: 되돌리기/다시
         </div>

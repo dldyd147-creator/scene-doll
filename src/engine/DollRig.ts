@@ -35,6 +35,9 @@ const JOINT_DOT_BONES = [
   'RightToeBase',
 ];
 
+/** 몸통 제어점: 몸에 가려져도 항상 보이고 잡힌다(팔다리 점은 가려지면 숨는다) */
+export const TORSO_DOT_BONES = new Set(['Head', 'Neck', 'Spine2', 'Spine1', 'Spine', 'Hips']);
+
 /** 관절이 몸 안에 있으므로 제어점을 카메라 쪽으로 당길 거리(키 175cm 기준 m). 몸 두께의 절반 정도 */
 const MARKER_PULL: Record<string, number> = {
   Head: 0.11,
@@ -91,9 +94,13 @@ export abstract class DollRig {
   readonly drivenBones: string[];
   /** 관절점을 찍는 뼈(이 뼈대에 있는 것만) */
   readonly jointDotBones: string[];
+  /** 그중 팔다리 점(가려지면 숨음)과 몸통 점(항상 보임) */
+  private readonly limbDotBones: string[];
+  private readonly torsoDotBones: string[];
   readonly effectors: string[];
   private ikMarkers: MarkerPoints;
   private jointMarkers: MarkerPoints;
+  private torsoMarkers: MarkerPoints;
   private selectedMarker: MarkerPoints;
   private markerScale = 1;
 
@@ -132,17 +139,22 @@ export abstract class DollRig {
     this.hiMat = mats.hi;
     this.drivenBones = skel.order.filter((n) => isDrivenBone(n) && skel.bones.has(drivenParent(n)));
     this.jointDotBones = JOINT_DOT_BONES.filter((n) => skel.bones.has(n));
+    this.limbDotBones = this.jointDotBones.filter((n) => !TORSO_DOT_BONES.has(n));
+    this.torsoDotBones = this.jointDotBones.filter((n) => TORSO_DOT_BONES.has(n));
     this.effectors = EFFECTOR_NAMES.filter((n) => skel.bones.has(IK_CHAINS[n].end));
 
     this.ikMarkers = new MarkerPoints(Math.max(1, this.effectors.length), 15, circleTexture(), 22);
-    this.jointMarkers = new MarkerPoints(Math.max(1, this.jointDotBones.length), 8, circleTexture(), 20);
+    this.jointMarkers = new MarkerPoints(Math.max(1, this.limbDotBones.length), 8, circleTexture(), 20);
+    this.torsoMarkers = new MarkerPoints(Math.max(1, this.torsoDotBones.length), 8, circleTexture(), 21, false);
     this.selectedMarker = new MarkerPoints(1, 20, ringTexture(), 23);
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, HANDLE_COLOR);
-    for (let i = 0; i < this.jointDotBones.length; i++) this.jointMarkers.setColor(i, JOINT_COLOR);
+    for (let i = 0; i < this.limbDotBones.length; i++) this.jointMarkers.setColor(i, JOINT_COLOR);
+    for (let i = 0; i < this.torsoDotBones.length; i++) this.torsoMarkers.setColor(i, JOINT_COLOR);
     this.selectedMarker.setColor(0, SELECTED_JOINT_COLOR);
     this.jointMarkers.points.visible = false;
+    this.torsoMarkers.points.visible = false;
     this.selectedMarker.points.visible = false;
-    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.selectedMarker.points);
+    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.selectedMarker.points);
 
     this.groundRing = new Mesh(
       new RingGeometry(0.24, 0.27, 48),
@@ -204,6 +216,7 @@ export abstract class DollRig {
     this.markerScale = mult;
     this.ikMarkers.setSize(15 * mult);
     this.jointMarkers.setSize(8 * mult);
+    this.torsoMarkers.setSize(8 * mult);
     this.selectedMarker.setSize(20 * mult);
   }
 
@@ -222,6 +235,7 @@ export abstract class DollRig {
     this.selected = on;
     this.groundRing.visible = on;
     this.jointMarkers.points.visible = on;
+    this.torsoMarkers.points.visible = on;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
 
@@ -536,10 +550,18 @@ export abstract class DollRig {
       marker.setPosition(i, _v.x, _v.y, _v.z);
     };
     this.effectors.forEach((name, i) => place(this.ikMarkers, i, IK_CHAINS[name].end));
-    if (this.selected) this.jointDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
+    if (this.selected) {
+      this.limbDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
+      this.torsoDotBones.forEach((name, i) => place(this.torsoMarkers, i, name));
+    }
     if (this.highlighted && this.skel.bones.has(this.highlighted)) place(this.selectedMarker, 0, this.highlighted);
     this.groundRing.position.set(this.root.position.x, 0.003, this.root.position.z);
     this.groundRing.scale.setScalar(Math.max(0.5, s));
+  }
+
+  /** 몸통 제어점인가(가려져도 보이고 잡힌다) */
+  isTorsoDot(bone: string): boolean {
+    return TORSO_DOT_BONES.has(bone);
   }
 
   /** 바닥 링 반지름(월드) */
@@ -573,6 +595,7 @@ export abstract class DollRig {
     for (const m of this.materials) m.dispose();
     this.ikMarkers.dispose();
     this.jointMarkers.dispose();
+    this.torsoMarkers.dispose();
     this.selectedMarker.dispose();
     this.groundRing.geometry.dispose();
     (this.groundRing.material as MeshBasicMaterial).dispose();

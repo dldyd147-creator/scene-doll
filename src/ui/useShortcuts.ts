@@ -94,9 +94,21 @@ export function useShortcuts(engine: Engine): void {
       switch (key) {
         case 'g':
         case 'm':
+          if (e.altKey) {
+            // Alt+G: 위치 초기화(블렌더식)
+            e.preventDefault();
+            engine.resetSelectedDoll('position');
+            return;
+          }
           if (engine.interaction?.startModal('move')) e.preventDefault();
           return;
         case 'r':
+          if (e.altKey) {
+            // Alt+R: 회전 초기화(블렌더식)
+            e.preventDefault();
+            engine.resetSelectedDoll('rotation');
+            return;
+          }
           if (engine.interaction?.startModal('rotate')) e.preventDefault();
           return;
         case 'q':
