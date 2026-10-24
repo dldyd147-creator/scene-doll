@@ -16,7 +16,11 @@ export function useEngine(): Engine {
 
   useEffect(() => {
     engine.mount();
-    if (import.meta.env.DEV) (window as unknown as { __sceneDoll: unknown }).__sceneDoll = { engine, store: useStore };
+    if (import.meta.env.DEV) {
+      void import('../storage').then((m) => {
+        (window as unknown as { __sceneDoll: unknown }).__sceneDoll = { engine, store: useStore, storage: m.storage };
+      });
+    }
     const s = useStore.getState();
     engine.applySettings(s.settings);
     engine.applyCut(selectCurrentCut(s));
