@@ -203,7 +203,7 @@ export class Engine {
   private frame = (): void => {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.frame);
-    for (const rig of this.dolls.values()) rig.updateHelpers();
+    for (const rig of this.dolls.values()) rig.updateHelpers(this.workCamera.position);
     this.updateFrustumDistance();
     this.render();
   };
@@ -510,8 +510,10 @@ export class Engine {
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
     } else if (this.gizmoTarget === 'root' && rig) {
       this.keepFeet(rig, this.plantedFeet);
+      this.enforceFloor(rig);
     } else if (this.gizmoTarget === 'bone' && rig && this.selection.bone) {
       this.clampAfterChange(rig, [this.selection.bone]);
+      this.enforceFloor(rig);
     } else if (this.gizmoTarget === 'camera') {
       this.manu.camera.updateMatrixWorld(true);
     }
@@ -550,6 +552,13 @@ export class Engine {
     const keepEnd = opts.keepEndOrientation ?? this.settings.lockEndOrientation;
     const endWorldQ = new Quaternion();
     if (keepEnd) end.getWorldQuaternion(endWorldQ);
+    if (this.settings.floorLock) {
+      // 바닥 뚫기 금지: 발목은 발바닥 높이, 손은 손 두께만큼 바닥 위까지만
+      const s = rig.root.scale.x;
+      const ankle = (rig.skel.rest.get(chain.end)?.pos.y ?? 0) * s;
+      const floor = chain.end.endsWith('Foot') ? ankle : 0.03 * rig.unitHeight * s;
+      if (target.y < floor) target = new Vector3(target.x, floor, target.z);
+    }
 
     const useShoulder = opts.shoulder ?? this.settings.shoulderLink;
     if (useShoulder && chain.clavicle && this.settings.shoulderLinkRatio > 0) {
@@ -593,6 +602,8 @@ export class Engine {
     }
     const chainBones = [chain.clavicle, chain.upper, chain.lower, chain.end].filter((x): x is string => !!x);
     this.clampAfterChange(rig, chainBones);
+    // 발 고정(keepFeet)에서 부르는 내부 풀이(shoulder:false)는 제외하고, 사용자가 끄는 IK에서만 바닥을 지킨다
+    if (opts.shoulder !== false) this.enforceFloor(rig);
   }
 
   /** 돌 전체를 바닥 수직축으로 돌린다 */
@@ -669,7 +680,26 @@ export class Engine {
   /** 선택한 돌(없으면 전체)의 관절을 한계 안으로 교정 */
   fixJoints(): void {
     const targets = this.selectedRig() ? [this.selectedRig()!] : [...this.dolls.values()];
-    for (const rig of targets) if (rig.clampAll()) this.commitDoll(rig.id);
+    let total = 0;
+    for (const rig of targets) {
+      const n = rig.clampAll();
+      if (n) {
+        total += n;
+        this.enforceFloor(rig);
+        this.commitDoll(rig.id);
+      }
+    }
+    this.callbacks.hint(total ? `관절 ${total}개를 한계 안으로 교정했습니다` : '교정할 관절이 없습니다(모두 한계 안)');
+  }
+
+  /** 바닥 뚫기 금지: 몸의 가장 낮은 점이 바닥 아래면 돌 전체를 올린다 */
+  enforceFloor(rig: DollRig): void {
+    if (!this.settings.floorLock) return;
+    const y = rig.lowestPointY();
+    if (y < -0.002) {
+      rig.root.position.y -= y;
+      rig.root.updateMatrixWorld(true);
+    }
   }
 
   // ---------- 조작뷰 시점 ----------
@@ -759,20 +789,38 @@ export class Engine {
 
   // ---------- 원고 카메라 명령 ----------
 
-  /** 아이레벨·하이·로우 프리셋: 높이를 바꾸고 피사체를 바라본다 */
-  cameraPreset(kind: 'eye' | 'high' | 'low'): void {
+  /** 시점 기준 돌: 선택한 돌, 없으면 첫 돌 */
+  private viewpointRig(): DollRig | null {
+    return this.selectedRig() ?? this.dolls.values().next().value ?? null;
+  }
+
+  /** 아이레벨: 선택한 캐릭터의 눈높이(앉아 있으면 앉은 눈높이)에 카메라를 수평으로 놓는다 */
+  cameraEyeLevel(): void {
     if (!this.cut) return;
-    const subject = this.subjectCenter();
+    const rig = this.viewpointRig();
     const cam = this.cut.camera;
-    const scale = Math.max(0.6, subject.y / 0.9);
-    const height = kind === 'eye' ? 1.5 * scale : kind === 'high' ? 2.9 * scale : 0.45 * scale;
-    const pos = new Vector3(cam.position[0], height, cam.position[2]);
-    const horiz = Math.hypot(pos.x - subject.x, pos.z - subject.z);
-    if (horiz < 0.5) pos.z = subject.z + 3;
-    const aim = subject.clone();
-    if (kind === 'eye') aim.y = height; // 수평 유지
-    const { yaw, pitch } = lookAtAngles(pos, aim);
-    this.commitCameraState({ ...cam, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)], yaw, pitch, roll: 0 });
+    const eyeY = rig ? rig.eyeWorldPoint().y : 1.5;
+    const pos = new Vector3(cam.position[0], eyeY, cam.position[2]);
+    const subject = rig ? rig.eyeWorldPoint() : this.subjectCenter();
+    const { yaw } = lookAtAngles(pos, subject);
+    this.commitCameraState({ ...cam, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)], yaw, pitch: 0, roll: 0 });
+    this.callbacks.hint(rig ? `아이레벨: 높이 ${Math.round(eyeY * 100)}cm (${this.cut.dolls.find((d) => d.id === rig.id) ? '선택한 돌의 눈높이' : '눈높이'})` : '돌이 없어 150cm 아이레벨로 놓았습니다');
+  }
+
+  /** 시점샷(POV): 선택한 캐릭터의 두 눈 사이에서 머리가 보는 방향으로 */
+  cameraPov(): void {
+    if (!this.cut) return;
+    const rig = this.viewpointRig();
+    if (!rig) {
+      this.callbacks.hint('시점샷을 찍을 돌이 없습니다');
+      return;
+    }
+    const eye = rig.eyeWorldPoint();
+    const fwd = rig.headForward().normalize();
+    const pos = eye.clone().add(fwd.clone().multiplyScalar(0.04));
+    const { yaw, pitch } = lookAtAngles(pos, pos.clone().add(fwd));
+    this.commitCameraState({ ...this.cut.camera, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)], yaw, pitch, roll: 0 });
+    this.callbacks.hint('시점샷: 선택한 돌의 눈 위치에서 머리 방향으로 카메라를 놓았습니다');
   }
 
   /** 원고 프레임에 맞춤: 시선 방향은 두고 거리만 바꿔 대상이 들어오게 */

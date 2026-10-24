@@ -82,6 +82,7 @@ function lineParamsFor(m: BodyMeasure): LineParams {
     headZ: (m.headMin.z + m.headMax.z) / 2,
     headHalfW: (m.headMax.x - m.headMin.x) / 2,
     eyeY: m.headMin.y + 0.5 * (m.headMax.y - m.headMin.y),
+    eyeZ: m.headMax.z - 0.015,
     torsoY: [m.crotchY + 0.03, m.neckY],
   };
 }

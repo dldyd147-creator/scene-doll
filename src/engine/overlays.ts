@@ -158,7 +158,8 @@ export class MarkerPoints {
     this.posAttr.setUsage(35048); // DynamicDrawUsage
     g.setAttribute('position', this.posAttr);
     g.setAttribute('color', this.colAttr);
-    const m = new PointsMaterial({ size: sizePx, sizeAttenuation: false, map: texture, transparent: true, alphaTest: 0.2, depthTest: false, depthWrite: false, vertexColors: true });
+    // 깊이 검사를 켜서 몸 뒤에 가려진 제어점은 보이지 않게 한다(위치는 카메라 쪽으로 조금 당겨 몸 안의 관절도 앞에서는 보이게)
+    const m = new PointsMaterial({ size: sizePx, sizeAttenuation: false, map: texture, transparent: true, alphaTest: 0.2, depthTest: true, depthWrite: false, vertexColors: true });
     this.points = new Points(g, m);
     this.points.layers.set(LAYER_HELPERS);
     this.points.renderOrder = renderOrder;

@@ -21,6 +21,8 @@ export interface Settings {
   lockEndOrientation: boolean;
   /** 관절 한계: 사람 관절이 안 가는 각도로 꺾이지 않게 자동 교정 */
   jointLimits: boolean;
+  /** 바닥 뚫기 금지: 발(몸)이 바닥 아래로 내려가지 않게 */
+  floorLock: boolean;
   undoLimit: number;
   autosaveSeconds: number;
   /** 조작뷰에 원고 카메라 화각 범위 표시 */
@@ -46,6 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   plantFeet: false,
   lockEndOrientation: false,
   jointLimits: true,
+  floorLock: true,
   undoLimit: 200,
   autosaveSeconds: 60,
   showFrustum: true,

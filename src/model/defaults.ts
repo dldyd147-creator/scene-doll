@@ -83,6 +83,8 @@ export function createCut(number: number): Cut {
     desc: '',
     memo: '',
     generatedImages: [],
+    dialogue: [],
+    scriptNote: '',
     updatedAt: nowIso(),
   };
 }

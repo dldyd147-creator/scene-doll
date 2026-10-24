@@ -6,25 +6,42 @@ import { rotateObjectWorld } from './three-utils';
 
 type DragState =
   | { kind: 'idle' }
-  | { kind: 'pending'; rig: DollRig; bone: string; point: Vector3; x: number; y: number; alt: boolean; viaDot: boolean }
+  | { kind: 'pending'; rig: DollRig; bone: string; point: Vector3; x: number; y: number; alt: boolean }
   | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean }
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
   | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; moved: boolean }
-  | { kind: 'move'; rig: DollRig; plane: Plane; startHit: Vector3; startPos: Vector3; feet: Map<string, Vector3> | null; moved: boolean; viaHip: boolean }
-  | { kind: 'yaw'; rig: DollRig; center: Vector3; lastAngle: number; lastX: number; byAngle: boolean; feet: Map<string, Vector3> | null; moved: boolean }
+  | { kind: 'yaw'; rig: DollRig; lastAngle: number; feet: Map<string, Vector3> | null; moved: boolean }
   | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
 
 type Pick =
   | { kind: 'ik'; rig: DollRig; effector: string; pos: Vector3 }
-  | { kind: 'hip'; rig: DollRig; pos: Vector3 }
   | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
   | { kind: 'ring'; rig: DollRig; point: Vector3 }
   | { kind: 'camera'; point: Vector3 }
   | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
   | null;
 
+export type Axis = 'x' | 'y' | 'z' | null;
+
+/** 블렌더식 모달 변형(G 이동 / R 회전). 마우스를 움직이면 바로 따라오고 클릭·Enter로 확정, Esc·우클릭으로 취소 */
+interface ModalState {
+  kind: 'move' | 'rotate';
+  target: { rig: DollRig } | { camera: true };
+  axis: Axis;
+  startPointer: { x: number; y: number };
+  lastPointer: { x: number; y: number };
+  startPos: Vector3;
+  startQuat: Quaternion;
+  /** 이동용: 시작 시 바닥 평면 위의 포인터 점 */
+  startHit: Vector3 | null;
+  feet: Map<string, Vector3> | null;
+  /** 돌 저장 상태(취소 복구용) */
+  snapshot: { position: Vector3; quaternion: Quaternion; joints: ReturnType<DollRig['getJoints']> } | null;
+}
+
 const DRAG_THRESHOLD_PX = 3;
 const GROUND = new Plane(new Vector3(0, 1, 0), 0);
+const AXES: Record<Exclude<Axis, null>, Vector3> = { x: new Vector3(1, 0, 0), y: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1) };
 const _ray = new Raycaster();
 const _ndc = new Vector2();
 const _hit = new Vector3();
@@ -35,16 +52,18 @@ const _tmp = new Vector3();
 /**
  * 조작뷰 포인터 상호작용(디자인돌 방식).
  * - 손·발 핸들 드래그: IK로 팔·다리 전체가 따라옴
- * - 골반 핸들(사각) 또는 골반 부위 드래그: 돌 전체 이동(바닥 평면, Shift: 화면 평면). Alt+드래그: 돌 전체 회전
- * - 바닥 링 드래그: 돌 전체 회전
  * - 관절점 드래그: 그 관절이 커서를 따라가게 위 뼈를 돌림. 몸 부위 드래그: 그 관절 회전. Alt: 비틀기
+ * - 바닥 링 드래그: 돌 전체 회전
  * - 원고 카메라 아이콘 드래그: 카메라 이동
+ * - G/M: 선택 대상 이동, R: 회전(블렌더식 모달, X/Y/Z 축 고정)
  * - 빈 곳 클릭: 선택 해제. 시점 조작(휠/우클릭)은 OrbitControls가 맡는다.
  */
 export class Interaction {
   private state: DragState = { kind: 'idle' };
+  private modal: ModalState | null = null;
   private hover: Pick = null;
   private pointerId: number | null = null;
+  private lastPointer = { x: 0, y: 0 };
 
   constructor(
     private engine: Engine,
@@ -59,6 +78,7 @@ export class Interaction {
   }
 
   dispose(): void {
+    this.cancelModal();
     const el = this.el;
     el.removeEventListener('pointerdown', this.onDown);
     el.removeEventListener('pointermove', this.onMove);
@@ -71,12 +91,20 @@ export class Interaction {
     return this.state.kind !== 'idle' && this.state.kind !== 'pending';
   }
 
+  get modalActive(): boolean {
+    return this.modal !== null;
+  }
+
   // ---------- 피킹 ----------
 
-  private setRay(e: PointerEvent): void {
+  private setRayAt(clientX: number, clientY: number): void {
     const rect = this.el.getBoundingClientRect();
-    _ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    _ndc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     _ray.setFromCamera(_ndc, this.engine.workCamera);
+  }
+
+  private setRay(e: PointerEvent): void {
+    this.setRayAt(e.clientX, e.clientY);
   }
 
   /** 월드 점의 화면 픽셀 거리 */
@@ -89,29 +117,43 @@ export class Interaction {
     return Math.hypot(sx - e.clientX, sy - e.clientY);
   }
 
+  /** 점이 몸에 가려져 있는지(제어점 그리기와 같은 기준: 카메라 쪽으로 당긴 점이 메시 뒤면 가려짐) */
+  private occluded(p: Vector3, pull: number, targets: Object3D[]): boolean {
+    const cam = this.engine.workCamera.position;
+    const toCam = cam.clone().sub(p);
+    const d = toCam.length();
+    if (d < 1e-6) return false;
+    const probe = p.clone().add(toCam.multiplyScalar(Math.min(d * 0.5, pull) / d));
+    _ray.set(cam, probe.clone().sub(cam).normalize());
+    _ray.far = cam.distanceTo(probe) - 1e-3;
+    const hit = _ray.intersectObjects(targets, false).length > 0;
+    _ray.far = Infinity;
+    return hit;
+  }
+
   private pick(e: PointerEvent): Pick {
     const scale = Math.max(0.7, this.engine.settings.handleSize);
     const rigs = [...this.engine.dolls.values()];
     const selected = this.engine.selectedRig();
+    const targets: Object3D[] = [];
+    for (const rig of rigs) {
+      rig.prepareForPick();
+      targets.push(...rig.pickTargets);
+    }
 
-    // 1) IK 핸들·골반 핸들(모든 돌) — 선택한 돌을 우선
+    // 1) IK 핸들(모든 돌, 가려진 것 제외) — 선택한 돌을 우선
     let best: Pick = null;
     let bestD = 14 * scale;
     const ordered = selected ? [selected, ...rigs.filter((r) => r !== selected)] : rigs;
     for (const rig of ordered) {
+      const s = rig.heightCm / 175;
       for (const eff of rig.effectors) {
         const pos = rig.worldPos(IK_CHAINS[eff].end);
         const d = this.screenDist(e, pos);
-        if (d < bestD) {
+        if (d < bestD && !this.occluded(pos, 0.05 * s, targets)) {
           bestD = d;
           best = { kind: 'ik', rig, effector: eff, pos };
         }
-      }
-      const hip = rig.hipWorldPos();
-      const dh = this.screenDist(e, hip);
-      if (dh < bestD) {
-        bestD = dh;
-        best = { kind: 'hip', rig, pos: hip };
       }
     }
     if (best) return best;
@@ -119,10 +161,11 @@ export class Interaction {
     // 2) 관절점(선택한 돌만)
     if (selected) {
       let bd = 10 * scale;
+      const s = selected.heightCm / 175;
       for (const bone of selected.jointDotBones) {
         const pos = selected.worldPos(bone);
         const d = this.screenDist(e, pos);
-        if (d < bd) {
+        if (d < bd && !this.occluded(pos, 0.1 * s, targets)) {
           bd = d;
           best = { kind: 'joint', rig: selected, bone, pos };
         }
@@ -138,11 +181,6 @@ export class Interaction {
     }
 
     // 4) 몸 부위
-    const targets: Object3D[] = [];
-    for (const rig of rigs) {
-      rig.prepareForPick();
-      targets.push(...rig.pickTargets);
-    }
     const hits: Intersection[] = _ray.intersectObjects(targets, false);
     for (const hit of hits) {
       const dollId = (hit.object.userData as { dollId?: string }).dollId;
@@ -169,13 +207,14 @@ export class Interaction {
     return _ray.ray.intersectPlane(plane, _hit) ? _hit.clone() : null;
   }
 
+  private rayOnPlaneAt(clientX: number, clientY: number, plane: Plane): Vector3 | null {
+    this.setRayAt(clientX, clientY);
+    return _ray.ray.intersectPlane(plane, _hit) ? _hit.clone() : null;
+  }
+
   private viewPlaneAt(point: Vector3): Plane {
     this.engine.workCamera.getWorldDirection(_dir);
     return new Plane().setFromNormalAndCoplanarPoint(_dir.clone(), point);
-  }
-
-  private horizontalPlaneAt(point: Vector3): Plane {
-    return new Plane(new Vector3(0, 1, 0), -point.y);
   }
 
   private gizmoHot(): boolean {
@@ -190,6 +229,13 @@ export class Interaction {
   // ---------- 이벤트 ----------
 
   private onDown = (e: PointerEvent): void => {
+    if (this.modal) {
+      // 모달 중 클릭: 왼쪽 확정, 오른쪽 취소
+      if (e.button === 0) this.confirmModal();
+      else if (e.button === 2) this.cancelModal();
+      e.preventDefault();
+      return;
+    }
     if (e.button !== 0) return;
     if (this.gizmoHot()) return;
     if (this.state.kind !== 'idle') return;
@@ -205,17 +251,12 @@ export class Interaction {
         p.rig.setEffectorState(p.effector, 'active');
         this.state = { kind: 'ik', rig: p.rig, effector: p.effector, plane: this.viewPlaneAt(p.pos), moved: false };
         break;
-      case 'hip':
-        sel({ dollId: p.rig.id, bone: null });
-        p.rig.setHipState('active');
-        this.beginMoveOrYaw(e, p.rig, p.pos, true);
-        break;
       case 'joint': {
         const parent = p.rig.skel.parents.get(p.bone) ?? null;
         sel({ dollId: p.rig.id, bone: p.bone });
-        if (!parent) break;
-        // 관절점을 끌면 그 위 뼈를 돌려 관절이 커서를 따라간다
-        this.state = { kind: 'pending', rig: p.rig, bone: parent, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey, viaDot: true };
+        // 관절점을 끌면 그 위 뼈를 돌려 관절이 커서를 따라간다(골반점은 골반 자체를 돌린다)
+        const target = parent ?? p.bone;
+        this.state = { kind: 'pending', rig: p.rig, bone: target, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       }
       case 'camera': {
@@ -224,34 +265,22 @@ export class Interaction {
         break;
       }
       case 'part': {
-        const isRoot = p.bone === p.rig.skel.order[0];
-        sel({ dollId: p.rig.id, bone: isRoot ? null : p.bone });
-        if (isRoot) this.beginMoveOrYaw(e, p.rig, p.point, false);
-        else this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey, viaDot: false };
+        sel({ dollId: p.rig.id, bone: p.bone });
+        this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       }
       case 'ring': {
         sel({ dollId: p.rig.id, bone: null });
-        this.state = { kind: 'yaw', rig: p.rig, center: p.rig.root.position.clone(), lastAngle: this.groundAngle(p.rig, p.point), lastX: e.clientX, byAngle: true, feet: this.engine.capturePlantedFeet(p.rig), moved: false };
+        this.state = { kind: 'yaw', rig: p.rig, lastAngle: this.groundAngle(p.rig, p.point), feet: this.engine.capturePlantedFeet(p.rig), moved: false };
         break;
       }
     }
-    if (this.state.kind !== 'idle') this.capture(e);
+    this.capture(e);
   };
 
-  /** 골반을 잡았을 때: 보통은 이동, Alt면 돌 전체 회전 */
-  private beginMoveOrYaw(e: PointerEvent, rig: DollRig, point: Vector3, viaHip: boolean): void {
-    const feet = this.engine.capturePlantedFeet(rig);
-    if (e.altKey) {
-      this.state = { kind: 'yaw', rig, center: rig.root.position.clone(), lastAngle: 0, lastX: e.clientX, byAngle: false, feet, moved: false };
-      return;
-    }
-    const plane = e.shiftKey ? this.viewPlaneAt(point) : this.horizontalPlaneAt(point);
-    this.state = { kind: 'move', rig, plane, startHit: point, startPos: rig.root.position.clone(), feet, moved: false, viaHip };
-    this.el.style.cursor = 'move';
-  }
-
   private onMove = (e: PointerEvent): void => {
+    this.lastPointer = { x: e.clientX, y: e.clientY };
+    if (this.modal) return; // 모달은 window 리스너가 처리
     const s = this.state;
     switch (s.kind) {
       case 'idle':
@@ -286,6 +315,7 @@ export class Interaction {
         // 팔꿈치·무릎 아래 뼈는 경첩이라 위 뼈 비틀기와 함께 푼다(관절 한계가 켜진 동안)
         if (this.engine.settings.jointLimits && s.rig.aimHinge(s.bone, v1)) {
           s.lever.copy(v1);
+          this.engine.enforceFloor(s.rig);
           return;
         }
         _q.setFromUnitVectors(s.lever.clone().normalize(), v1.clone().normalize());
@@ -294,6 +324,7 @@ export class Interaction {
         rotateObjectWorld(bone, _q);
         s.lever.copy(v1);
         this.engine.clampAfterChange(s.rig, [s.bone]);
+        this.engine.enforceFloor(s.rig);
         return;
       }
       case 'twist': {
@@ -313,29 +344,14 @@ export class Interaction {
         s.moved = true;
         return;
       }
-      case 'move': {
-        const hit = this.rayOnPlane(e, s.plane);
-        if (!hit) return;
-        s.rig.root.position.copy(s.startPos).add(hit.sub(s.startHit));
-        s.rig.root.updateMatrixWorld(true);
-        this.engine.keepFeet(s.rig, s.feet);
-        s.moved = true;
-        return;
-      }
       case 'yaw': {
-        let delta: number;
-        if (s.byAngle) {
-          const hit = this.rayOnPlane(e, GROUND);
-          if (!hit) return;
-          const a = this.groundAngle(s.rig, hit);
-          delta = a - s.lastAngle;
-          if (delta > Math.PI) delta -= 2 * Math.PI;
-          if (delta < -Math.PI) delta += 2 * Math.PI;
-          s.lastAngle = a;
-        } else {
-          delta = -(e.clientX - s.lastX) * 0.01;
-          s.lastX = e.clientX;
-        }
+        const hit = this.rayOnPlane(e, GROUND);
+        if (!hit) return;
+        const a = this.groundAngle(s.rig, hit);
+        let delta = a - s.lastAngle;
+        if (delta > Math.PI) delta -= 2 * Math.PI;
+        if (delta < -Math.PI) delta += 2 * Math.PI;
+        s.lastAngle = a;
         this.engine.rotateRootYaw(s.rig, delta);
         this.engine.keepFeet(s.rig, s.feet);
         s.moved = true;
@@ -354,18 +370,19 @@ export class Interaction {
   };
 
   private onUp = (e: PointerEvent): void => {
+    if (this.modal) return;
     this.finish(e.button === 0 || e.type === 'pointercancel');
   };
 
   private onLost = (): void => {
+    if (this.modal) return;
     if (this.state.kind !== 'idle') this.finish(true);
   };
 
   private finish(commit: boolean): void {
     const s = this.state;
     if (s.kind === 'ik') s.rig.setEffectorState(s.effector, 'normal');
-    if (s.kind === 'move' && s.viaHip) s.rig.setHipState('normal');
-    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'move' || s.kind === 'yaw';
+    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'yaw';
     if (commit && dollDrag && s.moved) this.engine.commitDoll(s.rig.id);
     if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
     this.state = { kind: 'idle' };
@@ -389,13 +406,192 @@ export class Interaction {
     }
   }
 
+  // ---------- 모달 변형(G/R) ----------
+
+  /** G(이동)·R(회전) 시작. 선택한 돌 또는 원고 카메라가 대상 */
+  startModal(kind: 'move' | 'rotate'): boolean {
+    if (this.modal || this.dragging) return false;
+    const rig = this.engine.selectedRig();
+    const cameraSel = !!this.engine.selection.camera;
+    if (!rig && !cameraSel) return false;
+    const obj = rig ? rig.root : this.engine.manu.camera;
+    // 포인터가 조작뷰 밖이면(또는 아직 안 움직였으면) 첫 움직임에서 기준점을 잡는다
+    const rect = this.el.getBoundingClientRect();
+    const inside = this.lastPointer.x >= rect.left && this.lastPointer.x <= rect.right && this.lastPointer.y >= rect.top && this.lastPointer.y <= rect.bottom;
+    const startHit = inside ? this.rayOnPlaneAt(this.lastPointer.x, this.lastPointer.y, new Plane(new Vector3(0, 1, 0), -obj.position.y)) : null;
+    this.modal = {
+      kind,
+      target: rig ? { rig } : { camera: true },
+      axis: null,
+      startPointer: { ...this.lastPointer },
+      lastPointer: { ...this.lastPointer },
+      startPos: obj.position.clone(),
+      startQuat: obj.quaternion.clone(),
+      startHit,
+      feet: rig ? this.engine.capturePlantedFeet(rig) : null,
+      snapshot: rig ? { position: rig.root.position.clone(), quaternion: rig.root.quaternion.clone(), joints: rig.getJoints() } : null,
+    };
+    if (this.engine.orbit) this.engine.orbit.enabled = false;
+    window.addEventListener('pointermove', this.onModalMove);
+    window.addEventListener('keydown', this.onModalKey, true);
+    this.el.style.cursor = kind === 'move' ? 'move' : 'ew-resize';
+    this.modalHint();
+    return true;
+  }
+
+  private modalHint(): void {
+    const m = this.modal;
+    if (!m) return;
+    const what = 'camera' in m.target ? '원고 카메라' : '돌';
+    const axis = m.axis ? `${m.axis.toUpperCase()}축 고정` : m.kind === 'move' ? '바닥 평면' : 'Y축(수직)';
+    this.engine.callbacks.hint(`${what} ${m.kind === 'move' ? '이동' : '회전'} · ${axis} · X/Y/Z: 축 고정 · 클릭/Enter: 확정 · Esc/우클릭: 취소`);
+  }
+
+  private onModalKey = (e: KeyboardEvent): void => {
+    const m = this.modal;
+    if (!m) return;
+    const k = e.key.toLowerCase();
+    if (k === 'escape') {
+      this.cancelModal();
+    } else if (k === 'enter' || k === ' ') {
+      this.confirmModal();
+    } else if (k === 'x' || k === 'y' || k === 'z') {
+      m.axis = m.axis === k ? null : (k as Axis);
+      this.applyModal();
+      this.modalHint();
+    } else if (k === 'g' || k === 'm' || k === 'r') {
+      // 모달 중 G↔R 전환
+      const next = k === 'r' ? 'rotate' : 'move';
+      if (next !== m.kind) {
+        this.restoreModalStart();
+        m.kind = next;
+        m.axis = null;
+        m.startPointer = { ...m.lastPointer };
+        this.modalHint();
+      }
+    } else {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  private onModalMove = (e: PointerEvent): void => {
+    const m = this.modal;
+    if (!m) return;
+    this.lastPointer = { x: e.clientX, y: e.clientY };
+    if (!m.startHit) {
+      // 기준점이 없었으면 지금 위치를 시작점으로
+      m.startPointer = { x: e.clientX, y: e.clientY };
+      m.lastPointer = { x: e.clientX, y: e.clientY };
+      m.startHit = this.rayOnPlaneAt(e.clientX, e.clientY, new Plane(new Vector3(0, 1, 0), -m.startPos.y));
+      return;
+    }
+    m.lastPointer = { x: e.clientX, y: e.clientY };
+    this.applyModal();
+  };
+
+  private modalObject(): Object3D {
+    const m = this.modal!;
+    return 'camera' in m.target ? this.engine.manu.camera : m.target.rig.root;
+  }
+
+  private restoreModalStart(): void {
+    const m = this.modal!;
+    const obj = this.modalObject();
+    obj.position.copy(m.startPos);
+    obj.quaternion.copy(m.startQuat);
+    obj.updateMatrixWorld(true);
+  }
+
+  private applyModal(): void {
+    const m = this.modal;
+    if (!m) return;
+    const obj = this.modalObject();
+    const dx = m.lastPointer.x - m.startPointer.x;
+    const dy = m.lastPointer.y - m.startPointer.y;
+    if (m.kind === 'move') {
+      let delta: Vector3 | null = null;
+      if (m.axis === 'y') {
+        // 수직: 화면 평행 평면에서 위아래만
+        const plane = this.viewPlaneAt(m.startPos);
+        const a = this.rayOnPlaneAt(m.startPointer.x, m.startPointer.y, plane);
+        const b = this.rayOnPlaneAt(m.lastPointer.x, m.lastPointer.y, plane);
+        if (a && b) delta = new Vector3(0, b.y - a.y, 0);
+      } else {
+        const plane = new Plane(new Vector3(0, 1, 0), -m.startPos.y);
+        const a = m.startHit ?? this.rayOnPlaneAt(m.startPointer.x, m.startPointer.y, plane);
+        const b = this.rayOnPlaneAt(m.lastPointer.x, m.lastPointer.y, plane);
+        if (a && b) {
+          delta = b.clone().sub(a);
+          if (m.axis === 'x') delta.set(delta.x, 0, 0);
+          else if (m.axis === 'z') delta.set(0, 0, delta.z);
+        }
+      }
+      if (!delta) return;
+      obj.position.copy(m.startPos).add(delta);
+      obj.updateMatrixWorld(true);
+    } else {
+      const angle = -dx * 0.01;
+      const axis = AXES[m.axis ?? 'y'];
+      obj.quaternion.copy(m.startQuat);
+      obj.updateMatrixWorld(true);
+      if ('camera' in m.target) {
+        obj.rotateOnWorldAxis(axis, angle);
+      } else {
+        obj.rotateOnWorldAxis(axis, angle);
+      }
+      obj.updateMatrixWorld(true);
+      void dy;
+    }
+    if (!('camera' in m.target)) {
+      const rig = m.target.rig;
+      // 발 고정이 켜져 있으면 다리를 다시 풀고, 바닥 아래로는 내려가지 않게
+      if (m.feet) {
+        rig.setJoints(m.snapshot!.joints);
+        this.engine.keepFeet(rig, m.feet);
+      }
+      this.engine.enforceFloor(rig);
+    }
+  }
+
+  private endModal(): void {
+    const m = this.modal;
+    if (!m) return;
+    window.removeEventListener('pointermove', this.onModalMove);
+    window.removeEventListener('keydown', this.onModalKey, true);
+    this.modal = null;
+    if (this.engine.orbit) this.engine.orbit.enabled = true;
+    this.el.style.cursor = '';
+    this.engine.callbacks.hint('');
+  }
+
+  confirmModal(): void {
+    const m = this.modal;
+    if (!m) return;
+    const target = m.target;
+    this.endModal();
+    if ('camera' in target) this.engine.commitCamera();
+    else this.engine.commitDoll(target.rig.id);
+  }
+
+  cancelModal(): void {
+    const m = this.modal;
+    if (!m) return;
+    const obj = this.modalObject();
+    obj.position.copy(m.startPos);
+    obj.quaternion.copy(m.startQuat);
+    if (!('camera' in m.target) && m.snapshot) m.target.rig.setJoints(m.snapshot.joints);
+    obj.updateMatrixWorld(true);
+    this.endModal();
+  }
+
   // ---------- 호버 ----------
 
   private clearHoverState(): void {
     const h = this.hover;
     if (!h) return;
     if (h.kind === 'ik') h.rig.setEffectorState(h.effector, 'normal');
-    if (h.kind === 'hip') h.rig.setHipState('normal');
     this.hover = null;
   }
 
@@ -411,7 +607,6 @@ export class Interaction {
       this.clearHoverState();
       this.hover = p;
       if (p?.kind === 'ik') p.rig.setEffectorState(p.effector, 'hover');
-      if (p?.kind === 'hip') p.rig.setHipState('hover');
     }
     const hint = this.engine.callbacks.hint;
     switch (p?.kind) {
@@ -419,21 +614,17 @@ export class Interaction {
         this.el.style.cursor = 'grab';
         hint(`${boneLabel(IK_CHAINS[p.effector].end)} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
         return;
-      case 'hip':
-        this.el.style.cursor = 'move';
-        hint('골반 핸들 · 드래그: 돌 이동 · Shift+드래그: 높이 · Alt+드래그: 돌 회전');
-        return;
       case 'joint':
         this.el.style.cursor = 'grab';
         hint(`${boneLabel(p.bone)} 관절 · 끌면 관절이 커서를 따라갑니다 · E: 회전 링`);
         return;
       case 'camera':
         this.el.style.cursor = 'move';
-        hint('원고 카메라 · 끌어서 이동 · W: 이동 기즈모 · E: 회전 기즈모');
+        hint('원고 카메라 · 끌어서 이동 · G: 이동 · R: 회전 · W/E: 기즈모');
         return;
       case 'part':
-        this.el.style.cursor = p.bone === p.rig.skel.order[0] ? 'move' : 'grab';
-        hint(p.bone === p.rig.skel.order[0] ? '골반 · 드래그: 돌 이동 · Shift: 높이 · Alt: 돌 회전' : `${boneLabel(p.bone)} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · E: 회전 링`);
+        this.el.style.cursor = 'grab';
+        hint(`${boneLabel(p.bone)} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · G: 돌 이동 · R: 돌 회전`);
         return;
       case 'ring':
         this.el.style.cursor = 'ew-resize';

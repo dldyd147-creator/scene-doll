@@ -43,10 +43,11 @@ const PATHS: Record<string, string> = {
   check: 'M5 12l5 5L20 7',
   external: 'M14 4h6v6M20 4l-9 9M19 14v6H4V5h6',
   cut: 'M4 4h16v16H4zM4 10h16',
-  eyeLevel: 'M3 12h18M12 7a5 5 0 0 0-5 5 5 5 0 0 0 10 0 5 5 0 0 0-5-5z',
-  high: 'M4 6l8 12 8-12M12 18v2',
-  low: 'M4 18L12 6l8 12M12 4v2',
+  eyeLevel: 'M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  pov: 'M12 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM9 10h6l1 5h-8zM4 20l8-5 8 5',
   aim: 'M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+  toManu: 'M14 5h7v14h-7M3 5h7v14H3M13 12H6m0 0l3-3m-3 3l3 3',
+  toWork: 'M3 5h7v14H3M14 5h7v14h-7M11 12h7m0 0l-3-3m3 3l-3 3',
   doll: 'M12 3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM7 10h10l-2 5v6h-2v-4h-2v4H9v-6z',
 };
 

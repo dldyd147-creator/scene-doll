@@ -40,6 +40,8 @@ export interface Episode {
   number: number;
   /** 컷 번호 순서 */
   cutOrder: number[];
+  /** 가져온 글콘티 파일(NTT 엑셀) 정보 */
+  scriptSource?: { fileName: string; importedAt: string };
   updatedAt: string;
 }
 
@@ -103,6 +105,10 @@ export interface Cut {
   memo: string;
   /** 5단계 생성 결과 이미지 경로 */
   generatedImages: string[];
+  /** 글콘티 대사(NTT 엑셀 연동, 2단계 이후). position: 원고뷰 위/아래 */
+  dialogue?: Array<{ speaker: string; text: string; position: 'top' | 'bottom' }>;
+  /** 글콘티 지문(장면 설명, 사람이 쓴 것) */
+  scriptNote?: string;
   updatedAt: string;
 }
 
@@ -136,6 +142,8 @@ export interface DollAsset {
   boneMap: Record<string, string>;
   /** 목록에 보이지 않음(옛 데이터 호환용으로만 남긴 돌) */
   hidden?: boolean;
+  /** 두 눈 사이 위치(휴식 돌 공간). 없으면 머리 치수에서 계산 */
+  eye?: Vec3;
 }
 
 /** 포즈(2단계) */

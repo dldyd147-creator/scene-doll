@@ -36,6 +36,8 @@ export function useShortcuts(engine: Engine): void {
         return;
       }
       if (isTyping(e)) return;
+      // G/R 모달 변형 중에는 Interaction이 키를 처리한다
+      if (engine.interaction?.modalActive) return;
 
       if (ctrl && key === 'z' && !e.shiftKey) {
         e.preventDefault();
@@ -90,6 +92,13 @@ export function useShortcuts(engine: Engine): void {
           return;
       }
       switch (key) {
+        case 'g':
+        case 'm':
+          if (engine.interaction?.startModal('move')) e.preventDefault();
+          return;
+        case 'r':
+          if (engine.interaction?.startModal('rotate')) e.preventDefault();
+          return;
         case 'q':
           s.setMode('direct');
           return;

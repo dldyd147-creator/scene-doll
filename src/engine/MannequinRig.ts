@@ -20,6 +20,7 @@ function lineParamsFor(skel: BuiltSkeleton, p: Proportions) {
     headZ: 0.008,
     headHalfW: p.headRx,
     eyeY: y('Head') + p.headRy,
+    eyeZ: 0.008 + p.headRz,
     torsoY: [y('Hips') - 0.01 - p.pelvisRy * 0.85, y('Neck')] as [number, number],
   };
 }

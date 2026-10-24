@@ -3,7 +3,7 @@ import type { DollInstance, Gender, JointRotations, Quat } from '../model/types'
 import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkeleton } from './skeleton';
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
 import { mirrorJoints } from './mirror';
-import { circleTexture, MarkerPoints, ringTexture, squareTexture } from './overlays';
+import { circleTexture, MarkerPoints, ringTexture } from './overlays';
 import { clampJointRotation, limitFor, swingTwist } from './limits';
 import { fromQuat, roundTo, toQuat } from './three-utils';
 
@@ -11,6 +11,7 @@ const IDENTITY = new Quaternion();
 const _v = new Vector3();
 const _q = new Quaternion();
 const _q2 = new Quaternion();
+const _toCam = new Vector3();
 
 /** 관절점을 찍을 뼈(IK 끝점 손·발은 핸들이 따로 있다) */
 const JOINT_DOT_BONES = [
@@ -19,6 +20,7 @@ const JOINT_DOT_BONES = [
   'Spine2',
   'Spine1',
   'Spine',
+  'Hips',
   'LeftShoulder',
   'LeftArm',
   'LeftForeArm',
@@ -33,13 +35,39 @@ const JOINT_DOT_BONES = [
   'RightToeBase',
 ];
 
+/** 관절이 몸 안에 있으므로 제어점을 카메라 쪽으로 당길 거리(키 175cm 기준 m). 몸 두께의 절반 정도 */
+const MARKER_PULL: Record<string, number> = {
+  Head: 0.11,
+  Neck: 0.06,
+  Spine2: 0.13,
+  Spine1: 0.12,
+  Spine: 0.11,
+  Hips: 0.12,
+  LeftShoulder: 0.09,
+  RightShoulder: 0.09,
+  LeftArm: 0.06,
+  RightArm: 0.06,
+  LeftForeArm: 0.045,
+  RightForeArm: 0.045,
+  LeftHand: 0.035,
+  RightHand: 0.035,
+  LeftUpLeg: 0.09,
+  RightUpLeg: 0.09,
+  LeftLeg: 0.06,
+  RightLeg: 0.06,
+  LeftFoot: 0.05,
+  RightFoot: 0.05,
+  LeftToeBase: 0.04,
+  RightToeBase: 0.04,
+};
+
 export type MarkerState = 'normal' | 'hover' | 'active';
 
 /**
  * 돌의 공통 뼈대 조작·직렬화·제어점.
  * 몸(메시)은 하위 클래스가 붙인다: 코드 마네킹(MannequinRig), GLB 스킨 메시(GlbDollRig).
  * - 관절 회전은 '돌 공간, 휴식 자세 대비' 쿼터니언으로 읽고 쓴다
- * - 제어점(손·발 IK 핸들, 골반 핸들, 관절점, 선택 관절 링)은 화면 픽셀 크기가 일정한 점으로 그린다
+ * - 제어점(손·발 IK 핸들, 관절점, 선택 관절 링)은 화면 픽셀 크기가 일정한 점으로 그리고, 몸 뒤에 가려지면 보이지 않는다
  * - 트위스트 뼈(…Twist)는 저장하지 않고 팔다리 회전에서 자동으로 구동한다
  */
 export abstract class DollRig {
@@ -58,13 +86,13 @@ export abstract class DollRig {
   protected lineUniforms: LineUniforms;
   protected highlighted: string | null = null;
   protected outlineMeshes: Object3D[] = [];
+  readonly lineParams: LineParams;
   /** 구동(트위스트) 뼈 */
   readonly drivenBones: string[];
   /** 관절점을 찍는 뼈(이 뼈대에 있는 것만) */
   readonly jointDotBones: string[];
   readonly effectors: string[];
   private ikMarkers: MarkerPoints;
-  private hipMarker: MarkerPoints;
   private jointMarkers: MarkerPoints;
   private selectedMarker: MarkerPoints;
   private markerScale = 1;
@@ -97,6 +125,7 @@ export abstract class DollRig {
     this.heightCm = heightCm;
     this.root.name = `doll:${id}`;
     this.root.add(bodyRoot ?? skel.root);
+    this.lineParams = lineParams;
     this.lineUniforms = createLineUniforms(lineParams);
     const mats = this.newMaterials();
     this.baseMat = mats.base;
@@ -106,16 +135,14 @@ export abstract class DollRig {
     this.effectors = EFFECTOR_NAMES.filter((n) => skel.bones.has(IK_CHAINS[n].end));
 
     this.ikMarkers = new MarkerPoints(Math.max(1, this.effectors.length), 15, circleTexture(), 22);
-    this.hipMarker = new MarkerPoints(1, 16, squareTexture(), 21);
     this.jointMarkers = new MarkerPoints(Math.max(1, this.jointDotBones.length), 8, circleTexture(), 20);
     this.selectedMarker = new MarkerPoints(1, 20, ringTexture(), 23);
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, HANDLE_COLOR);
-    this.hipMarker.setColor(0, HANDLE_COLOR);
     for (let i = 0; i < this.jointDotBones.length; i++) this.jointMarkers.setColor(i, JOINT_COLOR);
     this.selectedMarker.setColor(0, SELECTED_JOINT_COLOR);
     this.jointMarkers.points.visible = false;
     this.selectedMarker.points.visible = false;
-    this.helpers.add(this.ikMarkers.points, this.hipMarker.points, this.jointMarkers.points, this.selectedMarker.points);
+    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.selectedMarker.points);
 
     this.groundRing = new Mesh(
       new RingGeometry(0.24, 0.27, 48),
@@ -176,7 +203,6 @@ export abstract class DollRig {
   setMarkerScale(mult: number): void {
     this.markerScale = mult;
     this.ikMarkers.setSize(15 * mult);
-    this.hipMarker.setSize(16 * mult);
     this.jointMarkers.setSize(8 * mult);
     this.selectedMarker.setSize(20 * mult);
   }
@@ -197,17 +223,12 @@ export abstract class DollRig {
     this.groundRing.visible = on;
     this.jointMarkers.points.visible = on;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
-    this.hipMarker.setColor(0, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
 
   setEffectorState(name: string, state: MarkerState): void {
     const i = this.effectors.indexOf(name);
     if (i < 0) return;
     this.ikMarkers.setColor(i, state === 'active' ? '#ffb020' : state === 'hover' ? '#ffe08a' : this.selected ? HANDLE_COLOR : HANDLE_DIM_COLOR);
-  }
-
-  setHipState(state: MarkerState): void {
-    this.hipMarker.setColor(0, state === 'active' ? '#ffb020' : state === 'hover' ? '#ffe08a' : this.selected ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
 
   /** 레이캐스트 결과 → 뼈 이름(트위스트 뼈는 그 팔다리로) */
@@ -385,10 +406,10 @@ export abstract class DollRig {
     return true;
   }
 
-  /** 모든 관절을 한계 안으로(부모부터). 하나라도 바뀌었으면 true */
-  clampAll(): boolean {
-    let changed = false;
-    for (const name of this.skel.order) if (this.clampJoint(name)) changed = true;
+  /** 모든 관절을 한계 안으로(부모부터). 바뀐 관절 수 */
+  clampAll(): number {
+    let changed = 0;
+    for (const name of this.skel.order) if (this.clampJoint(name)) changed++;
     if (changed) this.root.updateMatrixWorld(true);
     return changed;
   }
@@ -400,6 +421,26 @@ export abstract class DollRig {
     b.getWorldQuaternion(_q2);
     const restQ = this.skel.rest.get(name)!.quat;
     return target.copy(restDir).applyQuaternion(restQ.clone().invert()).applyQuaternion(_q2);
+  }
+
+  /** 휴식 돌 공간의 점(뼈 기준)이 지금 월드 어디에 있는지 */
+  restPointWorld(bone: string, restPoint: Vector3, target = new Vector3()): Vector3 {
+    const b = this.skel.bones.get(bone);
+    const rest = this.skel.rest.get(bone);
+    if (!b || !rest) return target.copy(restPoint);
+    const local = restPoint.clone().sub(rest.pos).applyQuaternion(rest.quat.clone().invert());
+    return target.copy(local).applyMatrix4(b.matrixWorld);
+  }
+
+  /** 두 눈 사이(얼굴 앞면, 눈높이) 월드 위치 */
+  eyeWorldPoint(target = new Vector3()): Vector3 {
+    const p = this.lineParams;
+    return this.restPointWorld('Head', new Vector3(0, p.eyeY, p.eyeZ), target);
+  }
+
+  /** 머리가 보는 방향(월드) */
+  headForward(target = new Vector3()): Vector3 {
+    return this.boneWorldDirection(this.skel.bones.has('Head') ? 'Head' : this.skel.order[0], new Vector3(0, 0, 1), target);
   }
 
   private restLocalQuat(name: string): Quaternion {
@@ -446,38 +487,54 @@ export abstract class DollRig {
     this.root.updateMatrixWorld(true);
   }
 
+  /**
+   * 몸의 가장 낮은 점(대략). 발바닥·발끝·손·골반·머리 뼈 위치에서 두께를 뺀 값으로, 매 조작마다 싸게 구한다.
+   */
+  lowestPointY(): number {
+    const s = this.root.scale.x;
+    let min = Infinity;
+    const probe = (bone: string, below: number) => {
+      if (!this.skel.bones.has(bone)) return;
+      min = Math.min(min, this.worldPos(bone, _v).y - below * s);
+    };
+    for (const side of ['Left', 'Right']) {
+      const ankle = this.skel.rest.get(`${side}Foot`)?.pos.y ?? 0.055;
+      probe(`${side}Foot`, ankle);
+      probe(`${side}ToeBase`, this.skel.rest.get(`${side}ToeBase`)?.pos.y ?? 0.012);
+      probe(`${side}Toe_End`, 0);
+      probe(`${side}Hand`, 0.03 * this.unitHeight);
+      probe(`${side}Leg`, 0.06 * this.unitHeight);
+      probe(`${side}ForeArm`, 0.045 * this.unitHeight);
+    }
+    probe('Hips', 0.11 * this.unitHeight);
+    probe('Head', 0.1 * this.unitHeight);
+    return Number.isFinite(min) ? min : 0;
+  }
+
   worldPos(bone: string, target = new Vector3()): Vector3 {
     const b = this.skel.bones.get(bone);
     if (!b) return target.set(0, 0, 0);
     return target.setFromMatrixPosition(b.matrixWorld);
   }
 
-  /** 골반(돌 이동 핸들) 위치 */
-  hipWorldPos(target = new Vector3()): Vector3 {
-    return this.worldPos(this.skel.order[0], target);
-  }
-
-  /** 제어점·링을 뼈에 맞춘다. 매 프레임 호출 */
-  updateHelpers(): void {
+  /** 제어점·링을 뼈에 맞춘다. 매 프레임 호출. cameraPos가 있으면 제어점을 카메라 쪽으로 몸 두께만큼 당겨 가려짐 판정을 맞춘다 */
+  updateHelpers(cameraPos?: Vector3): void {
     this.updateDriven();
-    this.effectors.forEach((name, i) => {
-      this.worldPos(IK_CHAINS[name].end, _v);
-      this.ikMarkers.setPosition(i, _v.x, _v.y, _v.z);
-    });
-    this.hipWorldPos(_v);
-    this.hipMarker.setPosition(0, _v.x, _v.y, _v.z);
-    if (this.selected) {
-      this.jointDotBones.forEach((name, i) => {
-        this.worldPos(name, _v);
-        this.jointMarkers.setPosition(i, _v.x, _v.y, _v.z);
-      });
-    }
-    if (this.highlighted && this.skel.bones.has(this.highlighted)) {
-      this.worldPos(this.highlighted, _v);
-      this.selectedMarker.setPosition(0, _v.x, _v.y, _v.z);
-    }
+    const s = this.heightCm / 175;
+    const place = (marker: MarkerPoints, i: number, bone: string) => {
+      this.worldPos(bone, _v);
+      if (cameraPos) {
+        _toCam.copy(cameraPos).sub(_v);
+        const d = _toCam.length();
+        if (d > 1e-6) _v.add(_toCam.multiplyScalar(Math.min(d * 0.5, (MARKER_PULL[bone] ?? 0.06) * s) / d));
+      }
+      marker.setPosition(i, _v.x, _v.y, _v.z);
+    };
+    this.effectors.forEach((name, i) => place(this.ikMarkers, i, IK_CHAINS[name].end));
+    if (this.selected) this.jointDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
+    if (this.highlighted && this.skel.bones.has(this.highlighted)) place(this.selectedMarker, 0, this.highlighted);
     this.groundRing.position.set(this.root.position.x, 0.003, this.root.position.z);
-    this.groundRing.scale.setScalar(Math.max(0.5, this.heightCm / 175));
+    this.groundRing.scale.setScalar(Math.max(0.5, s));
   }
 
   /** 바닥 링 반지름(월드) */
@@ -510,7 +567,6 @@ export abstract class DollRig {
   dispose(): void {
     for (const m of this.materials) m.dispose();
     this.ikMarkers.dispose();
-    this.hipMarker.dispose();
     this.jointMarkers.dispose();
     this.selectedMarker.dispose();
     this.groundRing.geometry.dispose();

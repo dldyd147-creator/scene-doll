@@ -47,6 +47,8 @@ export interface LineParams {
   headZ: number;
   headHalfW: number;
   eyeY: number;
+  /** 눈높이에서 얼굴 앞면 z(돌 공간 휴식). 시점(POV) 카메라 위치에 쓴다 */
+  eyeZ: number;
   /** 몸통 정중선 세로 범위 [아래, 위] */
   torsoY: [number, number];
 }
