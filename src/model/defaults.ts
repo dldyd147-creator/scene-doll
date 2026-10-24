@@ -31,12 +31,14 @@ export function pickColor(used: string[]): string {
   return (free ?? CHARACTER_COLORS[used.length % CHARACTER_COLORS.length]).hex;
 }
 
-/** 내장 돌 목록. MakeHuman(CC0) 남·여가 기본, 코드 마네킹은 가벼운 테스트용 */
+/** 내장 돌 목록. 2세대 MakeHuman(CC0, 트위스트 뼈) 남·여가 기본, 코드 마네킹은 가벼운 테스트용. 1세대는 옛 데이터 호환용으로 숨김 */
 export const DOLL_ASSETS: DollAsset[] = [
-  { id: 'mh_m', name: '남', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: 'dolls/mh_male.glb', boneMap: {} },
-  { id: 'mh_f', name: '여', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: 'dolls/mh_female.glb', boneMap: {} },
+  { id: 'mh2_m', name: '남', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: 'dolls/mh2_male.glb', boneMap: {} },
+  { id: 'mh2_f', name: '여', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: 'dolls/mh2_female.glb', boneMap: {} },
   { id: 'mannequin_m', name: '캡슐 남', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: null, boneMap: {} },
   { id: 'mannequin_f', name: '캡슐 여', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: null, boneMap: {} },
+  { id: 'mh_m', name: '남(1세대)', gender: 'male', bodyType: 'basic', baseHeightCm: 175, glbPath: 'dolls/mh_male.glb', boneMap: {}, hidden: true },
+  { id: 'mh_f', name: '여(1세대)', gender: 'female', bodyType: 'basic', baseHeightCm: 162, glbPath: 'dolls/mh_female.glb', boneMap: {}, hidden: true },
 ];
 
 export function dollAsset(id: string): DollAsset {

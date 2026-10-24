@@ -58,7 +58,7 @@ function DollTab() {
   const [heights, setHeights] = useState<Record<string, number>>(() => Object.fromEntries(DOLL_ASSETS.map((d) => [d.id, d.baseHeightCm])));
   return (
     <>
-      {DOLL_ASSETS.map((d) => (
+      {DOLL_ASSETS.filter((d) => !d.hidden).map((d) => (
         <div key={d.id} className="card" title={d.glbPath ? '실제 인체 메시(MakeHuman, CC0). 같은 뼈대라 포즈가 호환됩니다' : '코드로 만든 단순 캡슐 돌(테스트용)'}>
           <div className="row">
             <b className="grow">{d.name}</b>

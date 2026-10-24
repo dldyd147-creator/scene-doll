@@ -134,6 +134,8 @@ export interface DollAsset {
   glbPath: string | null;
   /** GLB 뼈 이름 → 표준(Mixamo) 이름 매핑. 비어 있으면 동일 */
   boneMap: Record<string, string>;
+  /** 목록에 보이지 않음(옛 데이터 호환용으로만 남긴 돌) */
+  hidden?: boolean;
 }
 
 /** 포즈(2단계) */

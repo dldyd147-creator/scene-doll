@@ -70,4 +70,4 @@ src/
 
 - 뼈 이름은 Mixamo 표준(접두어 없음), 휴식 자세는 T포즈.
 - 관절 회전값은 **돌 공간에서 휴식 자세 대비 회전 쿼터니언**으로 저장합니다. 뼈의 로컬 축 규약에 의존하지 않아, 같은 이름·T포즈 뼈대를 가진 어떤 돌(코드 마네킹, MakeHuman, 실제 GLB)에도 같은 포즈를 적용할 수 있습니다.
-- 1단계 돌은 코드로 만든 캡슐 마네킹(남·여)입니다. 점검 보고는 [docs/doll-report.md](docs/doll-report.md).
+- 기본 돌은 MakeHuman(CC0) 2세대 남·여로, 팔다리에 트위스트 뼈 8개가 있어 비틀림이 어깨·손목에 걸쳐 풀립니다. 캡슐 마네킹은 테스트용입니다. 점검 보고는 [docs/doll-report.md](docs/doll-report.md), 생성 스크립트는 `doll-src/makehuman/`.

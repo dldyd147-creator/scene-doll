@@ -18,7 +18,9 @@ Pipeline (steps 1-6 and 8 are identical to v1 build_doll.py; 7 is extended):
         axis (Arm/UpLeg at 35 %, ForeArm/Leg at 65 % from the limb head), tail further along the same axis
         (20 % of the limb length), same roll as the limb bone -> identity local rotation in the glTF
      c. NEW: weight cleanup: remove weights that are not part of the bone's main connected region ("islands"),
-        drop negligible weights (< 1e-3)
+        drop negligible weights (< 1e-3); then 2 iterations of Laplacian smoothing (factor 0.5) of the 8 limb groups
+        Left/Right Arm, ForeArm, UpLeg, Leg (--smooth-limbs N, 0 = off) -- removes the one-edge weight jumps at the
+        inner elbow / knee crease of the MPFB weights (18 -> 5 edges with a step > 0.5; the 5 left are in the hands)
      d. NEW: twist weights generated from the limb weights by a smooth gradient along the limb axis:
           t = clamp(dot(p - head, axis) / length, 0, 1)   (0 = limb head/proximal joint, 1 = limb tail/distal joint)
           proximal twist (ArmTwist, UpLegTwist): share s(t) = 1 - smoothstep(0.0, 0.6, t)   (1 at the joint, 0 from 60 %)
@@ -78,7 +80,8 @@ def twist_share(kind, t):
 def parse_args():
     argv = sys.argv
     args = argv[argv.index("--") + 1:] if "--" in argv else []
-    opts = {"gender": "male", "height": None, "out": None, "log": None, "blend": None, "race": "neutral"}
+    opts = {"gender": "male", "height": None, "out": None, "log": None, "blend": None, "race": "neutral",
+            "smooth-limbs": "2"}  # Laplacian smoothing iterations (factor 0.5) of the 8 limb groups before the twist split; 0 = off
     i = 0
     while i < len(args):
         key = args[i].lstrip("-")
@@ -94,6 +97,7 @@ def parse_args():
     opts["height"] = float(opts["height"])
     if not opts["out"]:
         raise SystemExit("--out <file.glb> is required")
+    opts["smooth-limbs"] = int(opts["smooth-limbs"])
     return opts
 
 
@@ -623,6 +627,49 @@ for bone in W:
             tiny_removed += 1
 REPORT["tiny_weights_removed"] = tiny_removed
 write_weights(W)
+
+# optional: Laplacian smoothing of the limb groups (softens the few one-edge weight jumps at the inner elbow / knee
+# inherited from the MPFB mixamo weights). Off by default unless --smooth-limbs N is given.
+SMOOTH_LIMB_GROUPS = [f"{s}{b}" for s in ("Left", "Right") for b in ("Arm", "ForeArm", "UpLeg", "Leg")]
+SMOOTH_FACTOR = 0.5
+
+
+def smooth_group(W, bone, factor, repeat):
+    """Laplacian smoothing of one group's weights over the mesh one-ring (like Blender's Weight Tools > Smooth with
+    expand 0): w'(v) = (1-f) w(v) + f mean(w(n), n in neighbours(v)), evaluated on the region and its one-ring, so the
+    region can grow by one ring per iteration with small values. The per-vertex total is restored by write_weights()."""
+    d = dict(W[bone])
+    for _ in range(repeat):
+        region = set(d)
+        ring = set()
+        for v in region:
+            ring |= adjacency[v]
+        new = {}
+        for v in region | ring:
+            nb = adjacency[v]
+            if not nb:
+                continue
+            mean = sum(d.get(n, 0.0) for n in nb) / len(nb)
+            val = (1.0 - factor) * d.get(v, 0.0) + factor * mean
+            if val > 1e-4:
+                new[v] = val
+        d = new
+    W[bone] = d
+
+
+if OPTS["smooth-limbs"] > 0:
+    for name in SMOOTH_LIMB_GROUPS:
+        smooth_group(W, name, SMOOTH_FACTOR, OPTS["smooth-limbs"])
+    write_weights(W)
+    W = read_weights()
+    for bone in W:
+        for vi in [vi for vi, w in W[bone].items() if w < TINY_WEIGHT]:
+            if len([g for g in W if vi in W[g]]) > 1:
+                del W[bone][vi]
+    island_report += cleanup_islands(W, "after_smoothing")
+    write_weights(W)
+    log("smoothed limb groups: repeat", OPTS["smooth-limbs"])
+REPORT["smooth_limbs_repeat"] = OPTS["smooth-limbs"]
 W = read_weights()
 counts_before_twist = {b: len(W.get(b, {})) for b in sorted(bone_names)}
 REPORT["bone_vertex_counts_before_twist"] = counts_before_twist

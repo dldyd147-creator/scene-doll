@@ -288,8 +288,8 @@ export abstract class DollRig {
 
   /**
    * 트위스트 뼈 구동.
-   * ArmTwist·UpLegTwist: 그 팔다리 자신의 비틀림의 −50%(어깨·고관절 쪽이 덜 꼬이게)
-   * ForeArmTwist·LegTwist: 손·발 비틀림의 +50%(손목·발목 쪽이 따라 돌게)
+   * ArmTwist·UpLegTwist(어깨·고관절 쪽 가중치): 그 팔다리 자신의 비틀림의 −50% → 몸통에서 팔로 비틀림이 서서히 시작
+   * ForeArmTwist·LegTwist(손목·발목 쪽 가중치): 손·발 비틀림의 +80% → 손목이 접히지 않고 아래팔에 걸쳐 풀림
    */
   updateDriven(): void {
     if (!this.drivenBones.length) return;
@@ -300,7 +300,7 @@ export abstract class DollRig {
       if (!limbR) continue;
       const axis = this.skel.rest.get(limb)!.dir;
       let angle = 0;
-      if (/(Arm|UpLeg)Twist$/.test(tw)) {
+      if (/^(Left|Right)(Arm|UpLeg)Twist$/.test(tw)) {
         const gp = this.skel.parents.get(limb);
         const gpR = gp ? deltas.get(gp) : undefined;
         const J = (gpR ? gpR.clone().invert() : new Quaternion()).multiply(limbR);
@@ -310,7 +310,7 @@ export abstract class DollRig {
         const childR = deltas.get(child);
         if (!childR) continue;
         const J = limbR.clone().invert().multiply(childR);
-        angle = 0.5 * swingTwist(J, axis).twistAngle;
+        angle = 0.8 * swingTwist(J, axis).twistAngle;
       }
       const R = limbR.clone().multiply(_q.setFromAxisAngle(axis, angle));
       this.setJointDelta(tw, R);
