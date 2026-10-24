@@ -5,3 +5,5 @@ dist-ssr
 .DS_Store
 doll-src/makehuman/downloads
 doll-src/makehuman/**/*.blend1
+
+*.tsbuildinfo
