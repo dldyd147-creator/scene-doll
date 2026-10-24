@@ -97,22 +97,25 @@ export class Engine {
   // ---------- 생명주기 ----------
 
   mount(): void {
-    document.body.appendChild(this.canvas);
+    this.disposed = false;
+    if (!this.canvas.isConnected) document.body.appendChild(this.canvas);
     this.resize();
     window.addEventListener('resize', this.resize);
+    cancelAnimationFrame(this.raf);
     this.raf = requestAnimationFrame(this.frame);
   }
 
+  /** 화면에서 떼어낸다. 다시 mount()할 수 있다(개발 중 핫 리로드 대비) */
   dispose(): void {
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
-    this.interaction?.dispose();
-    this.gizmo?.dispose();
-    this.orbit?.dispose();
+    this.setWorkSurface(null);
     for (const rig of this.dolls.values()) rig.dispose();
     this.dolls.clear();
-    this.renderer.dispose();
+    this.dollKeys.clear();
+    this.loadingTemplates.clear();
+    this.cut = null;
     this.canvas.remove();
   }
 

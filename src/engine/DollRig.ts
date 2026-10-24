@@ -55,6 +55,8 @@ export abstract class DollRig {
   protected abstract bodyBounds(): Box3;
   /** 부위 강조(지원하는 돌만) */
   protected abstract highlightParts(bone: string | null): void;
+  /** 레이캐스트 직전 호출: 자세가 바뀐 메시의 바운딩을 갱신할 기회 */
+  prepareForPick(): void {}
 
   protected constructor(
     readonly id: string,
@@ -166,7 +168,8 @@ export abstract class DollRig {
     for (const name of this.skel.order) {
       const rel = dq.get(name)!.clone().multiply(this.skel.rest.get(name)!.quat.clone().invert());
       if (rel.w < 0) rel.set(-rel.x, -rel.y, -rel.z, -rel.w);
-      if (1 - rel.w > 1e-7) {
+      // 0.25° 미만은 휴식 자세로 본다(GLB 뼈대의 부동소수점 노이즈가 관절값으로 남지 않게)
+      if (1 - rel.w > 2.5e-6) {
         out[name] = toQuat(rel).map((v) => roundTo(v, 5)) as Quat;
       }
     }

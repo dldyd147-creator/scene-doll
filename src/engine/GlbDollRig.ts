@@ -32,9 +32,16 @@ export class GlbDollRig extends DollRig {
       m.material = this.baseMat;
       m.frustumCulled = false;
       m.userData = { dollId: id };
+      // 휴식 자세 기준 바운딩 박스로 레이캐스트를 거르면 포즈를 바꾼 뒤 팔다리를 못 집는다
+      m.geometry.boundingBox = null;
       return m;
     });
     this.setHeight(heightCm);
+  }
+
+  override prepareForPick(): void {
+    // 스킨 메시의 바운딩 구를 현재 자세로 다시 계산하게 한다(three.js가 레이캐스트 때 계산)
+    for (const m of this.pickTargets) (m as SkinnedMesh).boundingSphere = null;
   }
 
   boneFromHit(hit: Intersection): string | null {

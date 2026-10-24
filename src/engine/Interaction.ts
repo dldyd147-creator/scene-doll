@@ -94,7 +94,10 @@ export class Interaction {
   private pickPart(e: PointerEvent): { rig: DollRig; bone: string; point: Vector3 } | null {
     this.setRay(e);
     const targets: Object3D[] = [];
-    for (const rig of this.engine.dolls.values()) targets.push(...rig.pickTargets);
+    for (const rig of this.engine.dolls.values()) {
+      rig.prepareForPick();
+      targets.push(...rig.pickTargets);
+    }
     const hits: Intersection[] = _ray.intersectObjects(targets, false);
     for (const hit of hits) {
       const dollId = (hit.object.userData as { dollId?: string }).dollId;
