@@ -1,8 +1,8 @@
-import { Box3, BoxGeometry, BufferGeometry, CapsuleGeometry, Mesh, Object3D, SphereGeometry, Vector3, type Intersection } from 'three';
+import { Box3, BoxGeometry, BufferAttribute, BufferGeometry, CapsuleGeometry, Matrix4, Mesh, MeshToonMaterial, Object3D, SphereGeometry, type Intersection } from 'three';
 import type { DollAsset } from '../model/types';
 import { DollRig } from './DollRig';
 import { outlineForMesh, outlineMaterial } from './overlays';
-import { buildSkeleton, boneSpecs, proportionsFor, type Proportions } from './skeleton';
+import { buildSkeleton, boneSpecs, proportionsFor, type BuiltSkeleton, type Proportions } from './skeleton';
 
 /** 부위 메시 */
 export interface DollPart extends Mesh {
@@ -11,8 +11,21 @@ export interface DollPart extends Mesh {
 
 const _box = new Box3();
 
+/** 십자선이 그려지는 부위: 머리(얼굴선), 몸통(정중선) */
+const LINE_PARTS: Record<string, [number, number]> = { Head: [1, 0], Spine2: [0, 1], Spine1: [0, 1], Spine: [0, 1], Hips: [0, 1] };
+
+function lineParamsFor(skel: BuiltSkeleton, p: Proportions) {
+  const y = (b: string) => skel.rest.get(b)!.pos.y;
+  return {
+    headZ: 0.008,
+    headHalfW: p.headRx,
+    eyeY: y('Head') + p.headRy,
+    torsoY: [y('Hips') - 0.01 - p.pelvisRy * 0.85, y('Neck')] as [number, number],
+  };
+}
+
 /**
- * 코드로 만든 캡슐 마네킹. Mixamo 이름의 T포즈 뼈대에 뼈마다 캡슐/타원체/상자(강체)를 붙인다.
+ * 코드로 만든 캡슐 마네킹(단순 돌). Mixamo 이름의 T포즈 뼈대에 뼈마다 캡슐/타원체/상자(강체)를 붙인다.
  * 높이 1.0 비율 단위로 만들고 root 스케일로 키를 맞춘다.
  */
 export class MannequinRig extends DollRig {
@@ -21,17 +34,35 @@ export class MannequinRig extends DollRig {
   readonly partsByBone = new Map<string, DollPart[]>();
   readonly proportions: Proportions;
   private outlineMat = outlineMaterial(0.0032);
+  /** 부위별 재질(십자선 부위는 뼈 휴식 행렬이 다른 전용 재질) */
+  private partMats = new Map<string, { base: MeshToonMaterial; hi: MeshToonMaterial }>();
 
   constructor(id: string, asset: DollAsset, color: string, heightCm: number) {
-    super(id, asset.gender, asset.id, color, heightCm, buildSkeleton(boneSpecs(proportionsFor(asset.gender))), 1, null);
-    this.proportions = proportionsFor(asset.gender);
+    const proportions = proportionsFor(asset.gender);
+    const skel = buildSkeleton(boneSpecs(proportions));
+    super(id, asset.gender, asset.id, color, heightCm, skel, 1, null, lineParamsFor(skel, proportions));
+    this.proportions = proportions;
     this.buildParts();
-    this.buildMannequinCrosshair();
     this.setHeight(heightCm);
   }
 
   private addPart(bone: string, geometry: BufferGeometry): void {
-    const mesh = new Mesh(geometry, this.baseMat) as unknown as DollPart;
+    let mats = { base: this.baseMat, hi: this.hiMat };
+    const region = LINE_PARTS[bone];
+    if (region) {
+      const rest = this.skel.rest.get(bone)!;
+      const restMatrix = new Matrix4().compose(rest.pos, rest.quat, new Object3D().scale);
+      mats = this.newMaterials(restMatrix);
+      const n = geometry.getAttribute('position').count;
+      const arr = new Float32Array(n * 2);
+      for (let i = 0; i < n; i++) {
+        arr[i * 2] = region[0];
+        arr[i * 2 + 1] = region[1];
+      }
+      geometry.setAttribute('aRegion', new BufferAttribute(arr, 2));
+    }
+    this.partMats.set(bone, mats);
+    const mesh = new Mesh(geometry, mats.base) as unknown as DollPart;
     mesh.userData = { dollId: this.id, bone };
     mesh.name = `part:${bone}`;
     this.skel.bones.get(bone)!.add(mesh);
@@ -85,22 +116,7 @@ export class MannequinRig extends DollRig {
     }
   }
 
-  private buildMannequinCrosshair(): void {
-    const p = this.proportions;
-    const y = (b: string) => this.skel.rest.get(b)!.pos.y;
-    this.buildCrosshair({
-      head: { bone: 'Head', center: new Vector3(0, y('Head') + p.headRy, 0.008), radii: new Vector3(p.headRx, p.headRy, p.headRz) },
-      torso: [
-        { bone: 'Spine2', from: new Vector3(0, y('Spine2'), p.chestRz), to: new Vector3(0, y('Neck'), p.chestRz * 0.9) },
-        { bone: 'Spine1', from: new Vector3(0, y('Spine1'), 0.085 * 0.85), to: new Vector3(0, y('Spine2'), 0.085 * 0.85) },
-        { bone: 'Spine', from: new Vector3(0, y('Spine'), p.waistR * p.waistZ), to: new Vector3(0, y('Spine1'), p.waistR * p.waistZ) },
-        { bone: 'Hips', from: new Vector3(0, y('Hips') - 0.01 - p.pelvisRy * 0.85, p.pelvisRz * 0.6), to: new Vector3(0, y('Spine'), p.pelvisRz * 0.95) },
-      ],
-      lift: 0.004,
-    });
-  }
-
-  boneFromHit(hit: Intersection): string | null {
+  protected boneFromHitRaw(hit: Intersection): string | null {
     const ud = hit.object.userData as Partial<DollPart['userData']>;
     return ud.bone ?? null;
   }
@@ -115,7 +131,10 @@ export class MannequinRig extends DollRig {
   }
 
   protected highlightParts(bone: string | null): void {
-    for (const part of this.parts) part.material = part.userData.bone === bone ? this.hiMat : this.baseMat;
+    for (const part of this.parts) {
+      const mats = this.partMats.get(part.userData.bone)!;
+      part.material = part.userData.bone === bone ? mats.hi : mats.base;
+    }
   }
 
   override dispose(): void {

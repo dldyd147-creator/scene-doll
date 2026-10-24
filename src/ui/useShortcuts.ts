@@ -71,6 +71,8 @@ export function useShortcuts(engine: Engine): void {
         case 'Escape':
           if (s.settingsOpen) s.setSettingsOpen(false);
           else if (s.exportOpen) s.setExportOpen(false);
+          else if (s.helpOpen) s.setHelpOpen(false);
+          else if (s.galleryOpen) s.setGalleryOpen(false);
           else if (s.mode !== 'direct') s.setMode('direct');
           else s.select({ dollId: null, bone: null });
           return;

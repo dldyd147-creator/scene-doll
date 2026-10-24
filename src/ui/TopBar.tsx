@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
+import { Icon } from './icons';
 import { chooseWorkFolder, folderSupported, openDocument, pendingFolderName, reconnectWorkFolder, saveNow, useBrowserStorage } from './save';
 
 function timeLabel(iso: string | null): string {
@@ -21,6 +22,9 @@ export function TopBar() {
   const setWorkName = useStore((s) => s.setWorkName);
   const setEpisodeNumber = useStore((s) => s.setEpisodeNumber);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
+  const setHelpOpen = useStore((s) => s.setHelpOpen);
+  const setGalleryOpen = useStore((s) => s.setGalleryOpen);
+  const setExportOpen = useStore((s) => s.setExportOpen);
   const [pending, setPending] = useState<string | null>(null);
   const [openList, setOpenList] = useState<Array<{ code: string; episodes: number[] }> | null>(null);
   const openBtn = useRef<HTMLButtonElement>(null);
@@ -63,18 +67,15 @@ export function TopBar() {
         씬 <span>돌</span>
       </div>
       <div className="sep" />
-      <label className="field">
-        작품코드
-        <input className="code" type="text" value={work.code} maxLength={3} onChange={(e) => setWorkCode(e.target.value)} spellCheck={false} />
-      </label>
-      <input className="name" type="text" value={work.name} onChange={(e) => setWorkName(e.target.value)} placeholder="작품명" spellCheck={false} />
-      <label className="field">
-        회차
+      <input className="code" type="text" value={work.code} maxLength={3} onChange={(e) => setWorkCode(e.target.value)} spellCheck={false} title="작품코드(영문 대문자 3자)" />
+      <input className="name" type="text" value={work.name} onChange={(e) => setWorkName(e.target.value)} placeholder="작품명" spellCheck={false} title="작품명" />
+      <label className="field" title="회차">
+        <Icon name="cut" />
         <input className="episode" type="number" min={1} max={999} value={episode.number} onChange={(e) => setEpisodeNumber(Number(e.target.value))} />
       </label>
       <div style={{ position: 'relative' }}>
-        <button ref={openBtn} onClick={showOpenList}>
-          열기…
+        <button ref={openBtn} className="icon" onClick={showOpenList} title="저장된 작품·회차 열기">
+          <Icon name="folderOpen" />
         </button>
         {openList && (
           <div className="popover" style={{ left: 0 }}>
@@ -102,40 +103,47 @@ export function TopBar() {
       <div className="grow" />
 
       {storageKind === 'folder' ? (
-        <span className="storage-chip folder" title="저장 위치: 지정한 작업 폴더 (탐색기에서 바로 보입니다)">
-          📁 {folderName}
+        <span className="storage-chip folder" title={`작업 폴더: ${folderName} · 파일은 탐색기에서 이 폴더 안에 보입니다 · 클릭: 폴더 변경`} onClick={() => void chooseWorkFolder()}>
+          <Icon name="folder" /> {folderName}
         </span>
-      ) : (
-        <span className="storage-chip" title="작업 폴더를 지정하기 전까지 브라우저 안에 저장합니다">
-          브라우저 내부 저장
-        </span>
-      )}
-      {pending && storageKind !== 'folder' && (
+      ) : pending ? (
         <button className="primary" onClick={() => void reconnectWorkFolder()} title={`이전 작업 폴더(${pending})에 다시 접근 허용`}>
-          폴더 다시 연결
+          <Icon name="folder" /> {pending} 다시 연결
         </button>
-      )}
-      {folderSupported() ? (
-        <button onClick={() => void chooseWorkFolder()}>{storageKind === 'folder' ? '폴더 변경' : '작업 폴더 지정'}</button>
+      ) : folderSupported() ? (
+        <button onClick={() => void chooseWorkFolder()} title="작업 폴더를 지정하면 파일이 탐색기에 바로 보입니다. 지정 전에는 브라우저 안에 저장됩니다">
+          <Icon name="folder" /> 작업 폴더
+        </button>
       ) : (
-        <span className="muted small" title="크롬·엣지에서 열면 작업 폴더에 직접 저장할 수 있습니다">
-          폴더 저장은 크롬·엣지 전용
+        <span className="storage-chip" title="폴더 저장은 크롬·엣지에서만 됩니다. 지금은 브라우저 안에 저장합니다">
+          브라우저 저장
         </span>
       )}
       {storageKind === 'folder' && (
-        <button onClick={() => void useBrowserStorage()} title="작업 폴더 연결을 끊고 브라우저 내부 저장으로">
-          연결 해제
+        <button className="icon ghost" onClick={() => void useBrowserStorage()} title="작업 폴더 연결 해제(브라우저 내부 저장으로)">
+          <Icon name="close" size={14} />
         </button>
       )}
       <div className="sep" />
-      <button onClick={() => void saveNow()} title="저장 (Ctrl+S)">
-        저장
+      <button className="icon" onClick={() => void saveNow()} title="저장 (Ctrl+S)">
+        <Icon name="save" />
       </button>
-      <span className={`save-state ${saveError ? 'error' : dirty ? 'dirty' : ''}`}>
-        {saveError ? `저장 실패: ${saveError}` : dirty ? '변경됨' : lastSavedAt ? `저장됨 ${timeLabel(lastSavedAt)}` : ''}
+      <span className={`save-state ${saveError ? 'error' : dirty ? 'dirty' : ''}`} title={saveError ?? undefined}>
+        {saveError ? '저장 실패' : dirty ? '변경됨' : lastSavedAt ? timeLabel(lastSavedAt) : ''}
       </span>
+      <button className="icon" onClick={() => setExportOpen(true)} title="회차 일괄 출력(PNG + 설명 텍스트)">
+        <Icon name="export" />
+      </button>
+      <button className="icon" onClick={() => setGalleryOpen(true)} title="출력물 보기(출력 폴더의 PNG·설명 텍스트)">
+        <Icon name="gallery" />
+      </button>
       <div className="sep" />
-      <button onClick={() => setSettingsOpen(true)}>설정</button>
+      <button className="icon" onClick={() => setSettingsOpen(true)} title="설정">
+        <Icon name="settings" />
+      </button>
+      <button className="icon" onClick={() => setHelpOpen(true)} title="도움말: 조작법과 단축키">
+        <Icon name="help" />
+      </button>
     </header>
   );
 }

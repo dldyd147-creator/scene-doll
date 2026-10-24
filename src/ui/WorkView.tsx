@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import type { Engine } from '../engine/Engine';
 import { useStore } from '../state/store';
+import { Icon } from './icons';
 
 export function WorkView({ engine }: { engine: Engine }) {
   const mode = useStore((s) => s.mode);
@@ -25,117 +26,104 @@ export function WorkView({ engine }: { engine: Engine }) {
     [engine],
   );
 
+  const toggleCut = (key: 'shading' | 'crosshair' | 'outline') =>
+    commitCut((c) => {
+      if (key === 'shading') c.light.shading = !c.light.shading;
+      else c[key] = !c[key];
+    });
+
   return (
     <section className="view work-view">
       <div className="view-surface" ref={surfaceRef} />
       {dollCount === 0 && (
         <div className="work-empty">
           <div>
-            오른쪽 에셋 패널의 <b>돌</b> 탭에서 돌을 추가하세요.
-            <br />
-            <span className="small">몸 부위를 잡고 끌면 관절이 돌고, 손·발의 회색 핸들을 끌면 팔·다리 전체가 따라옵니다.</span>
+            오른쪽 <b>돌</b> 탭에서 <Icon name="plus" size={14} /> 를 눌러 돌을 꺼내세요.
           </div>
         </div>
       )}
       <div className="work-toolbar">
         <div className="group" title="조작 모드">
-          <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="부위를 직접 끌어 관절 회전">
-            직접<kbd>Q</kbd>
+          <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="직접 드래그 (Q): 부위·관절점·핸들을 끌어 자세를 잡음">
+            <Icon name="hand" /> 직접
           </button>
-          <button className={mode === 'translate' ? 'active' : ''} onClick={() => setMode('translate')} title="이동 기즈모(돌 전체 / 손·발 IK 축 이동)">
-            이동<kbd>W</kbd>
+          <button className={mode === 'translate' ? 'active' : ''} onClick={() => setMode('translate')} title="이동 기즈모 (W): 돌 전체 또는 손·발 IK 축 이동">
+            <Icon name="move" /> 이동
           </button>
-          <button className={mode === 'rotate' ? 'active' : ''} onClick={() => setMode('rotate')} title="회전 링 기즈모(선택 관절 / 돌 전체)">
-            회전<kbd>E</kbd>
+          <button className={mode === 'rotate' ? 'active' : ''} onClick={() => setMode('rotate')} title="회전 링 기즈모 (E): 선택 관절 또는 돌 전체">
+            <Icon name="rotate" /> 회전
           </button>
         </div>
         <div className="group" title="선택한 돌">
-          <button disabled={!hasDoll} onClick={() => engine.mirrorSelected()} title="포즈 좌우 반전">
-            미러
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.mirrorSelected()} title="포즈 좌우 반전">
+            <Icon name="mirror" />
           </button>
-          <button disabled={!hasDoll} onClick={() => engine.resetSelectedJoint(true)} title={selection.bone ? '선택한 관절과 그 아래 관절 초기화' : '모든 관절 초기화'}>
-            {selection.bone ? '관절 초기화' : '포즈 초기화'}
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedJoint(true)} title={selection.bone ? '선택한 관절과 그 아래 초기화' : '모든 관절 초기화(T포즈)'}>
+            <Icon name="reset" />
           </button>
-          <button disabled={!hasDoll || !selection.bone} onClick={() => engine.resetAllJoints()} title="모든 관절 초기화(T포즈)">
-            전체 초기화
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.fixJoints()} title="관절을 사람 관절 한계 안으로 교정">
+            <Icon name="fix" />
           </button>
-          <button disabled={!hasDoll} onClick={() => engine.snapSelectedToGround()} title="가장 낮은 점을 바닥에 붙이기">
-            바닥 접지
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.snapSelectedToGround()} title="가장 낮은 점을 바닥에 붙이기">
+            <Icon name="ground" />
           </button>
-          <button disabled={!hasDoll} onClick={() => selection.dollId && duplicateDoll(selection.dollId)} title="복제 (Ctrl+C, Ctrl+V는 같은 자리)">
-            복제
+          <button className="icon" disabled={!hasDoll} onClick={() => selection.dollId && duplicateDoll(selection.dollId)} title="복제 (Ctrl+C · Ctrl+V는 같은 자리)">
+            <Icon name="copy" />
           </button>
-          <button className="danger" disabled={!hasDoll} onClick={() => selection.dollId && removeDoll(selection.dollId)} title="삭제 (Delete)">
-            삭제
+          <button className="icon danger" disabled={!hasDoll} onClick={() => selection.dollId && removeDoll(selection.dollId)} title="삭제 (Delete)">
+            <Icon name="trash" />
           </button>
         </div>
         <div className="group" title="시점">
-          <button onClick={() => engine.fitAll()} title="모든 돌이 보이는 객관 뷰">
-            전체<kbd>Shift+Z</kbd>
+          <button className="icon" onClick={() => engine.fitAll()} title="전체 보기 (Shift+Z)">
+            <Icon name="fitAll" />
           </button>
-          <button onClick={() => engine.focusSelected()} title="선택한 돌로 시점 맞춤">
-            선택<kbd>F</kbd>
+          <button className="icon" onClick={() => engine.focusSelected()} title="선택한 돌로 시점 맞춤 (F)">
+            <Icon name="focus" />
           </button>
-          <button onClick={() => engine.toggleViewWithManuscript()} title="조작뷰 시점 ↔ 원고 카메라 시점">
-            원고 시점<kbd>Tab</kbd>
+          <button className="icon" onClick={() => engine.toggleViewWithManuscript()} title="조작뷰 시점 ↔ 원고 카메라 시점 (Tab)">
+            <Icon name="camera" />
           </button>
         </div>
         <div className="group" title="표시">
-          <button
-            className={shading ? 'active' : ''}
-            onClick={() =>
-              commitCut((c) => {
-                c.light.shading = !c.light.shading;
-              })
-            }
-            title="2단 셀 명암 켜기/끄기(컷에 저장)"
-          >
-            명암
+          <button className={`icon ${shading ? 'active' : ''}`} onClick={() => toggleCut('shading')} title="2단 셀 명암(컷에 저장)">
+            <Icon name="shading" />
           </button>
-          <button
-            className={crosshair ? 'active' : ''}
-            onClick={() =>
-              commitCut((c) => {
-                c.crosshair = !c.crosshair;
-              })
-            }
-            title="머리 십자선(얼굴 중심·눈높이)과 몸통 정중선. 출력에도 들어감(출력 설정에서 제외 가능)"
-          >
-            십자선
+          <button className={`icon ${crosshair ? 'active' : ''}`} onClick={() => toggleCut('crosshair')} title="십자선: 얼굴 중심선·눈높이선·몸통 정중선(컷에 저장, 출력 포함)">
+            <Icon name="crosshair" />
           </button>
-          <button
-            className={outline ? 'active' : ''}
-            onClick={() =>
-              commitCut((c) => {
-                c.outline = !c.outline;
-              })
-            }
-            title="돌 실루엣 외곽선(겹친 돌 구분)"
-          >
-            외곽선
+          <button className={`icon ${outline ? 'active' : ''}`} onClick={() => toggleCut('outline')} title="실루엣 외곽선(컷에 저장)">
+            <Icon name="outline" />
           </button>
-          <button className={settings.showGrid ? 'active' : ''} onClick={() => updateSettings({ showGrid: !settings.showGrid })} title="바닥 격자">
-            격자
+          <button className={`icon ${settings.showGrid ? 'active' : ''}`} onClick={() => updateSettings({ showGrid: !settings.showGrid })} title="바닥 격자">
+            <Icon name="grid" />
           </button>
-          <button className={settings.showFrustum ? 'active' : ''} onClick={() => updateSettings({ showFrustum: !settings.showFrustum })} title="원고 카메라 화각 범위 선">
-            화각선
+          <button className={`icon ${settings.showFrustum ? 'active' : ''}`} onClick={() => updateSettings({ showFrustum: !settings.showFrustum })} title="원고 카메라 화각 범위 선">
+            <Icon name="frustum" />
           </button>
-          <button className={settings.shoulderLink ? 'active' : ''} onClick={() => updateSettings({ shoulderLink: !settings.shoulderLink })} title="손을 끌 때 어깨(쇄골)가 조금 따라옴">
-            어깨 연동
+        </div>
+        <div className="group" title="포징 보조">
+          <button className={`icon ${settings.jointLimits ? 'active' : ''}`} onClick={() => updateSettings({ jointLimits: !settings.jointLimits })} title="관절 한계: 사람 관절이 안 가는 각도로 꺾이지 않게 자동 교정">
+            <Icon name="limits" />
           </button>
-          <button className={settings.plantFeet ? 'active' : ''} onClick={() => updateSettings({ plantFeet: !settings.plantFeet })} title="돌 전체를 옮기거나 골반을 돌릴 때 발이 제자리를 지킴(다리 IK)">
-            발 고정
+          <button className={`icon ${settings.shoulderLink ? 'active' : ''}`} onClick={() => updateSettings({ shoulderLink: !settings.shoulderLink })} title="어깨 연동: 손을 끌 때 쇄골이 조금 따라옴">
+            <Icon name="shoulder" />
           </button>
-          <button className={settings.lockEndOrientation ? 'active' : ''} onClick={() => updateSettings({ lockEndOrientation: !settings.lockEndOrientation })} title="IK로 끌 때 손·발 방향을 유지">
-            손발 방향 고정
+          <button className={`icon ${settings.plantFeet ? 'active' : ''}`} onClick={() => updateSettings({ plantFeet: !settings.plantFeet })} title="발 고정: 돌을 옮기거나 골반을 돌릴 때 발이 제자리(다리 IK)">
+            <Icon name="feet" />
+          </button>
+          <button className={`icon ${settings.lockEndOrientation ? 'active' : ''}`} onClick={() => updateSettings({ lockEndOrientation: !settings.lockEndOrientation })} title="손·발 방향 고정: IK로 끌 때 손·발 방향 유지">
+            <Icon name="wrist" />
           </button>
         </div>
       </div>
-      <div className="work-hints">
-        부위 드래그: 관절 회전 · Alt+드래그: 비틀기 · 손·발 핸들 드래그: IK · 빈 곳 클릭: 선택 해제
-        <br />
-        {settings.orbitMode === 'designdoll' ? '우클릭 드래그: 시점 회전 · 휠 드래그: 팬' : '휠 드래그: 시점 회전 · Shift+휠 드래그: 팬 · 우클릭 드래그: 팬'} · 휠: 줌 · Ctrl+Z/Y: 되돌리기/다시
-      </div>
+      {settings.showHints && (
+        <div className="work-hints">
+          부위 드래그: 관절 회전 · 관절점 드래그: 관절 이동 · 손발 핸들: IK · 골반 핸들: 돌 이동(Shift 높이, Alt 회전) · 바닥 링: 회전 · Alt+부위: 비틀기
+          <br />
+          {settings.orbitMode === 'designdoll' ? '우클릭 드래그: 시점 회전 · 휠 드래그: 팬' : '휠 드래그: 시점 회전 · Shift+휠 드래그: 팬 · 우클릭 드래그: 팬'} · 휠: 줌 · Ctrl+Z/Y: 되돌리기/다시
+        </div>
+      )}
     </section>
   );
 }

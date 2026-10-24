@@ -1,21 +1,30 @@
-import { Color, MeshBasicMaterial, Plane, Quaternion, Raycaster, Vector2, Vector3, type Intersection, type Object3D } from 'three';
+import { Plane, Quaternion, Raycaster, Vector2, Vector3, type Intersection, type Object3D } from 'three';
 import type { Engine } from './Engine';
-import type { DollHandle, DollRig } from './DollRig';
-import { HANDLE_ACTIVE_COLOR, HANDLE_COLOR, HANDLE_HOVER_COLOR } from './materials';
+import type { DollRig } from './DollRig';
 import { boneLabel, IK_CHAINS } from './skeleton';
 import { rotateObjectWorld } from './three-utils';
 
 type DragState =
   | { kind: 'idle' }
-  | { kind: 'pending'; rig: DollRig; bone: string; point: Vector3; x: number; y: number; alt: boolean }
-  | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean; feet: Map<string, Vector3> | null }
+  | { kind: 'pending'; rig: DollRig; bone: string; point: Vector3; x: number; y: number; alt: boolean; viaDot: boolean }
+  | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean }
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
-  | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; handle: DollHandle; moved: boolean }
+  | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; moved: boolean }
+  | { kind: 'move'; rig: DollRig; plane: Plane; startHit: Vector3; startPos: Vector3; feet: Map<string, Vector3> | null; moved: boolean; viaHip: boolean }
+  | { kind: 'yaw'; rig: DollRig; center: Vector3; lastAngle: number; lastX: number; byAngle: boolean; feet: Map<string, Vector3> | null; moved: boolean }
   | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
 
+type Pick =
+  | { kind: 'ik'; rig: DollRig; effector: string; pos: Vector3 }
+  | { kind: 'hip'; rig: DollRig; pos: Vector3 }
+  | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
+  | { kind: 'ring'; rig: DollRig; point: Vector3 }
+  | { kind: 'camera'; point: Vector3 }
+  | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
+  | null;
+
 const DRAG_THRESHOLD_PX = 3;
-/** IK 핸들 클릭 반경(px) */
-const HANDLE_PICK_PX = 16;
+const GROUND = new Plane(new Vector3(0, 1, 0), 0);
 const _ray = new Raycaster();
 const _ndc = new Vector2();
 const _hit = new Vector3();
@@ -25,15 +34,16 @@ const _tmp = new Vector3();
 
 /**
  * 조작뷰 포인터 상호작용(디자인돌 방식).
- * - 몸 부위를 잡고 끌면 그 관절이 바로 회전(화면 평면 기준 레버)
- * - Alt+드래그: 뼈 축 비틀기
- * - 손·발 핸들을 끌면 IK로 팔·다리 전체가 따라옴(핸들은 화면 평행 평면 위를 움직인다)
- * - 원고 카메라 아이콘을 끌면 카메라가 화면 평행 평면에서 움직인다
+ * - 손·발 핸들 드래그: IK로 팔·다리 전체가 따라옴
+ * - 골반 핸들(사각) 또는 골반 부위 드래그: 돌 전체 이동(바닥 평면, Shift: 화면 평면). Alt+드래그: 돌 전체 회전
+ * - 바닥 링 드래그: 돌 전체 회전
+ * - 관절점 드래그: 그 관절이 커서를 따라가게 위 뼈를 돌림. 몸 부위 드래그: 그 관절 회전. Alt: 비틀기
+ * - 원고 카메라 아이콘 드래그: 카메라 이동
  * - 빈 곳 클릭: 선택 해제. 시점 조작(휠/우클릭)은 OrbitControls가 맡는다.
  */
 export class Interaction {
   private state: DragState = { kind: 'idle' };
-  private hoverHandle: DollHandle | null = null;
+  private hover: Pick = null;
   private pointerId: number | null = null;
 
   constructor(
@@ -69,41 +79,67 @@ export class Interaction {
     _ray.setFromCamera(_ndc, this.engine.workCamera);
   }
 
-  /** 화면 거리로 IK 핸들을 고른다(작은 구라도 넉넉히 잡히게) */
-  private pickHandle(e: PointerEvent): DollHandle | null {
+  /** 월드 점의 화면 픽셀 거리 */
+  private screenDist(e: PointerEvent, p: Vector3): number {
     const rect = this.el.getBoundingClientRect();
-    const px = e.clientX - rect.left;
-    const py = e.clientY - rect.top;
-    const cam = this.engine.workCamera;
-    let best: DollHandle | null = null;
-    let bestD = HANDLE_PICK_PX * Math.max(0.6, this.engine.settings.handleSize);
-    for (const rig of this.engine.dolls.values()) {
-      for (const h of rig.handles.values()) {
-        _tmp.copy(h.position).project(cam);
-        if (_tmp.z > 1) continue;
-        const sx = ((_tmp.x + 1) / 2) * rect.width;
-        const sy = ((1 - _tmp.y) / 2) * rect.height;
-        const d = Math.hypot(sx - px, sy - py);
+    _tmp.copy(p).project(this.engine.workCamera);
+    if (_tmp.z > 1) return Infinity;
+    const sx = rect.left + ((_tmp.x + 1) / 2) * rect.width;
+    const sy = rect.top + ((1 - _tmp.y) / 2) * rect.height;
+    return Math.hypot(sx - e.clientX, sy - e.clientY);
+  }
+
+  private pick(e: PointerEvent): Pick {
+    const scale = Math.max(0.7, this.engine.settings.handleSize);
+    const rigs = [...this.engine.dolls.values()];
+    const selected = this.engine.selectedRig();
+
+    // 1) IK 핸들·골반 핸들(모든 돌) — 선택한 돌을 우선
+    let best: Pick = null;
+    let bestD = 14 * scale;
+    const ordered = selected ? [selected, ...rigs.filter((r) => r !== selected)] : rigs;
+    for (const rig of ordered) {
+      for (const eff of rig.effectors) {
+        const pos = rig.worldPos(IK_CHAINS[eff].end);
+        const d = this.screenDist(e, pos);
         if (d < bestD) {
           bestD = d;
-          best = h;
+          best = { kind: 'ik', rig, effector: eff, pos };
         }
       }
+      const hip = rig.hipWorldPos();
+      const dh = this.screenDist(e, hip);
+      if (dh < bestD) {
+        bestD = dh;
+        best = { kind: 'hip', rig, pos: hip };
+      }
     }
-    return best;
-  }
+    if (best) return best;
 
-  private pickCameraIcon(e: PointerEvent): Vector3 | null {
-    if (!this.engine.manu.icon.visible) return null;
-    this.setRay(e);
-    const hits = _ray.intersectObjects(this.engine.manu.iconMeshes, false);
-    return hits.length ? hits[0].point.clone() : null;
-  }
+    // 2) 관절점(선택한 돌만)
+    if (selected) {
+      let bd = 10 * scale;
+      for (const bone of selected.jointDotBones) {
+        const pos = selected.worldPos(bone);
+        const d = this.screenDist(e, pos);
+        if (d < bd) {
+          bd = d;
+          best = { kind: 'joint', rig: selected, bone, pos };
+        }
+      }
+      if (best) return best;
+    }
 
-  private pickPart(e: PointerEvent): { rig: DollRig; bone: string; point: Vector3 } | null {
+    // 3) 원고 카메라 아이콘
     this.setRay(e);
+    if (this.engine.manu.icon.visible) {
+      const hits = _ray.intersectObjects(this.engine.manu.iconMeshes, false);
+      if (hits.length) return { kind: 'camera', point: hits[0].point.clone() };
+    }
+
+    // 4) 몸 부위
     const targets: Object3D[] = [];
-    for (const rig of this.engine.dolls.values()) {
+    for (const rig of rigs) {
       rig.prepareForPick();
       targets.push(...rig.pickTargets);
     }
@@ -114,7 +150,16 @@ export class Interaction {
       if (!rig) continue;
       const bone = rig.boneFromHit(hit);
       if (!bone) continue;
-      return { rig, bone, point: hit.point.clone() };
+      return { kind: 'part', rig, bone, point: hit.point.clone() };
+    }
+
+    // 5) 바닥 링(선택한 돌)
+    if (selected && _ray.ray.intersectPlane(GROUND, _hit)) {
+      const c = selected.root.position;
+      const dist = Math.hypot(_hit.x - c.x, _hit.z - c.z);
+      const camDist = this.engine.workCamera.position.distanceTo(_hit);
+      const tol = 0.03 + 0.015 * camDist;
+      if (Math.abs(dist - selected.groundRingRadius) < tol) return { kind: 'ring', rig: selected, point: _hit.clone() };
     }
     return null;
   }
@@ -129,9 +174,17 @@ export class Interaction {
     return new Plane().setFromNormalAndCoplanarPoint(_dir.clone(), point);
   }
 
+  private horizontalPlaneAt(point: Vector3): Plane {
+    return new Plane(new Vector3(0, 1, 0), -point.y);
+  }
+
   private gizmoHot(): boolean {
     const g = this.engine.gizmo;
     return !!g && g.getHelper().visible && (g.dragging || g.axis !== null);
+  }
+
+  private groundAngle(rig: DollRig, p: Vector3): number {
+    return Math.atan2(p.x - rig.root.position.x, p.z - rig.root.position.z);
   }
 
   // ---------- 이벤트 ----------
@@ -140,39 +193,63 @@ export class Interaction {
     if (e.button !== 0) return;
     if (this.gizmoHot()) return;
     if (this.state.kind !== 'idle') return;
-
-    const handle = this.pickHandle(e);
-    if (handle) {
-      const rig = this.engine.dolls.get(handle.userData.dollId);
-      if (!rig) return;
-      const effector = handle.userData.effector;
-      this.engine.callbacks.select({ dollId: rig.id, bone: IK_CHAINS[effector].end });
-      this.setHandleColor(handle, HANDLE_ACTIVE_COLOR);
-      this.state = { kind: 'ik', rig, effector, plane: this.viewPlaneAt(handle.position), handle, moved: false };
-      this.capture(e);
+    const sel = this.engine.callbacks.select;
+    const p = this.pick(e);
+    if (!p) {
+      sel({ dollId: null, bone: null });
       return;
     }
-
-    const camHit = this.pickCameraIcon(e);
-    if (camHit) {
-      this.engine.callbacks.select({ dollId: null, bone: null, camera: true });
-      const startPos = this.engine.manu.camera.position.clone();
-      const plane = this.viewPlaneAt(camHit);
-      this.state = { kind: 'camera', plane, startHit: camHit, startPos, moved: false };
-      this.capture(e);
-      return;
+    switch (p.kind) {
+      case 'ik':
+        sel({ dollId: p.rig.id, bone: IK_CHAINS[p.effector].end });
+        p.rig.setEffectorState(p.effector, 'active');
+        this.state = { kind: 'ik', rig: p.rig, effector: p.effector, plane: this.viewPlaneAt(p.pos), moved: false };
+        break;
+      case 'hip':
+        sel({ dollId: p.rig.id, bone: null });
+        p.rig.setHipState('active');
+        this.beginMoveOrYaw(e, p.rig, p.pos, true);
+        break;
+      case 'joint': {
+        const parent = p.rig.skel.parents.get(p.bone) ?? null;
+        sel({ dollId: p.rig.id, bone: p.bone });
+        if (!parent) break;
+        // 관절점을 끌면 그 위 뼈를 돌려 관절이 커서를 따라간다
+        this.state = { kind: 'pending', rig: p.rig, bone: parent, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey, viaDot: true };
+        break;
+      }
+      case 'camera': {
+        sel({ dollId: null, bone: null, camera: true });
+        this.state = { kind: 'camera', plane: this.viewPlaneAt(p.point), startHit: p.point, startPos: this.engine.manu.camera.position.clone(), moved: false };
+        break;
+      }
+      case 'part': {
+        const isRoot = p.bone === p.rig.skel.order[0];
+        sel({ dollId: p.rig.id, bone: isRoot ? null : p.bone });
+        if (isRoot) this.beginMoveOrYaw(e, p.rig, p.point, false);
+        else this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey, viaDot: false };
+        break;
+      }
+      case 'ring': {
+        sel({ dollId: p.rig.id, bone: null });
+        this.state = { kind: 'yaw', rig: p.rig, center: p.rig.root.position.clone(), lastAngle: this.groundAngle(p.rig, p.point), lastX: e.clientX, byAngle: true, feet: this.engine.capturePlantedFeet(p.rig), moved: false };
+        break;
+      }
     }
-
-    const hit = this.pickPart(e);
-    if (hit) {
-      this.engine.callbacks.select({ dollId: hit.rig.id, bone: hit.bone });
-      this.state = { kind: 'pending', rig: hit.rig, bone: hit.bone, point: hit.point, x: e.clientX, y: e.clientY, alt: e.altKey };
-      this.capture(e);
-      return;
-    }
-
-    this.engine.callbacks.select({ dollId: null, bone: null });
+    if (this.state.kind !== 'idle') this.capture(e);
   };
+
+  /** 골반을 잡았을 때: 보통은 이동, Alt면 돌 전체 회전 */
+  private beginMoveOrYaw(e: PointerEvent, rig: DollRig, point: Vector3, viaHip: boolean): void {
+    const feet = this.engine.capturePlantedFeet(rig);
+    if (e.altKey) {
+      this.state = { kind: 'yaw', rig, center: rig.root.position.clone(), lastAngle: 0, lastX: e.clientX, byAngle: false, feet, moved: false };
+      return;
+    }
+    const plane = e.shiftKey ? this.viewPlaneAt(point) : this.horizontalPlaneAt(point);
+    this.state = { kind: 'move', rig, plane, startHit: point, startPos: rig.root.position.clone(), feet, moved: false, viaHip };
+    this.el.style.cursor = 'move';
+  }
 
   private onMove = (e: PointerEvent): void => {
     const s = this.state;
@@ -193,13 +270,7 @@ export class Interaction {
           const pivot = s.rig.worldPos(s.bone);
           const lever = s.point.clone().sub(pivot);
           if (lever.lengthSq() < 1e-8) lever.set(0, 0.01, 0);
-          // 골반을 돌릴 때 발 고정이 켜져 있으면 발 위치를 기억해 둔다
-          let feet: Map<string, Vector3> | null = null;
-          if (s.bone === 'Hips' && this.engine.settings.plantFeet) {
-            feet = new Map();
-            for (const eff of ['LeftFoot', 'RightFoot']) if (s.rig.skel.bones.has(eff)) feet.set(eff, s.rig.worldPos(eff));
-          }
-          this.state = { kind: 'direct', rig: s.rig, bone: s.bone, pivot, lever, plane: this.viewPlaneAt(s.point), moved: false, feet };
+          this.state = { kind: 'direct', rig: s.rig, bone: s.bone, pivot, lever, plane: this.viewPlaneAt(s.point), moved: false };
         }
         this.el.style.cursor = 'grabbing';
         this.onMove(e);
@@ -217,7 +288,7 @@ export class Interaction {
         rotateObjectWorld(bone, _q);
         s.lever.copy(v1);
         s.moved = true;
-        if (s.feet) for (const [eff, pos] of s.feet) this.engine.solveIk(s.rig, eff, pos, { shoulder: false });
+        this.engine.clampAfterChange(s.rig, [s.bone]);
         return;
       }
       case 'twist': {
@@ -227,12 +298,41 @@ export class Interaction {
         bone.rotateY(dx * 0.012 * this.engine.settings.directDragSpeed);
         bone.updateWorldMatrix(false, true);
         s.moved = true;
+        this.engine.clampAfterChange(s.rig, [s.bone]);
         return;
       }
       case 'ik': {
         const target = this.rayOnPlane(e, s.plane);
         if (!target) return;
         this.engine.solveIk(s.rig, s.effector, target);
+        s.moved = true;
+        return;
+      }
+      case 'move': {
+        const hit = this.rayOnPlane(e, s.plane);
+        if (!hit) return;
+        s.rig.root.position.copy(s.startPos).add(hit.sub(s.startHit));
+        s.rig.root.updateMatrixWorld(true);
+        this.engine.keepFeet(s.rig, s.feet);
+        s.moved = true;
+        return;
+      }
+      case 'yaw': {
+        let delta: number;
+        if (s.byAngle) {
+          const hit = this.rayOnPlane(e, GROUND);
+          if (!hit) return;
+          const a = this.groundAngle(s.rig, hit);
+          delta = a - s.lastAngle;
+          if (delta > Math.PI) delta -= 2 * Math.PI;
+          if (delta < -Math.PI) delta += 2 * Math.PI;
+          s.lastAngle = a;
+        } else {
+          delta = -(e.clientX - s.lastX) * 0.01;
+          s.lastX = e.clientX;
+        }
+        this.engine.rotateRootYaw(s.rig, delta);
+        this.engine.keepFeet(s.rig, s.feet);
         s.moved = true;
         return;
       }
@@ -258,10 +358,10 @@ export class Interaction {
 
   private finish(commit: boolean): void {
     const s = this.state;
-    if (s.kind === 'ik') this.setHandleColor(s.handle, HANDLE_COLOR);
-    if (commit && (s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik') && s.moved) {
-      this.engine.commitDoll(s.rig.id);
-    }
+    if (s.kind === 'ik') s.rig.setEffectorState(s.effector, 'normal');
+    if (s.kind === 'move' && s.viaHip) s.rig.setHipState('normal');
+    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'move' || s.kind === 'yaw';
+    if (commit && dollDrag && s.moved) this.engine.commitDoll(s.rig.id);
     if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
     this.state = { kind: 'idle' };
     this.el.style.cursor = '';
@@ -286,47 +386,57 @@ export class Interaction {
 
   // ---------- 호버 ----------
 
-  private setHandleColor(h: DollHandle, hex: string): void {
-    (h.material as MeshBasicMaterial).color = new Color(hex);
+  private clearHoverState(): void {
+    const h = this.hover;
+    if (!h) return;
+    if (h.kind === 'ik') h.rig.setEffectorState(h.effector, 'normal');
+    if (h.kind === 'hip') h.rig.setHipState('normal');
+    this.hover = null;
   }
 
   private updateHover(e: PointerEvent): void {
     if (this.gizmoHot()) {
-      this.clearHover();
+      this.clearHoverState();
+      this.el.style.cursor = '';
       return;
     }
-    const handle = this.pickHandle(e);
-    if (handle !== this.hoverHandle) {
-      if (this.hoverHandle) this.setHandleColor(this.hoverHandle, HANDLE_COLOR);
-      this.hoverHandle = handle;
-      if (handle) this.setHandleColor(handle, HANDLE_HOVER_COLOR);
+    const p = this.pick(e);
+    const same = this.hover && p && this.hover.kind === p.kind && (this.hover as { rig?: DollRig }).rig === (p as { rig?: DollRig }).rig && (this.hover as { effector?: string }).effector === (p as { effector?: string }).effector;
+    if (!same) {
+      this.clearHoverState();
+      this.hover = p;
+      if (p?.kind === 'ik') p.rig.setEffectorState(p.effector, 'hover');
+      if (p?.kind === 'hip') p.rig.setHipState('hover');
     }
-    if (handle) {
-      this.el.style.cursor = 'grab';
-      const label = boneLabel(IK_CHAINS[handle.userData.effector].end);
-      this.engine.callbacks.hint(`${label} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
-      return;
+    const hint = this.engine.callbacks.hint;
+    switch (p?.kind) {
+      case 'ik':
+        this.el.style.cursor = 'grab';
+        hint(`${boneLabel(IK_CHAINS[p.effector].end)} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
+        return;
+      case 'hip':
+        this.el.style.cursor = 'move';
+        hint('골반 핸들 · 드래그: 돌 이동 · Shift+드래그: 높이 · Alt+드래그: 돌 회전');
+        return;
+      case 'joint':
+        this.el.style.cursor = 'grab';
+        hint(`${boneLabel(p.bone)} 관절 · 끌면 관절이 커서를 따라갑니다 · E: 회전 링`);
+        return;
+      case 'camera':
+        this.el.style.cursor = 'move';
+        hint('원고 카메라 · 끌어서 이동 · W: 이동 기즈모 · E: 회전 기즈모');
+        return;
+      case 'part':
+        this.el.style.cursor = p.bone === p.rig.skel.order[0] ? 'move' : 'grab';
+        hint(p.bone === p.rig.skel.order[0] ? '골반 · 드래그: 돌 이동 · Shift: 높이 · Alt: 돌 회전' : `${boneLabel(p.bone)} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · E: 회전 링`);
+        return;
+      case 'ring':
+        this.el.style.cursor = 'ew-resize';
+        hint('바닥 링 · 끌면 돌 전체가 돕니다');
+        return;
+      default:
+        this.el.style.cursor = '';
+        hint('');
     }
-    if (this.pickCameraIcon(e)) {
-      this.el.style.cursor = 'move';
-      this.engine.callbacks.hint('원고 카메라 · 끌어서 이동 · W: 이동 기즈모 · E: 회전 기즈모');
-      return;
-    }
-    const hit = this.pickPart(e);
-    if (hit) {
-      this.el.style.cursor = 'grab';
-      this.engine.callbacks.hint(`${boneLabel(hit.bone)} · 드래그: 관절 회전 · Alt+드래그: 비틀기 · E: 회전 링`);
-      return;
-    }
-    this.el.style.cursor = '';
-    this.engine.callbacks.hint('');
-  }
-
-  private clearHover(): void {
-    if (this.hoverHandle) {
-      this.setHandleColor(this.hoverHandle, HANDLE_COLOR);
-      this.hoverHandle = null;
-    }
-    this.el.style.cursor = '';
   }
 }

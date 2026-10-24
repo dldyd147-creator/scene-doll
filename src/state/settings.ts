@@ -19,11 +19,18 @@ export interface Settings {
   plantFeet: boolean;
   /** 손목·발목 방향 고정: IK로 끌 때 손·발의 방향을 유지한다 */
   lockEndOrientation: boolean;
+  /** 관절 한계: 사람 관절이 안 가는 각도로 꺾이지 않게 자동 교정 */
+  jointLimits: boolean;
   undoLimit: number;
   autosaveSeconds: number;
   /** 조작뷰에 원고 카메라 화각 범위 표시 */
   showFrustum: boolean;
   showGrid: boolean;
+  /** 원고뷰에도 바닥 격자 표시(출력에는 안 들어감) */
+  manuscriptGrid: boolean;
+  theme: 'light' | 'dark';
+  /** 조작뷰 구석의 조작 안내 상자 */
+  showHints: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -38,10 +45,14 @@ export const DEFAULT_SETTINGS: Settings = {
   directDragSpeed: 1,
   plantFeet: false,
   lockEndOrientation: false,
+  jointLimits: true,
   undoLimit: 200,
   autosaveSeconds: 60,
   showFrustum: true,
   showGrid: true,
+  manuscriptGrid: true,
+  theme: 'light',
+  showHints: false,
 };
 
 const KEY = 'scene-doll.settings.v1';

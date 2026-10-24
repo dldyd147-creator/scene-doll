@@ -91,6 +91,18 @@ export interface RestTransform {
   quat: Quaternion;
   /** 자식(또는 물려받은) 방향으로의 길이. 잎 뼈는 0 */
   length: number;
+  /** 돌 공간 휴식 자세에서 뼈가 뻗는 방향(단위 벡터). 잎 뼈는 부모 방향 */
+  dir: Vector3;
+}
+
+/** 구동 뼈(트위스트 뼈) 이름인지: LeftArmTwist 같은 것. 사용자가 직접 돌리지 않고 프로그램이 돌린다 */
+export function isDrivenBone(name: string): boolean {
+  return /^(Left|Right)(Arm|ForeArm|UpLeg|Leg)Twist$/.test(name);
+}
+
+/** 트위스트 뼈 → 그것이 붙은 팔다리 뼈 이름 */
+export function drivenParent(name: string): string {
+  return name.replace(/Twist$/, '');
 }
 
 /** 돌 하나의 뼈대 정보. 코드 마네킹과 GLB 돌이 같은 구조를 쓴다 */
@@ -146,7 +158,7 @@ export function buildSkeleton(specList: BoneSpec[]): BuiltSkeleton {
     const hint = new Vector3(...(s.up ?? [0, 0, 1]));
     const quat = frameQuat(dir, hint);
     const length = s.child && specs.has(s.child) ? dir.length() : 0;
-    rest.set(s.name, { pos, quat, length });
+    rest.set(s.name, { pos, quat, length, dir: dir.clone().normalize() });
 
     const bone = new Bone();
     bone.name = s.name;
@@ -189,25 +201,30 @@ export function skeletonFromHierarchy(rootBone: Bone, boneMap: Record<string, st
   const baseInv = rootBone.parent ? rootBone.parent.matrixWorld.clone().invert() : new Matrix4();
   const scale = new Vector3();
 
-  const visit = (b: Bone, parentName: string | null) => {
+  const visit = (b: Bone, parentName: string | null, parentDir: Vector3) => {
     b.name = normalizeBoneName(b.name, boneMap);
     const m = baseInv.clone().multiply(b.matrixWorld);
     const pos = new Vector3();
     const quat = new Quaternion();
     m.decompose(pos, quat, scale);
-    const childBone = b.children.find((c) => (c as Bone).isBone) as Bone | undefined;
+    // 방향은 트위스트 뼈가 아닌 첫 자식 뼈 쪽. 없으면 부모 방향을 물려받는다
+    const childBones = b.children.filter((c) => (c as Bone).isBone) as Bone[];
+    const mainChild = childBones.find((c) => !isDrivenBone(normalizeBoneName(c.name, boneMap))) ?? childBones[0];
     let length = 0;
-    if (childBone) {
-      const cm = baseInv.clone().multiply(childBone.matrixWorld);
-      length = new Vector3().setFromMatrixPosition(cm).distanceTo(pos);
+    const dir = parentDir.clone();
+    if (mainChild) {
+      const cm = baseInv.clone().multiply(mainChild.matrixWorld);
+      const cp = new Vector3().setFromMatrixPosition(cm);
+      length = cp.distanceTo(pos);
+      if (length > 1e-6) dir.copy(cp).sub(pos).normalize();
     }
     bones.set(b.name, b);
-    rest.set(b.name, { pos, quat, length });
+    rest.set(b.name, { pos, quat, length, dir });
     parents.set(b.name, parentName);
     order.push(b.name);
-    for (const c of b.children) if ((c as Bone).isBone) visit(c as Bone, b.name);
+    for (const c of childBones) visit(c, b.name, dir);
   };
-  visit(rootBone, null);
+  visit(rootBone, null, new Vector3(0, 1, 0));
   return { root: rootBone, bones, rest, order, parents };
 }
 

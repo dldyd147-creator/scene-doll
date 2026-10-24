@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useEngine } from './ui/useEngine';
 import { useShortcuts } from './ui/useShortcuts';
 import { useAutosave } from './ui/useAutosave';
@@ -9,11 +10,18 @@ import { AssetPanel } from './ui/AssetPanel';
 import { StatusBar } from './ui/StatusBar';
 import { SettingsDialog } from './ui/SettingsDialog';
 import { ExportDialog } from './ui/ExportDialog';
+import { HelpDialog } from './ui/HelpDialog';
+import { OutputGallery } from './ui/OutputGallery';
+import { useStore } from './state/store';
 
 export default function App() {
   const engine = useEngine();
   useShortcuts(engine);
   useAutosave();
+  const theme = useStore((s) => s.settings.theme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
   return (
     <div className="app">
       <TopBar />
@@ -26,6 +34,8 @@ export default function App() {
       <StatusBar />
       <SettingsDialog />
       <ExportDialog engine={engine} />
+      <HelpDialog />
+      <OutputGallery />
     </div>
   );
 }

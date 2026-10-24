@@ -27,7 +27,6 @@ import { createDollRig, loadDollTemplate } from './dollTemplates';
 import { ManuscriptCamera } from './ManuscriptCamera';
 import { cameraForward, lookAtAngles, ManuscriptControls } from './ManuscriptControls';
 import { KEY_LIGHT_INTENSITY, LAYER_HELPERS } from './materials';
-import { setLineResolution } from './overlays';
 import { IK_CHAINS } from './skeleton';
 import { solveTwoBone } from './ik';
 import { Interaction } from './Interaction';
@@ -47,8 +46,12 @@ export interface OffscreenOptions {
   helpers?: boolean;
 }
 
-const WORK_BG = new Color('#1b1c21');
+const THEME = {
+  light: { work: '#d8dbe1', gridCenter: '#8a90a0', grid: '#b4bac6' },
+  dark: { work: '#1b1c21', gridCenter: '#3b3d46', grid: '#2a2c33' },
+};
 const MANU_BG = new Color('#ffffff');
+const Y_AXIS = new Vector3(0, 1, 0);
 const _v = new Vector3();
 const _q = new Quaternion();
 
@@ -63,7 +66,7 @@ export class Engine {
   readonly workCamera = new PerspectiveCamera(45, 1, 0.03, 300);
   readonly manu = new ManuscriptCamera();
   readonly keyLight = new DirectionalLight('#ffffff', KEY_LIGHT_INTENSITY);
-  readonly grid: GridHelper;
+  grid: GridHelper;
   readonly dolls = new Map<string, DollRig>();
   /** IK 기즈모용 대리 객체(손·발 위치) */
   readonly ikProxy = new Object3D();
@@ -76,12 +79,14 @@ export class Engine {
   mode: ToolMode = 'direct';
   cut: Cut | null = null;
 
+  private workBg = new Color(THEME.light.work);
   private views: Record<ViewKind, HTMLElement | null> = { work: null, manuscript: null };
   private dollKeys = new Map<string, string>();
   private loadingTemplates = new Set<string>();
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
   private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | null = null;
+  private plantedFeet: Map<string, Vector3> | null = null;
   private disposed = false;
 
   constructor(readonly callbacks: EngineCallbacks) {
@@ -94,14 +99,20 @@ export class Engine {
     this.workCamera.position.set(2.4, 1.75, 3.2);
     this.workCamera.layers.enable(LAYER_HELPERS);
 
-    this.grid = new GridHelper(20, 40, new Color('#3b3d46'), new Color('#2a2c33'));
-    this.grid.layers.set(LAYER_HELPERS);
+    this.grid = this.makeGrid('light');
     this.scene.add(this.grid);
 
     this.keyLight.position.set(5, 8, 6);
     this.scene.add(this.keyLight);
     this.scene.add(this.manu.camera);
     this.scene.add(this.ikProxy);
+  }
+
+  private makeGrid(theme: 'light' | 'dark'): GridHelper {
+    const g = new GridHelper(20, 40, new Color(THEME[theme].gridCenter), new Color(THEME[theme].grid));
+    g.layers.set(LAYER_HELPERS);
+    if (this.settings.manuscriptGrid) g.layers.enable(0);
+    return g;
   }
 
   // ---------- 생명주기 ----------
@@ -201,7 +212,7 @@ export class Engine {
     r.setClearColor(0x000000, 0);
     r.clear();
     r.setScissorTest(true);
-    this.renderView(this.views.work, this.workCamera, WORK_BG, true);
+    this.renderView(this.views.work, this.workCamera, this.workBg, true);
     this.renderView(this.views.manuscript, this.manu.camera, MANU_BG, false);
   }
 
@@ -225,12 +236,11 @@ export class Engine {
         camera.updateProjectionMatrix();
       }
     }
-    setLineResolution(w, h);
     r.render(this.scene, camera);
   }
 
   /**
-   * 오프스크린 렌더(썸네일·일괄 출력). 원고 카메라 화각 그대로, 헬퍼 없이 그린다.
+   * 오프스크린 렌더(썸네일·일괄 출력). 원고 카메라 화각 그대로, 헬퍼·격자 없이 그린다.
    * 결과는 2D 캔버스(위아래 뒤집기 완료).
    */
   renderToCanvas(camera: PerspectiveCamera, width: number, height: number, opts: OffscreenOptions): HTMLCanvasElement {
@@ -243,19 +253,26 @@ export class Engine {
     const prevAspect = camera.aspect;
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    for (const rig of this.dolls.values()) rig.updateHelpers();
+    const gridWasVisible = this.grid.visible;
+    this.grid.visible = false;
+    const linePx = Math.max(2.5, w / 400);
+    for (const rig of this.dolls.values()) {
+      rig.updateHelpers();
+      rig.setLinePx(linePx);
+    }
     r.setRenderTarget(rt);
     r.setScissorTest(false);
     r.setViewport(0, 0, w, h);
     if (opts.background === 'transparent') r.setClearColor(0x000000, 0);
-    else r.setClearColor(opts.background === 'white' ? MANU_BG : WORK_BG, 1);
+    else r.setClearColor(opts.background === 'white' ? MANU_BG : this.workBg, 1);
     r.clear();
-    setLineResolution(w, h);
     r.render(this.scene, camera);
     const buf = new Uint8Array(w * h * 4);
     r.readRenderTargetPixels(rt, 0, 0, w, h, buf);
     r.setRenderTarget(null);
     rt.dispose();
+    for (const rig of this.dolls.values()) rig.setLinePx(2.5);
+    this.grid.visible = gridWasVisible;
     camera.layers.mask = prevMask;
     camera.aspect = prevAspect;
     camera.updateProjectionMatrix();
@@ -305,7 +322,7 @@ export class Engine {
           continue;
         }
         rig = created;
-        rig.setHandleRadius(0.022 * this.settings.handleSize);
+        rig.setMarkerScale(this.settings.handleSize);
         this.scene.add(rig.root, rig.helpers);
         this.dolls.set(inst.id, rig);
       }
@@ -358,6 +375,7 @@ export class Engine {
   }
 
   applySettings(s: Settings): void {
+    const prev = this.settings;
     this.settings = s;
     if (this.orbit) {
       const o = this.orbit;
@@ -369,11 +387,21 @@ export class Engine {
           ? { LEFT: null, MIDDLE: MOUSE.PAN, RIGHT: MOUSE.ROTATE }
           : { LEFT: null, MIDDLE: MOUSE.ROTATE, RIGHT: MOUSE.PAN };
     }
-    // 관절 링이 돌을 다 덮지 않도록 기본은 three.js 기본 크기의 60%
-    this.gizmo?.setSize(0.6 * s.gizmoSize);
-    for (const rig of this.dolls.values()) rig.setHandleRadius(0.022 * s.handleSize);
+    this.gizmo?.setSize(0.75 * s.gizmoSize);
+    for (const rig of this.dolls.values()) rig.setMarkerScale(s.handleSize);
+    if (prev.theme !== s.theme || prev.manuscriptGrid !== s.manuscriptGrid || !this.grid.parent) {
+      this.grid.removeFromParent();
+      this.grid.geometry.dispose();
+      this.grid = this.makeGrid(s.theme);
+      this.scene.add(this.grid);
+    }
+    this.workBg.set(THEME[s.theme].work);
     this.grid.visible = s.showGrid;
     this.manu.setFrustumVisible(s.showFrustum);
+    // 관절 한계를 켜는 순간 모든 돌을 한계 안으로 교정한다
+    if (s.jointLimits && !prev.jointLimits) {
+      for (const rig of this.dolls.values()) if (rig.clampAll()) this.commitDoll(rig.id);
+    }
   }
 
   applySelection(sel: Selection): void {
@@ -430,7 +458,7 @@ export class Engine {
     g.getHelper().visible = true;
     if (this.mode === 'rotate') {
       g.setMode('rotate');
-      if (bone) {
+      if (bone && bone.name !== rig.skel.order[0]) {
         g.setSpace('local');
         g.attach(bone);
         this.gizmoTarget = 'bone';
@@ -453,25 +481,34 @@ export class Engine {
     }
   }
 
-  private plantedFeet: Map<string, Vector3> | null = null;
+  /** 발 고정이 켜져 있으면 지금 발 위치를 기억한다(돌 이동·골반 회전 전에) */
+  capturePlantedFeet(rig: DollRig): Map<string, Vector3> | null {
+    if (!this.settings.plantFeet) return null;
+    const feet = new Map<string, Vector3>();
+    for (const eff of ['LeftFoot', 'RightFoot']) if (rig.skel.bones.has(eff)) feet.set(eff, rig.worldPos(eff));
+    return feet;
+  }
+
+  /** 기억해 둔 발 위치로 다리를 다시 푼다 */
+  keepFeet(rig: DollRig, feet: Map<string, Vector3> | null): void {
+    if (!feet) return;
+    rig.root.updateMatrixWorld(true);
+    for (const [eff, pos] of feet) this.solveIk(rig, eff, pos, { shoulder: false });
+  }
 
   private onGizmoStart(): void {
     const rig = this.selectedRig();
-    if (rig && this.gizmoTarget === 'root' && this.settings.plantFeet) {
-      this.plantedFeet = new Map();
-      for (const eff of ['LeftFoot', 'RightFoot']) if (rig.skel.bones.has(eff)) this.plantedFeet.set(eff, rig.worldPos(eff));
-    } else {
-      this.plantedFeet = null;
-    }
+    this.plantedFeet = rig && this.gizmoTarget === 'root' ? this.capturePlantedFeet(rig) : null;
   }
 
   private onGizmoChange(): void {
     const rig = this.selectedRig();
     if (this.gizmoTarget === 'ik') {
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
-    } else if (this.gizmoTarget === 'root' && rig && this.plantedFeet) {
-      rig.root.updateMatrixWorld(true);
-      for (const [eff, pos] of this.plantedFeet) this.solveIk(rig, eff, pos, { shoulder: false });
+    } else if (this.gizmoTarget === 'root' && rig) {
+      this.keepFeet(rig, this.plantedFeet);
+    } else if (this.gizmoTarget === 'bone' && rig && this.selection.bone) {
+      this.clampAfterChange(rig, [this.selection.bone]);
     } else if (this.gizmoTarget === 'camera') {
       this.manu.camera.updateMatrixWorld(true);
     }
@@ -489,7 +526,14 @@ export class Engine {
     if (this.gizmoTarget === 'ik' && this.selection.bone) rig.worldPos(this.selection.bone, this.ikProxy.position);
   }
 
-  // ---------- IK ----------
+  // ---------- IK·관절 한계 ----------
+
+  /** 관절 한계가 켜져 있으면 해당 뼈들을 한계 안으로 넣는다 */
+  clampAfterChange(rig: DollRig, bones: string[]): void {
+    if (!this.settings.jointLimits) return;
+    for (const b of bones) rig.clampJoint(b);
+    rig.root.updateMatrixWorld(true);
+  }
 
   /** 끝점(손·발)을 월드 좌표 target으로 보내도록 팔·다리를 푼다. 어깨 연동 포함 */
   solveIk(rig: DollRig, effector: string, target: Vector3, opts: { shoulder?: boolean; keepEndOrientation?: boolean } = {}): void {
@@ -500,8 +544,9 @@ export class Engine {
     const end = rig.skel.bones.get(chain.end);
     if (!upper || !lower || !end) return;
     rig.root.updateMatrixWorld(true);
+    const keepEnd = opts.keepEndOrientation ?? this.settings.lockEndOrientation;
     const endWorldQ = new Quaternion();
-    if (opts.keepEndOrientation ?? this.settings.lockEndOrientation) end.getWorldQuaternion(endWorldQ);
+    if (keepEnd) end.getWorldQuaternion(endWorldQ);
 
     const useShoulder = opts.shoulder ?? this.settings.shoulderLink;
     if (useShoulder && chain.clavicle && this.settings.shoulderLinkRatio > 0) {
@@ -533,10 +578,18 @@ export class Engine {
     rotateObjectWorld(upper, res.upper);
     rotateObjectWorld(lower, res.lower);
     end.updateWorldMatrix(true, false);
-    if (opts.keepEndOrientation ?? this.settings.lockEndOrientation) {
+    if (keepEnd) {
       end.getWorldQuaternion(_q);
       rotateObjectWorld(end, endWorldQ.multiply(_q.invert()));
     }
+    const chainBones = [chain.clavicle, chain.upper, chain.lower, chain.end].filter((x): x is string => !!x);
+    this.clampAfterChange(rig, chainBones);
+  }
+
+  /** 돌 전체를 바닥 수직축으로 돌린다 */
+  rotateRootYaw(rig: DollRig, angle: number): void {
+    rig.root.rotateOnWorldAxis(Y_AXIS, angle);
+    rig.root.updateMatrixWorld(true);
   }
 
   // ---------- 씬 → 스토어 ----------
@@ -602,6 +655,12 @@ export class Engine {
     if (!rig) return;
     rig.snapToGround();
     this.commitDoll(rig.id);
+  }
+
+  /** 선택한 돌(없으면 전체)의 관절을 한계 안으로 교정 */
+  fixJoints(): void {
+    const targets = this.selectedRig() ? [this.selectedRig()!] : [...this.dolls.values()];
+    for (const rig of targets) if (rig.clampAll()) this.commitDoll(rig.id);
   }
 
   // ---------- 조작뷰 시점 ----------
@@ -707,7 +766,7 @@ export class Engine {
     this.commitCameraState({ ...cam, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)], yaw, pitch, roll: 0 });
   }
 
-  /** 원고 프레임에 맞춤: 시선 방향은 두고 거리만 바꿔 대상이 세로로 들어오게 */
+  /** 원고 프레임에 맞춤: 시선 방향은 두고 거리만 바꿔 대상이 들어오게 */
   fitManuscript(target: 'all' | 'selected'): void {
     if (!this.cut) return;
     const rig = this.selectedRig();

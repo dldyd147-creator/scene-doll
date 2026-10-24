@@ -12,12 +12,12 @@ export type StorageStatus = { kind: 'folder' | 'browser'; label: string; pending
  * - 폴더가 없으면 브라우저 내부 저장(IndexedDB)으로 동작한다
  */
 class StorageService {
-  private backend: StorageBackend = new BrowserBackend();
-  private repo = new Repository(this.backend);
+  private backend_: StorageBackend = new BrowserBackend();
+  private repo = new Repository(this.backend_);
   private pendingHandle: FileSystemDirectoryHandle | null = null;
 
   get status(): StorageStatus {
-    return { kind: this.backend.kind, label: this.backend.label, pendingFolder: this.pendingHandle?.name ?? null };
+    return { kind: this.backend_.kind, label: this.backend_.label, pendingFolder: this.pendingHandle?.name ?? null };
   }
 
   get supportsFolder(): boolean {
@@ -39,8 +39,8 @@ class StorageService {
   }
 
   private useFolder(handle: FileSystemDirectoryHandle): void {
-    this.backend = new FolderBackend(handle);
-    this.repo = new Repository(this.backend);
+    this.backend_ = new FolderBackend(handle);
+    this.repo = new Repository(this.backend_);
     this.pendingHandle = null;
   }
 
@@ -74,8 +74,8 @@ class StorageService {
 
   async useBrowserStorage(): Promise<void> {
     await forgetFolderHandle().catch(() => undefined);
-    this.backend = new BrowserBackend();
-    this.repo = new Repository(this.backend);
+    this.backend_ = new BrowserBackend();
+    this.repo = new Repository(this.backend_);
     this.pendingHandle = null;
   }
 
@@ -97,6 +97,11 @@ class StorageService {
 
   get repository(): Repository {
     return this.repo;
+  }
+
+  /** 파일 단위 접근(출력물 보기 등) */
+  get backend(): StorageBackend {
+    return this.backend_;
   }
 }
 

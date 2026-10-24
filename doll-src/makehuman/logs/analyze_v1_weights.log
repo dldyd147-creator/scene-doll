@@ -1,0 +1,171 @@
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+== islands per bone (component sizes, largest first) ==
+  Head               verts= 4280 islands=3 [4276, 3, 1]  <-- MULTI
+  Hips               verts=  610 islands=1 [610]
+  LeftArm            verts=  654 islands=1 [654]
+  LeftFoot           verts= 1007 islands=1 [1007]
+  LeftForeArm        verts=  400 islands=1 [400]
+  LeftHand           verts=  395 islands=1 [395]
+  LeftHandIndex1     verts=  202 islands=2 [201, 1]  <-- MULTI
+  LeftHandIndex2     verts=  210 islands=1 [210]
+  LeftHandIndex3     verts=  157 islands=1 [157]
+  LeftHandMiddle1    verts=  238 islands=2 [237, 1]  <-- MULTI
+  LeftHandMiddle2    verts=  205 islands=1 [205]
+  LeftHandMiddle3    verts=  158 islands=1 [158]
+  LeftHandPinky1     verts=  244 islands=2 [242, 2]  <-- MULTI
+  LeftHandPinky2     verts=  201 islands=1 [201]
+  LeftHandPinky3     verts=  206 islands=2 [205, 1]  <-- MULTI
+  LeftHandRing1      verts=  236 islands=1 [236]
+  LeftHandRing2      verts=  186 islands=1 [186]
+  LeftHandRing3      verts=  153 islands=2 [152, 1]  <-- MULTI
+  LeftHandThumb1     verts=  101 islands=1 [101]
+  LeftHandThumb2     verts=  185 islands=1 [185]
+  LeftHandThumb3     verts=  136 islands=1 [136]
+  LeftLeg            verts=  447 islands=9 [425, 6, 5, 3, 3, 2]  <-- MULTI
+  LeftShoulder       verts=  239 islands=1 [239]
+  LeftToeBase        verts=  833 islands=1 [833]
+  LeftUpLeg          verts=  701 islands=1 [701]
+  Neck               verts=  384 islands=1 [384]
+  RightArm           verts=  658 islands=1 [658]
+  RightFoot          verts=  775 islands=1 [775]
+  RightForeArm       verts=  405 islands=3 [399, 5, 1]  <-- MULTI
+  RightHand          verts=  506 islands=1 [506]
+  RightHandIndex1    verts=  202 islands=2 [201, 1]  <-- MULTI
+  RightHandIndex2    verts=  210 islands=1 [210]
+  RightHandIndex3    verts=  157 islands=1 [157]
+  RightHandMiddle1   verts=  232 islands=2 [231, 1]  <-- MULTI
+  RightHandMiddle2   verts=  205 islands=1 [205]
+  RightHandMiddle3   verts=  158 islands=1 [158]
+  RightHandPinky1    verts=  244 islands=2 [242, 2]  <-- MULTI
+  RightHandPinky2    verts=  201 islands=1 [201]
+  RightHandPinky3    verts=  206 islands=2 [205, 1]  <-- MULTI
+  RightHandRing1     verts=  236 islands=1 [236]
+  RightHandRing2     verts=  186 islands=1 [186]
+  RightHandRing3     verts=  153 islands=2 [152, 1]  <-- MULTI
+  RightHandThumb1    verts=  101 islands=1 [101]
+  RightHandThumb2    verts=  185 islands=1 [185]
+  RightHandThumb3    verts=  136 islands=1 [136]
+  RightLeg           verts=  443 islands=9 [421, 6, 5, 3, 3, 2]  <-- MULTI
+  RightShoulder      verts=  222 islands=1 [222]
+  RightToeBase       verts=  835 islands=1 [835]
+  RightUpLeg         verts=  699 islands=1 [699]
+  Spine              verts=  449 islands=1 [449]
+  Spine1             verts=  797 islands=1 [797]
+  Spine2             verts= 1256 islands=1 [1256]
+== edge weight steps (max over bones of |w_a - w_b| per edge) ==
+  hist: [(0.0, 20169), (0.1, 3685), (0.2, 1870), (0.3, 632), (0.4, 174), (0.5, 221), (0.6, 5)]
+  edges with step > 0.5: 25 / 26756
+== profile along LeftArm (len 0.255 m); bins of t=(proj/len), mean weights ==
+   t[-0.10.. 0.00) n= 338  LeftArm=0.139  LeftShoulder=0.141  Spine2=0.460  LeftForeArm=0.000
+   t[ 0.00.. 0.10) n=  42  LeftArm=0.633  LeftShoulder=0.192  Spine2=0.096  LeftForeArm=0.000
+   t[ 0.10.. 0.20) n=  29  LeftArm=0.956  LeftShoulder=0.044  Spine2=0.000  LeftForeArm=0.000
+   t[ 0.20.. 0.30) n=  33  LeftArm=1.000  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.000
+   t[ 0.30.. 0.40) n=  27  LeftArm=1.000  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.000
+   t[ 0.40.. 0.50) n=  20  LeftArm=0.998  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.002
+   t[ 0.50.. 0.60) n=  20  LeftArm=0.986  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.014
+   t[ 0.60.. 0.70) n=  23  LeftArm=0.973  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.027
+   t[ 0.70.. 0.80) n=  23  LeftArm=0.944  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.056
+   t[ 0.80.. 0.90) n=  34  LeftArm=0.819  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.181
+   t[ 0.90.. 1.00) n=  65  LeftArm=0.404  LeftShoulder=0.000  Spine2=0.000  LeftForeArm=0.596
+== profile along LeftForeArm (len 0.269 m); bins of t=(proj/len), mean weights ==
+   t[-0.10.. 0.00) n= 109  LeftForeArm=0.226  LeftArm=0.774  LeftHand=0.000
+   t[ 0.00.. 0.10) n=  28  LeftForeArm=0.814  LeftArm=0.186  LeftHand=0.000
+   t[ 0.10.. 0.20) n=  26  LeftForeArm=0.987  LeftArm=0.013  LeftHand=0.000
+   t[ 0.20.. 0.30) n=  15  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.30.. 0.40) n=  14  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.40.. 0.50) n=  20  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.50.. 0.60) n=  12  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.60.. 0.70) n=  13  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.70.. 0.80) n=  20  LeftForeArm=1.000  LeftArm=0.000  LeftHand=0.000
+   t[ 0.80.. 0.90) n=  35  LeftForeArm=0.897  LeftArm=0.000  LeftHand=0.103
+   t[ 0.90.. 1.00) n= 108  LeftForeArm=0.602  LeftArm=0.000  LeftHand=0.326
+== profile along LeftUpLeg (len 0.426 m); bins of t=(proj/len), mean weights ==
+   t[-0.10.. 0.00) n= 245  LeftUpLeg=0.062  Hips=0.468  LeftLeg=0.000
+   t[ 0.00.. 0.10) n=  43  LeftUpLeg=0.500  Hips=0.485  LeftLeg=0.000
+   t[ 0.10.. 0.20) n=  76  LeftUpLeg=0.654  Hips=0.322  LeftLeg=0.000
+   t[ 0.20.. 0.30) n=  55  LeftUpLeg=0.966  Hips=0.034  LeftLeg=0.000
+   t[ 0.30.. 0.40) n=  36  LeftUpLeg=1.000  Hips=0.000  LeftLeg=0.000
+   t[ 0.40.. 0.50) n=  29  LeftUpLeg=1.000  Hips=0.000  LeftLeg=0.000
+   t[ 0.50.. 0.60) n=  30  LeftUpLeg=0.997  Hips=0.000  LeftLeg=0.003
+   t[ 0.60.. 0.70) n=  25  LeftUpLeg=0.989  Hips=0.000  LeftLeg=0.011
+   t[ 0.70.. 0.80) n=  27  LeftUpLeg=0.974  Hips=0.000  LeftLeg=0.026
+   t[ 0.80.. 0.90) n=  37  LeftUpLeg=0.882  Hips=0.000  LeftLeg=0.118
+   t[ 0.90.. 1.00) n=  98  LeftUpLeg=0.414  Hips=0.000  LeftLeg=0.586
+== profile along LeftLeg (len 0.439 m); bins of t=(proj/len), mean weights ==
+   t[-0.10.. 0.00) n= 120  LeftLeg=0.149  LeftUpLeg=0.843  LeftFoot=0.000
+   t[ 0.00.. 0.10) n=  33  LeftLeg=0.609  LeftUpLeg=0.391  LeftFoot=0.000
+   t[ 0.10.. 0.20) n=  37  LeftLeg=0.942  LeftUpLeg=0.058  LeftFoot=0.000
+   t[ 0.20.. 0.30) n=  21  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.30.. 0.40) n=  19  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.40.. 0.50) n=  10  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.50.. 0.60) n=  20  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.60.. 0.70) n=  20  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.70.. 0.80) n=  16  LeftLeg=1.000  LeftUpLeg=0.000  LeftFoot=0.000
+   t[ 0.80.. 0.90) n=  27  LeftLeg=0.977  LeftUpLeg=0.000  LeftFoot=0.023
+   t[ 0.90.. 1.00) n= 124  LeftLeg=0.443  LeftUpLeg=0.000  LeftFoot=0.467
+== profile along LeftHand (len 0.099 m); bins of t=(proj/len), mean weights ==
+   t[-0.10.. 0.00) n=  67  LeftHand=0.203  LeftForeArm=0.796
+   t[ 0.00.. 0.10) n=  25  LeftHand=0.311  LeftForeArm=0.664
+   t[ 0.10.. 0.20) n=  21  LeftHand=0.441  LeftForeArm=0.408
+   t[ 0.20.. 0.30) n=  20  LeftHand=0.531  LeftForeArm=0.127
+   t[ 0.30.. 0.40) n=  16  LeftHand=0.474  LeftForeArm=0.020
+   t[ 0.40.. 0.50) n=  18  LeftHand=0.774  LeftForeArm=0.000
+   t[ 0.50.. 0.60) n=  22  LeftHand=0.563  LeftForeArm=0.000
+   t[ 0.60.. 0.70) n=  21  LeftHand=0.647  LeftForeArm=0.000
+   t[ 0.70.. 0.80) n=  24  LeftHand=0.733  LeftForeArm=0.000
+   t[ 0.80.. 0.90) n=  30  LeftHand=0.916  LeftForeArm=0.000
+   t[ 0.90.. 1.00) n= 131  LeftHand=0.371  LeftForeArm=0.000
+== shading ==
+  polys smooth: 13378 / 13378
+  sharp edges: 0  custom normals: False  attrs: ['position', '.edge_verts', 'material_index', '.corner_vert', '.corner_edge', 'UVMap']
+  modifiers: [('Armature', 'ARMATURE')]
+== default-rig split upperarm01.L/upperarm02.L vs LeftArm: union=654, mixamo LeftArm verts=654, overlap=654 ==
+   t[-0.10.. 0.00) n= 338  mean f01=0.931  min=0.164 max=1.000
+   t[ 0.00.. 0.10) n=  42  mean f01=0.659  min=0.259 max=0.964
+   t[ 0.10.. 0.20) n=  29  mean f01=0.675  min=0.364 max=0.824
+   t[ 0.20.. 0.30) n=  33  mean f01=0.514  min=0.280 max=0.731
+   t[ 0.30.. 0.40) n=  27  mean f01=0.307  min=0.194 max=0.509
+   t[ 0.40.. 0.50) n=  20  mean f01=0.180  min=0.103 max=0.252
+   t[ 0.50.. 0.60) n=  20  mean f01=0.096  min=0.044 max=0.153
+   t[ 0.60.. 0.70) n=  23  mean f01=0.048  min=0.013 max=0.081
+   t[ 0.70.. 0.80) n=  23  mean f01=0.020  min=0.000 max=0.039
+   t[ 0.80.. 0.90) n=  34  mean f01=0.000  min=0.000 max=0.000
+   t[ 0.90.. 1.00) n=  65  mean f01=0.000  min=0.000 max=0.000
+== default-rig split lowerarm01.L/lowerarm02.L vs LeftForeArm: union=400, mixamo LeftForeArm verts=400, overlap=400 ==
+   t[-0.10.. 0.00) n= 109  mean f01=1.000  min=1.000 max=1.000
+   t[ 0.00.. 0.10) n=  28  mean f01=1.000  min=1.000 max=1.000
+   t[ 0.10.. 0.20) n=  26  mean f01=1.000  min=1.000 max=1.000
+   t[ 0.20.. 0.30) n=  15  mean f01=0.963  min=0.906 max=1.000
+   t[ 0.30.. 0.40) n=  14  mean f01=0.914  min=0.909 max=0.920
+   t[ 0.40.. 0.50) n=  20  mean f01=0.837  min=0.828 max=0.848
+   t[ 0.50.. 0.60) n=  12  mean f01=0.685  min=0.673 max=0.708
+   t[ 0.60.. 0.70) n=  13  mean f01=0.653  min=0.556 max=0.723
+   t[ 0.70.. 0.80) n=  20  mean f01=0.561  min=0.451 max=0.624
+   t[ 0.80.. 0.90) n=  35  mean f01=0.456  min=0.379 max=0.520
+   t[ 0.90.. 1.00) n= 108  mean f01=0.201  min=0.000 max=1.000
+== default-rig split upperleg01.L/upperleg02.L vs LeftUpLeg: union=701, mixamo LeftUpLeg verts=701, overlap=701 ==
+   t[-0.10.. 0.00) n= 245  mean f01=0.947  min=0.750 max=1.000
+   t[ 0.00.. 0.10) n=  43  mean f01=0.874  min=0.721 max=1.000
+   t[ 0.10.. 0.20) n=  76  mean f01=0.870  min=0.576 max=1.000
+   t[ 0.20.. 0.30) n=  55  mean f01=0.660  min=0.429 max=0.871
+   t[ 0.30.. 0.40) n=  36  mean f01=0.507  min=0.301 max=0.784
+   t[ 0.40.. 0.50) n=  29  mean f01=0.283  min=0.174 max=0.404
+   t[ 0.50.. 0.60) n=  30  mean f01=0.154  min=0.102 max=0.229
+   t[ 0.60.. 0.70) n=  25  mean f01=0.059  min=0.014 max=0.135
+   t[ 0.70.. 0.80) n=  27  mean f01=0.003  min=0.000 max=0.025
+   t[ 0.80.. 0.90) n=  37  mean f01=0.000  min=0.000 max=0.000
+   t[ 0.90.. 1.00) n=  98  mean f01=0.000  min=0.000 max=0.000
+== default-rig split lowerleg01.L/lowerleg02.L vs LeftLeg: union=447, mixamo LeftLeg verts=447, overlap=447 ==
+   t[-0.10.. 0.00) n= 120  mean f01=0.992  min=0.000 max=1.000
+   t[ 0.00.. 0.10) n=  33  mean f01=0.989  min=0.963 max=1.000
+   t[ 0.10.. 0.20) n=  37  mean f01=0.950  min=0.899 max=0.979
+   t[ 0.20.. 0.30) n=  21  mean f01=0.875  min=0.789 max=0.926
+   t[ 0.30.. 0.40) n=  19  mean f01=0.751  min=0.577 max=0.848
+   t[ 0.40.. 0.50) n=  10  mean f01=0.664  min=0.629 max=0.680
+   t[ 0.50.. 0.60) n=  20  mean f01=0.497  min=0.446 max=0.575
+   t[ 0.60.. 0.70) n=  20  mean f01=0.221  min=0.157 max=0.248
+   t[ 0.70.. 0.80) n=  16  mean f01=0.156  min=0.131 max=0.181
+   t[ 0.80.. 0.90) n=  27  mean f01=0.193  min=0.128 max=0.235
+   t[ 0.90.. 1.00) n= 124  mean f01=0.281  min=0.000 max=1.000
+ANALYSIS DONE
+

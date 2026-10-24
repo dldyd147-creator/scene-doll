@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
+import { Icon } from './icons';
 
 /** 컷 목록(세로 띠): 확정 컷 썸네일을 웹툰 읽듯 세로 스크롤, 클릭하면 그 씬으로 */
 export function CutList() {
@@ -43,19 +44,19 @@ export function CutList() {
       </div>
       <div className="cutlist-tools">
         <button className="icon" onClick={() => moveCut(current, -1)} disabled={current === 0} title="현재 컷을 위로 이동">
-          ↑
+          <Icon name="up" />
         </button>
         <button className="icon" onClick={() => moveCut(current, 1)} disabled={current >= cuts.length - 1} title="현재 컷을 아래로 이동">
-          ↓
+          <Icon name="down" />
         </button>
         <button className="icon" onClick={() => insertCutAfter(current)} title="현재 컷 아래에 복사해 삽입">
-          ＋
+          <Icon name="plus" />
         </button>
         <button className="icon danger" onClick={() => deleteCut(current)} title="현재 컷 삭제">
-          ✕
+          <Icon name="trash" />
         </button>
         <button className="export" onClick={() => setExportOpen(true)} title="확정 컷 전체를 PNG + 설명 텍스트로 출력">
-          출력
+          <Icon name="export" /> 출력
         </button>
       </div>
     </aside>

@@ -33,6 +33,8 @@ export interface StoreState extends Document {
   settings: Settings;
   settingsOpen: boolean;
   exportOpen: boolean;
+  helpOpen: boolean;
+  galleryOpen: boolean;
   assetPanelOpen: boolean;
   past: Cut[];
   future: Cut[];
@@ -67,6 +69,8 @@ export interface StoreState extends Document {
   resetSettings: () => void;
   setSettingsOpen: (open: boolean) => void;
   setExportOpen: (open: boolean) => void;
+  setHelpOpen: (open: boolean) => void;
+  setGalleryOpen: (open: boolean) => void;
   setAssetPanelOpen: (open: boolean) => void;
   setWorkCode: (code: string) => void;
   setWorkName: (name: string) => void;
@@ -125,6 +129,8 @@ export const useStore = create<StoreState>()(
     settings: loadSettings(),
     settingsOpen: false,
     exportOpen: false,
+    helpOpen: false,
+    galleryOpen: false,
     assetPanelOpen: true,
     past: [],
     future: [],
@@ -280,6 +286,8 @@ export const useStore = create<StoreState>()(
 
     setSettingsOpen: (open) => set({ settingsOpen: open }),
     setExportOpen: (open) => set({ exportOpen: open }),
+    setHelpOpen: (open) => set({ helpOpen: open }),
+    setGalleryOpen: (open) => set({ galleryOpen: open }),
     setAssetPanelOpen: (open) => set({ assetPanelOpen: open }),
 
     setWorkCode: (code) => {

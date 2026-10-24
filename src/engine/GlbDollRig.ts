@@ -1,7 +1,8 @@
-import { Bone, Box3, Object3D, SkinnedMesh, Vector3, type Intersection, type Sphere } from 'three';
+import { Bone, Box3, BufferAttribute, Object3D, SkinnedMesh, Vector3, type Intersection, type Sphere } from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import type { DollAsset } from '../model/types';
-import { DollRig, type CrosshairSpec } from './DollRig';
+import { DollRig } from './DollRig';
+import type { LineParams } from './materials';
 import { outlineForSkinned, outlineMaterial } from './overlays';
 import { skeletonFromHierarchy, type BuiltSkeleton } from './skeleton';
 import type { DollTemplate } from './dollTemplates';
@@ -9,17 +10,16 @@ import type { DollTemplate } from './dollTemplates';
 interface BodyMeasure {
   headMin: Vector3;
   headMax: Vector3;
-  /** 뼈 이름 → 정면(최대 z) */
-  frontZ: Record<string, number>;
   /** 골반 아래(가랑이) 높이 */
   crotchY: number;
+  neckY: number;
 }
 
 const measureCache = new Map<string, BodyMeasure>();
 
 /**
- * 바인드 자세 정점을 뼈 가중치로 나눠 머리 상자·몸통 정면 깊이를 잰다(템플릿당 한 번).
- * 정점 좌표는 아마추어(=돌) 공간이다.
+ * 바인드 자세 정점을 뼈 가중치로 나눠 머리 상자·가랑이 높이를 재고, 십자선용 영역 속성(aRegion: 머리 가중치, 몸통 가중치)을
+ * 지오메트리에 붙인다(템플릿당 한 번, 복제본은 지오메트리를 공유한다). 정점 좌표는 아마추어(=돌) 공간이다.
  */
 function measureBody(assetId: string, mesh: SkinnedMesh, skel: BuiltSkeleton): BodyMeasure {
   const cached = measureCache.get(assetId);
@@ -29,42 +29,61 @@ function measureBody(assetId: string, mesh: SkinnedMesh, skel: BuiltSkeleton): B
   const si = g.getAttribute('skinIndex');
   const sw = g.getAttribute('skinWeight');
   const boneNames = mesh.skeleton.bones.map((b) => b.name);
+  const headSet = new Set(['Head', 'HeadTop_End']);
+  const torsoSet = new Set(['Hips', 'Spine', 'Spine1', 'Spine2']);
   const headMin = new Vector3(Infinity, Infinity, Infinity);
   const headMax = new Vector3(-Infinity, -Infinity, -Infinity);
-  const frontZ: Record<string, number> = {};
   let crotchY = Infinity;
-  const torsoBones = new Set(['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck']);
+  const region = new Float32Array(pos.count * 2);
   const v = new Vector3();
   for (let i = 0; i < pos.count; i++) {
+    let headW = 0;
+    let torsoW = 0;
     let best = -1;
     let bestW = 0;
     for (let k = 0; k < 4; k++) {
       const w = sw.getComponent(i, k);
+      if (w <= 0) continue;
+      const name = boneNames[si.getComponent(i, k)];
+      if (headSet.has(name)) headW += w;
+      if (torsoSet.has(name)) torsoW += w;
       if (w > bestW) {
         bestW = w;
         best = si.getComponent(i, k);
       }
     }
+    region[i * 2] = headW;
+    region[i * 2 + 1] = torsoW;
     if (best < 0) continue;
     const name = boneNames[best];
     v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
-    if (name === 'Head' || name === 'HeadTop_End') {
+    if (headSet.has(name)) {
       headMin.min(v);
       headMax.max(v);
-    } else if (torsoBones.has(name)) {
-      if (Math.abs(v.x) < 0.035) frontZ[name] = Math.max(frontZ[name] ?? -Infinity, v.z);
-      if (name === 'Hips' && Math.abs(v.x) < 0.02) crotchY = Math.min(crotchY, v.y);
+    } else if (name === 'Hips' && Math.abs(v.x) < 0.02) {
+      crotchY = Math.min(crotchY, v.y);
     }
   }
+  g.setAttribute('aRegion', new BufferAttribute(region, 2));
   if (!Number.isFinite(headMin.x)) {
     const h = skel.rest.get('Head')?.pos ?? new Vector3(0, 1.5, 0);
     headMin.set(h.x - 0.08, h.y, h.z - 0.09);
     headMax.set(h.x + 0.08, h.y + 0.22, h.z + 0.1);
   }
   if (!Number.isFinite(crotchY)) crotchY = (skel.rest.get('Hips')?.pos.y ?? 1) - 0.15;
-  const m = { headMin, headMax, frontZ, crotchY };
+  const neckY = skel.rest.get('Neck')?.pos.y ?? headMin.y - 0.05;
+  const m = { headMin, headMax, crotchY, neckY };
   measureCache.set(assetId, m);
   return m;
+}
+
+function lineParamsFor(m: BodyMeasure): LineParams {
+  return {
+    headZ: (m.headMin.z + m.headMax.z) / 2,
+    headHalfW: (m.headMax.x - m.headMin.x) / 2,
+    eyeY: m.headMin.y + 0.5 * (m.headMax.y - m.headMin.y),
+    torsoY: [m.crotchY + 0.03, m.neckY],
+  };
 }
 
 /**
@@ -86,7 +105,9 @@ export class GlbDollRig extends DollRig {
     });
     if (!meshes.length || !roots.length) throw new Error(`GLB에 스킨 메시 또는 뼈대가 없습니다: ${asset.glbPath}`);
     const skel = skeletonFromHierarchy(roots[0], asset.boneMap);
-    super(id, asset.gender, asset.id, color, heightCm, skel, template.unitHeight, clone);
+    clone.updateMatrixWorld(true);
+    const measure = measureBody(asset.id, meshes[0], skel);
+    super(id, asset.gender, asset.id, color, heightCm, skel, template.unitHeight, clone, lineParamsFor(measure));
     this.mesh = meshes[0];
     this.pickTargets = meshes.map((m) => {
       m.material = this.baseMat;
@@ -97,30 +118,10 @@ export class GlbDollRig extends DollRig {
       this.outlineMeshes.push(outlineForSkinned(m, this.outlineMat, m.parent ?? clone));
       return m;
     });
-    clone.updateMatrixWorld(true);
-    this.buildGlbCrosshair(measureBody(asset.id, this.mesh, skel));
     this.setHeight(heightCm);
   }
 
-  private buildGlbCrosshair(m: BodyMeasure): void {
-    const y = (b: string) => this.skel.rest.get(b)?.pos.y ?? 0;
-    const has = (b: string) => this.skel.bones.has(b);
-    const center = new Vector3(0, (m.headMin.y + m.headMax.y) / 2, (m.headMin.z + m.headMax.z) / 2);
-    const radii = new Vector3((m.headMax.x - m.headMin.x) / 2, (m.headMax.y - m.headMin.y) / 2, (m.headMax.z - m.headMin.z) / 2);
-    const torso: CrosshairSpec['torso'] = [];
-    const seg = (bone: string, child: string, fromY?: number) => {
-      if (!has(bone) || !has(child)) return;
-      const z = m.frontZ[bone] ?? m.frontZ.Spine1 ?? 0.1;
-      torso.push({ bone, from: new Vector3(0, fromY ?? y(bone), z), to: new Vector3(0, y(child), z) });
-    };
-    seg('Spine2', 'Neck');
-    seg('Spine1', 'Spine2');
-    seg('Spine', 'Spine1');
-    seg('Hips', 'Spine', m.crotchY + 0.03);
-    this.buildCrosshair({ head: { bone: 'Head', center, radii }, torso, lift: 0.012 });
-  }
-
-  boneFromHit(hit: Intersection): string | null {
+  protected boneFromHitRaw(hit: Intersection): string | null {
     const face = hit.face;
     const mesh = hit.object as SkinnedMesh;
     if (!face || !mesh.isSkinnedMesh) return null;
@@ -160,7 +161,7 @@ export class GlbDollRig extends DollRig {
   }
 
   protected highlightParts(): void {
-    /* 스킨 메시는 부위별 재질 교체가 없다. 선택 관절 표시(흰 점)로 대신한다 */
+    /* 스킨 메시는 부위별 재질 교체가 없다. 선택 관절 링으로 대신한다 */
   }
 
   override dispose(): void {

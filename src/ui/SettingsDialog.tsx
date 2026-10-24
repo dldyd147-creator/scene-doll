@@ -33,6 +33,7 @@ export function SettingsDialog() {
   const open = useStore((s) => s.settingsOpen);
   const setOpen = useStore((s) => s.setSettingsOpen);
   const orbitMode = useStore((s) => s.settings.orbitMode);
+  const theme = useStore((s) => s.settings.theme);
   const update = useStore((s) => s.updateSettings);
   const reset = useStore((s) => s.resetSettings);
   if (!open) return null;
@@ -40,11 +41,28 @@ export function SettingsDialog() {
     <div className="modal-backdrop" onClick={() => setOpen(false)}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2>설정</h2>
-        <div className="muted small">조작감은 실제 작업으로 맞춰 갑니다. 바꾼 값은 이 브라우저에 저장됩니다.</div>
+
+        <h3>화면</h3>
+        <div className="setting">
+          <span>테마</span>
+          <span className="segmented">
+            <button className={theme === 'light' ? 'active' : ''} onClick={() => update({ theme: 'light' })}>
+              밝게
+            </button>
+            <button className={theme === 'dark' ? 'active' : ''} onClick={() => update({ theme: 'dark' })}>
+              어둡게
+            </button>
+          </span>
+          <span />
+        </div>
+        <Toggle label="조작뷰 바닥 격자" k="showGrid" />
+        <Toggle label="원고뷰에도 바닥 격자(출력 제외)" k="manuscriptGrid" />
+        <Toggle label="원고 카메라 화각선" k="showFrustum" />
+        <Toggle label="조작뷰 조작 안내 상자" k="showHints" />
 
         <h3>시점 조작</h3>
         <div className="setting">
-          <span>시점 조작 방식</span>
+          <span>방식</span>
           <span className="segmented">
             <button className={orbitMode === 'sketchup' ? 'active' : ''} onClick={() => update({ orbitMode: 'sketchup' })}>
               스케치업 (휠 드래그 회전)
@@ -58,17 +76,16 @@ export function SettingsDialog() {
         <Range label="회전 감도" k="rotateSpeed" min={0.3} max={3} step={0.1} />
         <Range label="줌 감도" k="zoomSpeed" min={0.3} max={3} step={0.1} />
         <Range label="팬 감도" k="panSpeed" min={0.3} max={3} step={0.1} />
-        <Toggle label="바닥 격자" k="showGrid" />
-        <Toggle label="원고 카메라 화각선" k="showFrustum" />
 
         <h3>포징</h3>
-        <Range label="직접 드래그 감도" k="directDragSpeed" min={0.3} max={2} step={0.1} />
-        <Range label="기즈모 크기" k="gizmoSize" min={0.5} max={2} step={0.1} />
-        <Range label="IK 핸들 크기" k="handleSize" min={0.5} max={2.5} step={0.1} />
+        <Toggle label="관절 한계(자동 교정)" k="jointLimits" />
         <Toggle label="어깨 연동(손 끌 때 쇄골 따라옴)" k="shoulderLink" />
         <Range label="어깨 연동 비율" k="shoulderLinkRatio" min={0} max={0.6} step={0.05} fmt={(v) => v.toFixed(2)} />
-        <Toggle label="발 고정(돌 이동·골반 회전 때 발 제자리)" k="plantFeet" />
+        <Toggle label="발 고정(돌 이동·회전 때 발 제자리)" k="plantFeet" />
         <Toggle label="손·발 방향 고정(IK 때)" k="lockEndOrientation" />
+        <Range label="직접 드래그 감도" k="directDragSpeed" min={0.3} max={2} step={0.1} />
+        <Range label="기즈모 크기" k="gizmoSize" min={0.5} max={2} step={0.1} />
+        <Range label="제어점 크기" k="handleSize" min={0.6} max={2.5} step={0.1} />
 
         <h3>저장</h3>
         <Range label="되돌리기 최대 단계" k="undoLimit" min={100} max={1000} step={50} />
