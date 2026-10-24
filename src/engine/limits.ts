@@ -47,7 +47,6 @@ export function limitFor(bone: string): JointLimit | null {
 }
 
 const _axis = new Vector3();
-const _v = new Vector3();
 
 /** q = swing * twist 로 분해. twist는 axis 둘레 회전 */
 export function swingTwist(q: Quaternion, axis: Vector3): { swing: Quaternion; twist: Quaternion; twistAngle: number } {
@@ -63,10 +62,52 @@ export function swingTwist(q: Quaternion, axis: Vector3): { swing: Quaternion; t
 }
 
 /**
+ * 경첩 관절 분해: J = R_axis(theta) · T_boneDir(phi).
+ * theta: 경첩 축 둘레 굽힘각(뼈 휴식 방향을 축에 수직인 평면에 투영해 잰다)
+ * phi: 뼈 자신의 축 둘레 비틀림
+ * offAxis: 경첩+비틀림으로 설명되지 않는 나머지(뼈 방향이 경첩 평면 밖으로 벗어난 각)
+ * 뼈 방향이 경첩 축에 정확히 수직이 아니어도(실제 무릎은 6° 기울어 있다) 일관되게 분해되므로,
+ * 순수 경첩 굽힘이 비틀림으로 잘못 읽혀 교정되는 일이 없다.
+ */
+export function hingeDecompose(J: Quaternion, boneDir: Vector3, axis: Vector3): { theta: number; phi: number; offAxis: number } {
+  const rotated = boneDir.clone().applyQuaternion(J);
+  const base = boneDir.clone().sub(axis.clone().multiplyScalar(boneDir.dot(axis)));
+  const proj = rotated.clone().sub(axis.clone().multiplyScalar(rotated.dot(axis)));
+  let theta = 0;
+  if (base.lengthSq() > 1e-10 && proj.lengthSq() > 1e-10) {
+    base.normalize();
+    proj.normalize();
+    theta = Math.atan2(base.clone().cross(proj).dot(axis), base.dot(proj));
+  }
+  const hinge = new Quaternion().setFromAxisAngle(axis, theta);
+  const offAxis = rotated.angleTo(boneDir.clone().applyQuaternion(hinge));
+  const T = hinge.invert().multiply(J);
+  const phi = swingTwist(T, boneDir).twistAngle;
+  return { theta, phi, offAxis };
+}
+
+/** 경첩 굽힘 theta와 뼈 축 비틀림 phi로 관절 회전을 만든다(hingeDecompose의 역) */
+export function hingeCompose(boneDir: Vector3, axis: Vector3, theta: number, phi: number): Quaternion {
+  return new Quaternion().setFromAxisAngle(axis, theta).multiply(new Quaternion().setFromAxisAngle(boneDir, phi));
+}
+
+/**
  * 부모 기준 관절 회전 J(휴식 돌 공간에서 표현)를 한계 안으로 넣는다.
  * boneDir: 뼈의 휴식 방향(단위). 바뀐 게 없으면 null.
  */
 export function clampJointRotation(J: Quaternion, boneDir: Vector3, limit: JointLimit): Quaternion | null {
+  if (limit.hinge) {
+    _axis.set(limit.hinge.axis[0], limit.hinge.axis[1], limit.hinge.axis[2]).normalize();
+    const { theta, phi, offAxis } = hingeDecompose(J, boneDir, _axis);
+    const min = MathUtils.degToRad(limit.hinge.min);
+    const max = MathUtils.degToRad(limit.hinge.max);
+    const theta2 = Math.min(max, Math.max(min, theta));
+    const maxTwist = limit.twist !== undefined ? MathUtils.degToRad(limit.twist) : Infinity;
+    const phi2 = Math.min(maxTwist, Math.max(-maxTwist, phi));
+    if (offAxis > 1e-3 || Math.abs(theta2 - theta) > 1e-4 || Math.abs(phi2 - phi) > 1e-4) return hingeCompose(boneDir, _axis, theta2, phi2);
+    return null;
+  }
+
   const { swing, twist, twistAngle } = swingTwist(J, boneDir);
   let changed = false;
   let newSwing = swing;
@@ -80,28 +121,7 @@ export function clampJointRotation(J: Quaternion, boneDir: Vector3, limit: Joint
     }
   }
 
-  if (limit.hinge) {
-    _axis.set(limit.hinge.axis[0], limit.hinge.axis[1], limit.hinge.axis[2]).normalize();
-    const rotated = _v.copy(boneDir).applyQuaternion(swing);
-    // 경첩 축에 수직인 평면으로 투영
-    const proj = rotated.clone().sub(_axis.clone().multiplyScalar(rotated.dot(_axis)));
-    if (proj.lengthSq() > 1e-8) {
-      proj.normalize();
-      const base = boneDir.clone().sub(_axis.clone().multiplyScalar(boneDir.dot(_axis))).normalize();
-      let theta = Math.atan2(base.clone().cross(proj).dot(_axis), base.dot(proj));
-      const min = MathUtils.degToRad(limit.hinge.min);
-      const max = MathUtils.degToRad(limit.hinge.max);
-      const clamped = Math.min(max, Math.max(min, theta));
-      const hingeOnly = new Quaternion().setFromAxisAngle(_axis, clamped);
-      // 경첩 밖 성분이 있거나 범위를 벗어났으면 교정
-      const offAxis = rotated.angleTo(proj);
-      if (offAxis > 1e-3 || Math.abs(clamped - theta) > 1e-4) {
-        newSwing = hingeOnly;
-        changed = true;
-      }
-      theta = clamped;
-    }
-  } else if (limit.cone !== undefined) {
+  if (limit.cone !== undefined) {
     const w = Math.min(1, Math.max(-1, swing.w));
     const angle = 2 * Math.acos(Math.abs(w));
     const max = MathUtils.degToRad(limit.cone);

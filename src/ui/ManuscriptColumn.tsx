@@ -118,11 +118,11 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
           </select>
           <DragNumber value={cam.focalLength} step={0.5} min={14} max={300} digits={0} unit="mm" width={64} onPreview={(v) => preview({ focalLength: Math.round(v) })} onChange={(v) => setCamera({ focalLength: Math.round(v) })} />
         </div>
-        <div className="row">
+        <div className="row" title="cm 단위. X 좌우, Y 앞뒤, Z 위아래(높이)">
           <span className="label">위치</span>
-          <DragNumber value={cam.position[0] * 100} step={1} digits={0} unit="x" width={62} onPreview={(v) => preview({ position: posCm(0, v) })} onChange={(v) => setCamera({ position: posCm(0, v) })} />
-          <DragNumber value={cam.position[1] * 100} step={1} digits={0} unit="높이cm" width={82} onPreview={(v) => preview({ position: posCm(1, v) })} onChange={(v) => setCamera({ position: posCm(1, v) })} />
-          <DragNumber value={cam.position[2] * 100} step={1} digits={0} unit="z" width={62} onPreview={(v) => preview({ position: posCm(2, v) })} onChange={(v) => setCamera({ position: posCm(2, v) })} />
+          <DragNumber value={cam.position[0] * 100} step={1} digits={0} unit="X" width={66} onPreview={(v) => preview({ position: posCm(0, v) })} onChange={(v) => setCamera({ position: posCm(0, v) })} />
+          <DragNumber value={cam.position[2] * 100} step={1} digits={0} unit="Y" width={66} onPreview={(v) => preview({ position: posCm(2, v) })} onChange={(v) => setCamera({ position: posCm(2, v) })} />
+          <DragNumber value={cam.position[1] * 100} step={1} digits={0} unit="Z↑" width={70} onPreview={(v) => preview({ position: posCm(1, v) })} onChange={(v) => setCamera({ position: posCm(1, v) })} />
         </div>
         <div className="row">
           <span className="label">각도</span>
@@ -147,12 +147,13 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasSelection} onClick={() => engine.fitManuscript('selected')} title="선택한 돌이 프레임에 들어오게">
             <Icon name="focus" />
           </button>
-          <span style={{ flex: 1 }} />
-          <button className="icon" onClick={() => engine.copyWorkViewToManuscript()} title="조작뷰 시점 → 원고 카메라 (오른쪽 화면을 왼쪽으로)">
-            <Icon name="toManu" />
+        </div>
+        <div className="row copy-row">
+          <button className="big" onClick={() => engine.moveWorkViewToManuscript()} title="원고 카메라 → 조작뷰: 왼쪽(원고) 시점을 오른쪽(조작뷰)으로 가져옴">
+            <Icon name="toWork" size={18} /> 원고→조작뷰
           </button>
-          <button className="icon" onClick={() => engine.moveWorkViewToManuscript()} title="원고 카메라 → 조작뷰 (왼쪽 화면을 오른쪽으로)">
-            <Icon name="toWork" />
+          <button className="big" onClick={() => engine.copyWorkViewToManuscript()} title="조작뷰 시점 → 원고 카메라: 오른쪽(조작뷰) 시점을 왼쪽(원고 카메라)으로 복사">
+            조작뷰→원고 <Icon name="toManu" size={18} />
           </button>
         </div>
       </div>

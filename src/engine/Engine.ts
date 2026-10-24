@@ -28,7 +28,8 @@ import { ManuscriptCamera } from './ManuscriptCamera';
 import { cameraForward, lookAtAngles, ManuscriptControls } from './ManuscriptControls';
 import { KEY_LIGHT_INTENSITY, LAYER_HELPERS } from './materials';
 import { IK_CHAINS } from './skeleton';
-import { solveTwoBone } from './ik';
+import { hingeForward, solveHingeChain, solveTwoBone } from './ik';
+import { hingeCompose, hingeDecompose, limitFor } from './limits';
 import { Interaction } from './Interaction';
 import { fromVec3, roundTo, rotateObjectWorld } from './three-utils';
 
@@ -484,9 +485,9 @@ export class Engine {
     }
   }
 
-  /** 발 고정이 켜져 있으면 지금 발 위치를 기억한다(돌 이동·골반 회전 전에) */
-  capturePlantedFeet(rig: DollRig): Map<string, Vector3> | null {
-    if (!this.settings.plantFeet) return null;
+  /** 발 고정이 켜져 있으면(force면 항상) 지금 발 위치를 기억한다(돌 이동·골반 끌기 전에) */
+  capturePlantedFeet(rig: DollRig, force = false): Map<string, Vector3> | null {
+    if (!this.settings.plantFeet && !force) return null;
     const feet = new Map<string, Vector3>();
     for (const eff of ['LeftFoot', 'RightFoot']) if (rig.skel.bones.has(eff)) feet.set(eff, rig.worldPos(eff));
     return feet;
@@ -496,7 +497,16 @@ export class Engine {
   keepFeet(rig: DollRig, feet: Map<string, Vector3> | null): void {
     if (!feet) return;
     rig.root.updateMatrixWorld(true);
-    for (const [eff, pos] of feet) this.solveIk(rig, eff, pos, { shoulder: false });
+    // 발은 자리뿐 아니라 바닥에 닿은 방향도 그대로 둔다(안 그러면 앉힐 때 발끝이 바닥을 뚫고 돌이 떠오른다)
+    for (const [eff, pos] of feet) this.solveIk(rig, eff, pos, { shoulder: false, keepEndOrientation: true });
+  }
+
+  /** 기억해 둔 발 위치와 지금 발 위치의 최대 거리(m). 다리가 못 닿으면 커진다 */
+  feetError(rig: DollRig, feet: Map<string, Vector3> | null): number {
+    if (!feet) return 0;
+    let worst = 0;
+    for (const [eff, pos] of feet) worst = Math.max(worst, rig.worldPos(eff).distanceTo(pos));
+    return worst;
   }
 
   private onGizmoStart(): void {
@@ -585,22 +595,46 @@ export class Engine {
     const a = rig.worldPos(chain.upper);
     const b = rig.worldPos(chain.lower);
     const c = rig.worldPos(chain.end);
-    const pole = fromVec3(chain.pole).applyQuaternion(rig.root.quaternion);
-    const res = solveTwoBone({ a, b, c, target, poleHint: pole });
-    rotateObjectWorld(upper, res.upper);
-    rotateObjectWorld(lower, res.lower);
-    end.updateWorldMatrix(true, false);
-    if (this.settings.jointLimits) {
-      // 아래 뼈가 가리키는 방향을 경첩 평면이 품도록 위 뼈를 비틀어 둔다(팔꿈치·무릎이 옆으로 꺾이지 않게)
-      const dir = rig.worldPos(chain.end).sub(rig.worldPos(chain.lower));
-      if (dir.lengthSq() > 1e-8) rig.aimHinge(chain.lower, dir);
-      rig.root.updateMatrixWorld(true);
+    const limit = limitFor(chain.lower);
+    if (this.settings.jointLimits && limit?.hinge) {
+      // 경첩 관절(무릎·팔꿈치): 위 뼈 휴식 좌표계에서 경첩 축 둘레 굽힘각을 정확히 풀고 위 뼈는 겨냥 회전만 받는다.
+      // 결과가 정확한 경첩 회전이라 뒤따르는 관절 한계 교정이 손대지 않고, 발 고정이 미끄러지지 않는다.
+      const u0 = rig.skel.rest.get(chain.upper)!.dir;
+      const s0 = rig.skel.rest.get(chain.lower)!.dir;
+      const axis = fromVec3(limit.hinge.axis).normalize();
+      const min = MathUtils.degToRad(limit.hinge.min);
+      const max = MathUtils.degToRad(limit.hinge.max);
+      const Ru = rig.jointDelta(chain.upper);
+      const cur = hingeDecompose(Ru.clone().invert().multiply(rig.jointDelta(chain.lower)), s0, axis);
+      const invRoot = rig.root.quaternion.clone().invert();
+      const toTarget = target.clone().sub(a).applyQuaternion(invRoot);
+      const dist = toTarget.length();
+      const cDir = c.clone().sub(a).applyQuaternion(invRoot).normalize();
+      const tDir = dist > 1e-6 ? toTarget.clone().divideScalar(dist) : cDir.clone();
+      const l1 = a.distanceTo(b);
+      const l2 = b.distanceTo(c);
+      // 무릎·팔꿈치가 향할 쪽: 지금 위 뼈의 '앞'을 목표 쪽으로 겨냥 회전한 방향(위 뼈의 비틀림은 유지)
+      const f0 = hingeForward(l1, l2, u0, s0, axis, min, max);
+      const qAim = new Quaternion().setFromUnitVectors(cDir, tDir);
+      const pole = f0.clone().applyQuaternion(Ru).applyQuaternion(qAim);
+      const res = solveHingeChain({ l1, l2, u0, s0, axis, min, max, thetaCur: cur.theta, tDir, dist, pole });
+      const maxTwist = limit.twist !== undefined ? MathUtils.degToRad(limit.twist) : Infinity;
+      const phi = Math.min(maxTwist, Math.max(-maxTwist, cur.phi));
+      rig.setJointDelta(chain.upper, res.upper);
+      rig.setJointDelta(chain.lower, res.upper.clone().multiply(hingeCompose(s0, axis, res.theta, phi)));
+    } else {
+      const pole = fromVec3(chain.pole).applyQuaternion(rig.root.quaternion);
+      const res = solveTwoBone({ a, b, c, target, poleHint: pole });
+      rotateObjectWorld(upper, res.upper);
+      rotateObjectWorld(lower, res.lower);
     }
+    end.updateWorldMatrix(true, false);
     if (keepEnd) {
       end.getWorldQuaternion(_q);
       rotateObjectWorld(end, endWorldQ.multiply(_q.invert()));
     }
-    const chainBones = [chain.clavicle, chain.upper, chain.lower, chain.end].filter((x): x is string => !!x);
+    // 끝 방향을 잠근 경우(발 고정·끝 방향 잠금) 손목·발목 한계는 적용하지 않는다: 깊이 앉힐 때 발바닥이 바닥에 붙어 있어야 한다
+    const chainBones = [chain.clavicle, chain.upper, chain.lower, keepEnd ? null : chain.end].filter((x): x is string => !!x);
     this.clampAfterChange(rig, chainBones);
     // 발 고정(keepFeet)에서 부르는 내부 풀이(shoulder:false)는 제외하고, 사용자가 끄는 IK에서만 바닥을 지킨다
     if (opts.shoulder !== false) this.enforceFloor(rig);
@@ -690,6 +724,11 @@ export class Engine {
       }
     }
     this.callbacks.hint(total ? `관절 ${total}개를 한계 안으로 교정했습니다` : '교정할 관절이 없습니다(모두 한계 안)');
+  }
+
+  /** 바닥 뚫기 금지가 켜져 있고 몸의 가장 낮은 점이 바닥 아래인가 */
+  belowFloor(rig: DollRig): boolean {
+    return this.settings.floorLock && rig.lowestPointY() < -0.002;
   }
 
   /** 바닥 뚫기 금지: 몸의 가장 낮은 점이 바닥 아래면 돌 전체를 올린다 */

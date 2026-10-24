@@ -4,7 +4,7 @@ import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkelet
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
 import { mirrorJoints } from './mirror';
 import { circleTexture, MarkerPoints, ringTexture } from './overlays';
-import { clampJointRotation, limitFor, swingTwist } from './limits';
+import { clampJointRotation, hingeCompose, hingeDecompose, limitFor, swingTwist } from './limits';
 import { fromQuat, roundTo, toQuat } from './three-utils';
 
 const IDENTITY = new Quaternion();
@@ -366,6 +366,7 @@ export abstract class DollRig {
     const deltas = this.jointDeltas();
     const Rp = deltas.get(parent)!;
     const a0 = this.skel.rest.get(parent)!.dir;
+    const s0 = this.skel.rest.get(child)!.dir;
     const h0 = new Vector3(limit.hinge.axis[0], limit.hinge.axis[1], limit.hinge.axis[2]).normalize();
     const dDoll = dWorld.clone().applyQuaternion(this.root.quaternion.clone().invert()).normalize();
     // 부모 휴식 좌표계에서 본 목표 방향
@@ -374,20 +375,25 @@ export abstract class DollRig {
     if (dPerp.lengthSq() < 1e-6) return false;
     const u = dPerp.normalize();
     const n = new Vector3().crossVectors(a0, u).normalize();
+    // 경첩 굽힘각은 아래 뼈의 휴식 방향(경첩 축에 수직인 성분)을 기준으로 잰다
+    const base = s0.clone().sub(h0.clone().multiplyScalar(s0.dot(h0))).normalize();
+    const hingeAngle = (dir: Vector3): number | null => {
+      const dpp = dir.clone().sub(h0.clone().multiplyScalar(dir.dot(h0)));
+      if (dpp.lengthSq() < 1e-8) return null;
+      return Math.atan2(base.clone().cross(dpp).dot(h0), base.dot(dpp));
+    };
     // 두 후보(경첩 법선 ±n) 중 굽힘이 허용 범위에 들고 비틀림이 작은 쪽
     const min = MathUtils.degToRad(limit.hinge.min);
     const max = MathUtils.degToRad(limit.hinge.max);
-    let best: { tau: number; theta: number } | null = null;
+    const inRange = (t: number) => t >= min - 1e-3 && t <= max + 1e-3;
+    let best: { tau: number; score: number } | null = null;
     for (const cand of [n, n.clone().negate()]) {
       const tau = Math.atan2(h0.clone().cross(cand).dot(a0), h0.dot(cand));
       const twist = new Quaternion().setFromAxisAngle(a0, tau);
-      const dAfter = dP.clone().applyQuaternion(twist.clone().invert());
-      const dpp = dAfter.sub(h0.clone().multiplyScalar(dAfter.dot(h0)));
-      if (dpp.lengthSq() < 1e-8) continue;
-      const theta = Math.atan2(a0.clone().cross(dpp).dot(h0), a0.dot(dpp));
-      const inRange = theta >= min - 1e-3 && theta <= max + 1e-3;
-      const score = (inRange ? 0 : 10) + Math.abs(tau);
-      if (!best || score < (best.theta >= min - 1e-3 && best.theta <= max + 1e-3 ? 0 : 10) + Math.abs(best.tau)) best = { tau, theta };
+      const theta = hingeAngle(dP.clone().applyQuaternion(twist.clone().invert()));
+      if (theta === null) continue;
+      const score = (inRange(theta) ? 0 : 10) + Math.abs(tau);
+      if (!best || score < best.score) best = { tau, score };
     }
     if (!best) return false;
     // 위 뼈 비틀기(한계 안에서)
@@ -395,14 +401,13 @@ export abstract class DollRig {
     this.clampJoint(parent);
     // 비틀린 뒤 실제 경첩 평면에서 굽힘각을 다시 재서 적용
     const Rp2 = this.jointDelta(parent);
-    const dP2 = dDoll.clone().applyQuaternion(Rp2.clone().invert());
-    const dpp2 = dP2.sub(h0.clone().multiplyScalar(dP2.dot(h0)));
-    if (dpp2.lengthSq() < 1e-8) return true;
-    const theta = Math.min(max, Math.max(min, Math.atan2(a0.clone().cross(dpp2).dot(h0), a0.dot(dpp2))));
-    // 아래 뼈의 기존 비틀림(손목 회내 등)은 유지한다
+    const theta = hingeAngle(dDoll.clone().applyQuaternion(Rp2.clone().invert()));
+    if (theta === null) return true;
+    // 아래 뼈의 기존 비틀림(손목 회내 등)은 한계 안에서 유지한다
     const Jc = Rp2.clone().invert().multiply(deltas.get(child)!);
-    const keepTwist = swingTwist(Jc, this.skel.rest.get(child)!.dir).twist;
-    this.setJointDelta(child, Rp2.clone().multiply(new Quaternion().setFromAxisAngle(h0, theta)).multiply(keepTwist));
+    const maxTwist = limit.twist !== undefined ? MathUtils.degToRad(limit.twist) : Infinity;
+    const phi = Math.min(maxTwist, Math.max(-maxTwist, hingeDecompose(Jc, s0, h0).phi));
+    this.setJointDelta(child, Rp2.clone().multiply(hingeCompose(s0, h0, Math.min(max, Math.max(min, theta)), phi)));
     return true;
   }
 
@@ -503,10 +508,10 @@ export abstract class DollRig {
       probe(`${side}ToeBase`, this.skel.rest.get(`${side}ToeBase`)?.pos.y ?? 0.012);
       probe(`${side}Toe_End`, 0);
       probe(`${side}Hand`, 0.03 * this.unitHeight);
-      probe(`${side}Leg`, 0.06 * this.unitHeight);
+      probe(`${side}Leg`, 0.035 * this.unitHeight); // 무릎 관절 중심에서 무릎뼈 아래까지 ≈ 6cm
       probe(`${side}ForeArm`, 0.045 * this.unitHeight);
     }
-    probe('Hips', 0.11 * this.unitHeight);
+    probe('Hips', 0.055 * this.unitHeight); // 고관절 중심에서 엉덩이 바닥까지 ≈ 10cm(바닥에 앉을 수 있어야 한다)
     probe('Head', 0.1 * this.unitHeight);
     return Number.isFinite(min) ? min : 0;
   }

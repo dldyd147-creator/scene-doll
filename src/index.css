@@ -520,6 +520,17 @@ code {
   width: 30px;
   font-size: 12px;
 }
+.camera-panel .copy-row {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  margin-top: 2px;
+}
+.camera-panel button.big {
+  padding: 8px 6px;
+  font-size: 13px;
+  gap: 4px;
+  white-space: nowrap;
+}
 
 /* ---------- 조작뷰 ---------- */
 

@@ -119,7 +119,7 @@ export function WorkView({ engine }: { engine: Engine }) {
       </div>
       {settings.showHints && (
         <div className="work-hints">
-          G: 돌 이동(X/Y/Z 축 고정) · R: 돌 회전 · 부위 드래그: 관절 회전 · 관절점 드래그: 관절 이동 · 손발 핸들: IK · 바닥 링: 회전 · Alt+부위: 비틀기
+          G: 돌 이동 · R: 돌 회전(X/Y/Z 축 고정, Z가 위아래) · 골반 드래그: 발 고정 몸통 이동(앉기) · 부위 드래그: 관절 회전 · 관절점 드래그: 관절 이동 · 손발 핸들: IK · Alt+부위: 비틀기
           <br />
           {settings.orbitMode === 'designdoll' ? '우클릭 드래그: 시점 회전 · 휠 드래그: 팬' : '휠 드래그: 시점 회전 · Shift+휠 드래그: 팬 · 우클릭 드래그: 팬'} · 휠: 줌 · Ctrl+Z/Y: 되돌리기/다시
         </div>
