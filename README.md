@@ -6,10 +6,13 @@
 
 ## 실행
 
-- 배포 페이지: GitHub Pages (저장소 → Settings → Pages 에서 주소 확인)
+- 배포 페이지: https://dldyd147-creator.github.io/scene-doll/
 - 로컬 개발: `npm install` 후 `npm run dev` → http://localhost:5173
 - 빌드: `npm run build` → `dist/` (정적 파일, 어디에 올려도 동작)
+- 배포: `npm run deploy` (빌드 후 `gh-pages` 브랜치에 올림, 1~2분 뒤 반영)
 - 테스트: `npm test`, 타입 검사: `npm run typecheck`
+
+푸시할 때마다 자동 배포하려면 `deploy/github-pages.yml`을 `.github/workflows/deploy.yml`로 옮기면 된다. gh CLI 토큰에 `workflow` 권한이 필요하므로 먼저 `gh auth refresh -h github.com -s workflow`를 한 번 실행한다.
 
 대상 환경은 윈도우 데스크탑의 크롬·엣지입니다. 작업 폴더 저장은 폴더 접근 기능(File System Access API)이 있는 브라우저에서만 되고, 그 밖에서는 브라우저 내부 저장(IndexedDB)으로 동작합니다.
 

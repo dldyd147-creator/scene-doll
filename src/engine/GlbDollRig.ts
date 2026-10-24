@@ -1,4 +1,4 @@
-import { Bone, Box3, Object3D, SkinnedMesh, type Intersection } from 'three';
+import { Bone, Box3, Object3D, SkinnedMesh, type Intersection, type Sphere } from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import type { DollAsset } from '../model/types';
 import { DollRig } from './DollRig';
@@ -41,7 +41,7 @@ export class GlbDollRig extends DollRig {
 
   override prepareForPick(): void {
     // 스킨 메시의 바운딩 구를 현재 자세로 다시 계산하게 한다(three.js가 레이캐스트 때 계산)
-    for (const m of this.pickTargets) (m as SkinnedMesh).boundingSphere = null;
+    for (const m of this.pickTargets) (m as unknown as { boundingSphere: Sphere | null }).boundingSphere = null;
   }
 
   boneFromHit(hit: Intersection): string | null {
