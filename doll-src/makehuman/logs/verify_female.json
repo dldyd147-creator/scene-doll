@@ -1,0 +1,660 @@
+{
+  "glb": "C:\\dev\\scene-doll\\doll-src\\makehuman\\out\\mh_female.glb",
+  "bytes": 937888,
+  "blender_version": "4.3.2",
+  "checks": {
+    "single_mesh": {
+      "ok": true,
+      "detail": "meshes=1"
+    },
+    "single_skin": {
+      "ok": true,
+      "detail": "skins=1"
+    },
+    "no_animations": {
+      "ok": true,
+      "detail": "animations=0"
+    },
+    "no_textures": {
+      "ok": true,
+      "detail": ""
+    },
+    "one_material": {
+      "ok": true,
+      "detail": "materials=['DollSkin']"
+    },
+    "no_morph_targets": {
+      "ok": true,
+      "detail": ""
+    },
+    "triangles_le_50k": {
+      "ok": true,
+      "detail": "triangles=26756"
+    },
+    "triangles_le_30k_ideal": {
+      "ok": true,
+      "detail": "triangles=26756"
+    },
+    "raw_min_y_is_zero": {
+      "ok": true,
+      "detail": "min y = 0.00000 (glTF Y-up)"
+    },
+    "raw_height": {
+      "ok": true,
+      "detail": "height = 1.6202 m; x [-0.777,0.777] z [-0.093,0.203]"
+    },
+    "file_has_no_stray_mesh_nodes": {
+      "ok": true,
+      "detail": "mesh nodes=[('Body', 'Armature')]"
+    },
+    "one_armature_one_mesh": {
+      "ok": true,
+      "detail": "armatures=1 meshes=1"
+    },
+    "required_bones_present": {
+      "ok": true,
+      "detail": "missing=[]"
+    },
+    "parent_chain": {
+      "ok": true,
+      "detail": "wrong=[]"
+    },
+    "no_extra_bones": {
+      "ok": true,
+      "detail": "extra=[]"
+    },
+    "no_prefix": {
+      "ok": true,
+      "detail": "prefixed=[]"
+    },
+    "finger_bones": {
+      "ok": true,
+      "detail": "missing optional=[]"
+    },
+    "bone_count": {
+      "ok": true,
+      "detail": "65 bones"
+    },
+    "skin_joints_match_bones": {
+      "ok": true,
+      "detail": "joints=[65] bones=65"
+    },
+    "height": {
+      "ok": true,
+      "detail": "height=1.6202 m  bbox(glTF) x[-0.777,0.777] y[0.000,1.620] z[-0.093,0.203]"
+    },
+    "feet_on_ground": {
+      "ok": true,
+      "detail": "min y (glTF) = 0.00000"
+    },
+    "centred_x": {
+      "ok": true,
+      "detail": "x centre = -0.0000"
+    },
+    "facing_plus_z_gltf": {
+      "ok": true,
+      "detail": "feet dir (Blender) L=[-0.007, -0.941, -0.338] nose y=-0.154 head y=-0.025 back y=0.046"
+    },
+    "tpose_LeftArm_along_+X": {
+      "ok": true,
+      "detail": "dir=[1.0, 0.0, 0.0] angle from +-X = 0.00 deg"
+    },
+    "tpose_LeftForeArm_along_+X": {
+      "ok": true,
+      "detail": "dir=[1.0, 0.0, 0.0] angle from +-X = 0.00 deg"
+    },
+    "tpose_LeftHand_along_+X": {
+      "ok": true,
+      "detail": "dir=[1.0, 0.0, -0.0008] angle from +-X = 0.05 deg"
+    },
+    "tpose_LeftArm_shoulder_height": {
+      "ok": true,
+      "detail": "arm head z=1.288 tail z=1.288"
+    },
+    "palm_down_Left": {
+      "ok": true,
+      "detail": "palm normal (Blender) = [-0.094, 0.034, -0.995]  dot(-Z) = 0.995  thumb dir = [0.597, -0.541, -0.592]"
+    },
+    "tpose_RightArm_along_-X": {
+      "ok": true,
+      "detail": "dir=[-1.0, -0.0, 0.0] angle from +-X = 0.00 deg"
+    },
+    "tpose_RightForeArm_along_-X": {
+      "ok": true,
+      "detail": "dir=[-1.0, -0.0, 0.0] angle from +-X = 0.00 deg"
+    },
+    "tpose_RightHand_along_-X": {
+      "ok": true,
+      "detail": "dir=[-1.0, -0.0, -0.0009] angle from +-X = 0.05 deg"
+    },
+    "tpose_RightArm_shoulder_height": {
+      "ok": true,
+      "detail": "arm head z=1.288 tail z=1.288"
+    },
+    "palm_down_Right": {
+      "ok": true,
+      "detail": "palm normal (Blender) = [0.052, 0.037, -0.998]  dot(-Z) = 0.998  thumb dir = [-0.627, -0.525, -0.575]"
+    },
+    "head_at_top": {
+      "ok": true,
+      "detail": "Head tail z=1.621 of height 1.620"
+    },
+    "LeftFoot_at_bottom": {
+      "ok": true,
+      "detail": "LeftFoot head z=0.069"
+    },
+    "LeftLeg_straight_down": {
+      "ok": true,
+      "detail": "dir=[0.079, 0.049, -0.996]"
+    },
+    "RightFoot_at_bottom": {
+      "ok": true,
+      "detail": "RightFoot head z=0.069"
+    },
+    "RightLeg_straight_down": {
+      "ok": true,
+      "detail": "dir=[-0.082, 0.049, -0.995]"
+    },
+    "all_vertices_weighted": {
+      "ok": true,
+      "detail": "unweighted=0"
+    },
+    "max_4_influences": {
+      "ok": true,
+      "detail": "max influences per vertex = 4"
+    },
+    "armature_modifier": {
+      "ok": true,
+      "detail": ""
+    }
+  },
+  "raw_gltf": {
+    "asset": {
+      "generator": "Khronos glTF Blender I/O v4.3.47",
+      "version": "2.0"
+    },
+    "nodes": 67,
+    "meshes": 1,
+    "skins": 1,
+    "joints_per_skin": [
+      65
+    ],
+    "materials": [
+      "DollSkin"
+    ],
+    "textures": 0,
+    "images": 0,
+    "animations": 0,
+    "extensionsUsed": [],
+    "node_names": [
+      "LeftToe_End",
+      "LeftToeBase",
+      "LeftFoot",
+      "LeftLeg",
+      "LeftUpLeg",
+      "RightToe_End",
+      "RightToeBase",
+      "RightFoot",
+      "RightLeg",
+      "RightUpLeg",
+      "LeftHandIndex4",
+      "LeftHandIndex3",
+      "LeftHandIndex2",
+      "LeftHandIndex1",
+      "LeftHandMiddle4",
+      "LeftHandMiddle3",
+      "LeftHandMiddle2",
+      "LeftHandMiddle1",
+      "LeftHandPinky4",
+      "LeftHandPinky3",
+      "LeftHandPinky2",
+      "LeftHandPinky1",
+      "LeftHandRing4",
+      "LeftHandRing3",
+      "LeftHandRing2",
+      "LeftHandRing1",
+      "LeftHandThumb4",
+      "LeftHandThumb3",
+      "LeftHandThumb2",
+      "LeftHandThumb1",
+      "LeftHand",
+      "LeftForeArm",
+      "LeftArm",
+      "LeftShoulder",
+      "HeadTop_End",
+      "Head",
+      "Neck",
+      "RightHandIndex4",
+      "RightHandIndex3",
+      "RightHandIndex2",
+      "RightHandIndex1",
+      "RightHandMiddle4",
+      "RightHandMiddle3",
+      "RightHandMiddle2",
+      "RightHandMiddle1",
+      "RightHandPinky4",
+      "RightHandPinky3",
+      "RightHandPinky2",
+      "RightHandPinky1",
+      "RightHandRing4",
+      "RightHandRing3",
+      "RightHandRing2",
+      "RightHandRing1",
+      "RightHandThumb4",
+      "RightHandThumb3",
+      "RightHandThumb2",
+      "RightHandThumb1",
+      "RightHand",
+      "RightForeArm",
+      "RightArm",
+      "RightShoulder",
+      "Spine2",
+      "Spine1",
+      "Spine",
+      "Hips",
+      "Body",
+      "Armature"
+    ],
+    "primitives": [
+      {
+        "mesh": "Body",
+        "mode": 4,
+        "index_count": 80268,
+        "triangles": 26756,
+        "attributes": [
+          "JOINTS_0",
+          "NORMAL",
+          "POSITION",
+          "TEXCOORD_0",
+          "WEIGHTS_0"
+        ],
+        "positions": 14517,
+        "position_min": [
+          -0.7773561477661133,
+          0,
+          -0.09261342883110046
+        ],
+        "position_max": [
+          0.7773561477661133,
+          1.620180368423462,
+          0.20255404710769653
+        ],
+        "targets": 0
+      }
+    ],
+    "triangles_total": 26756,
+    "scene_root_nodes": [
+      "Armature"
+    ],
+    "mesh_node_parents": [
+      [
+        "Body",
+        "Armature"
+      ]
+    ],
+    "skin_skeleton_roots": [
+      null
+    ]
+  },
+  "bones": [
+    [
+      "Hips",
+      null
+    ],
+    [
+      "LeftUpLeg",
+      "Hips"
+    ],
+    [
+      "LeftLeg",
+      "LeftUpLeg"
+    ],
+    [
+      "LeftFoot",
+      "LeftLeg"
+    ],
+    [
+      "LeftToeBase",
+      "LeftFoot"
+    ],
+    [
+      "LeftToe_End",
+      "LeftToeBase"
+    ],
+    [
+      "RightUpLeg",
+      "Hips"
+    ],
+    [
+      "RightLeg",
+      "RightUpLeg"
+    ],
+    [
+      "RightFoot",
+      "RightLeg"
+    ],
+    [
+      "RightToeBase",
+      "RightFoot"
+    ],
+    [
+      "RightToe_End",
+      "RightToeBase"
+    ],
+    [
+      "Spine",
+      "Hips"
+    ],
+    [
+      "Spine1",
+      "Spine"
+    ],
+    [
+      "Spine2",
+      "Spine1"
+    ],
+    [
+      "LeftShoulder",
+      "Spine2"
+    ],
+    [
+      "LeftArm",
+      "LeftShoulder"
+    ],
+    [
+      "LeftForeArm",
+      "LeftArm"
+    ],
+    [
+      "LeftHand",
+      "LeftForeArm"
+    ],
+    [
+      "LeftHandIndex1",
+      "LeftHand"
+    ],
+    [
+      "LeftHandIndex2",
+      "LeftHandIndex1"
+    ],
+    [
+      "LeftHandIndex3",
+      "LeftHandIndex2"
+    ],
+    [
+      "LeftHandIndex4",
+      "LeftHandIndex3"
+    ],
+    [
+      "LeftHandMiddle1",
+      "LeftHand"
+    ],
+    [
+      "LeftHandMiddle2",
+      "LeftHandMiddle1"
+    ],
+    [
+      "LeftHandMiddle3",
+      "LeftHandMiddle2"
+    ],
+    [
+      "LeftHandMiddle4",
+      "LeftHandMiddle3"
+    ],
+    [
+      "LeftHandPinky1",
+      "LeftHand"
+    ],
+    [
+      "LeftHandPinky2",
+      "LeftHandPinky1"
+    ],
+    [
+      "LeftHandPinky3",
+      "LeftHandPinky2"
+    ],
+    [
+      "LeftHandPinky4",
+      "LeftHandPinky3"
+    ],
+    [
+      "LeftHandRing1",
+      "LeftHand"
+    ],
+    [
+      "LeftHandRing2",
+      "LeftHandRing1"
+    ],
+    [
+      "LeftHandRing3",
+      "LeftHandRing2"
+    ],
+    [
+      "LeftHandRing4",
+      "LeftHandRing3"
+    ],
+    [
+      "LeftHandThumb1",
+      "LeftHand"
+    ],
+    [
+      "LeftHandThumb2",
+      "LeftHandThumb1"
+    ],
+    [
+      "LeftHandThumb3",
+      "LeftHandThumb2"
+    ],
+    [
+      "LeftHandThumb4",
+      "LeftHandThumb3"
+    ],
+    [
+      "Neck",
+      "Spine2"
+    ],
+    [
+      "Head",
+      "Neck"
+    ],
+    [
+      "HeadTop_End",
+      "Head"
+    ],
+    [
+      "RightShoulder",
+      "Spine2"
+    ],
+    [
+      "RightArm",
+      "RightShoulder"
+    ],
+    [
+      "RightForeArm",
+      "RightArm"
+    ],
+    [
+      "RightHand",
+      "RightForeArm"
+    ],
+    [
+      "RightHandIndex1",
+      "RightHand"
+    ],
+    [
+      "RightHandIndex2",
+      "RightHandIndex1"
+    ],
+    [
+      "RightHandIndex3",
+      "RightHandIndex2"
+    ],
+    [
+      "RightHandIndex4",
+      "RightHandIndex3"
+    ],
+    [
+      "RightHandMiddle1",
+      "RightHand"
+    ],
+    [
+      "RightHandMiddle2",
+      "RightHandMiddle1"
+    ],
+    [
+      "RightHandMiddle3",
+      "RightHandMiddle2"
+    ],
+    [
+      "RightHandMiddle4",
+      "RightHandMiddle3"
+    ],
+    [
+      "RightHandPinky1",
+      "RightHand"
+    ],
+    [
+      "RightHandPinky2",
+      "RightHandPinky1"
+    ],
+    [
+      "RightHandPinky3",
+      "RightHandPinky2"
+    ],
+    [
+      "RightHandPinky4",
+      "RightHandPinky3"
+    ],
+    [
+      "RightHandRing1",
+      "RightHand"
+    ],
+    [
+      "RightHandRing2",
+      "RightHandRing1"
+    ],
+    [
+      "RightHandRing3",
+      "RightHandRing2"
+    ],
+    [
+      "RightHandRing4",
+      "RightHandRing3"
+    ],
+    [
+      "RightHandThumb1",
+      "RightHand"
+    ],
+    [
+      "RightHandThumb2",
+      "RightHandThumb1"
+    ],
+    [
+      "RightHandThumb3",
+      "RightHandThumb2"
+    ],
+    [
+      "RightHandThumb4",
+      "RightHandThumb3"
+    ]
+  ],
+  "mesh": {
+    "vertices": 14517,
+    "polygons": 26756,
+    "triangles": 26756,
+    "vertex_groups": 65,
+    "materials": [
+      "DollSkin"
+    ]
+  },
+  "bbox_blender_zup": {
+    "x": [
+      -0.7773562669754028,
+      0.7773561477661133
+    ],
+    "y": [
+      -0.20255404710769653,
+      0.09261342883110046
+    ],
+    "z": [
+      1.852719933026492e-08,
+      1.620180606842041
+    ]
+  },
+  "bbox_gltf_yup": {
+    "x": [
+      -0.7773562669754028,
+      0.7773561477661133
+    ],
+    "y": [
+      1.852719933026492e-08,
+      1.620180606842041
+    ],
+    "z": [
+      -0.09261342883110046,
+      0.20255404710769653
+    ]
+  },
+  "height_m": 1.6201805883148417,
+  "LeftFoot_dir_blender": [
+    -0.007496300619095564,
+    -0.94129478931427,
+    -0.3375025689601898
+  ],
+  "RightFoot_dir_blender": [
+    0.0075012813322246075,
+    -0.9412951469421387,
+    -0.3375014364719391
+  ],
+  "nose_point_blender": [
+    0.0005691407714039087,
+    -0.15406422317028046,
+    1.4814337491989136
+  ],
+  "head_bone_head_blender": [
+    0.000956178642809391,
+    -0.024521861225366592,
+    1.431813359260559
+  ],
+  "LeftArm_dir_blender": [
+    1.0,
+    0.0,
+    0.0
+  ],
+  "LeftForeArm_dir_blender": [
+    1.0,
+    0.0,
+    0.0
+  ],
+  "LeftHand_dir_blender": [
+    1.0,
+    0.0,
+    -0.0008
+  ],
+  "Left_palm_normal_blender": [
+    -0.0942,
+    0.0341,
+    -0.995
+  ],
+  "RightArm_dir_blender": [
+    -1.0,
+    -0.0,
+    0.0
+  ],
+  "RightForeArm_dir_blender": [
+    -1.0,
+    -0.0,
+    0.0
+  ],
+  "RightHand_dir_blender": [
+    -1.0,
+    -0.0,
+    -0.0009
+  ],
+  "Right_palm_normal_blender": [
+    0.0521,
+    0.0373,
+    -0.9979
+  ],
+  "pass": true
+}

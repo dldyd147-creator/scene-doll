@@ -1,0 +1,74 @@
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[smoke] macro {'gender': 1.0, 'age': 0.5, 'muscle': 0.5, 'weight': 0.5, 'proportions': 0.5, 'height': 0.5, 'cupsize': 0.5, 'firmness': 0.5, 'race': {'asian': 0.33, 'caucasian': 0.33, 'african': 0.33}}
+[smoke] created Human verts 19158 polys 18486 in 0.3s
+[smoke] shape keys: ['Basis', '$md-$as-$ma-$yn', '$md-$ca-$ma-$yn', '$md-$af-$ma-$yn', '$md-universal-$ma-$yn-$av$mu-$av$wg']
+[smoke] modifiers: [('Hide helpers', 'MASK', 'body')]
+[smoke] vertex groups: 152 ['HelperGeometry', 'JointCubes', 'Left', 'Mid', 'Right', 'body', 'helper-genital', 'helper-hair', 'helper-l-eye', 'helper-l-eyelashes-1', 'helper-l-eyelashes-2', 'helper-lower-teeth', 'helper-r-eye', 'helper-r-eyelashes-1', 'helper-r-eyelashes-2', 'helper-skirt', 'helper-tights', 'helper-tongue', 'helper-upper-teeth', 'joint-ground'] ...
+[smoke] evaluated body bbox (mask applied): (13380, (-0.56489098072052, 0.56489098072052), (-0.37613800168037415, 0.10000423341989517), (1.7345882952213287e-08, 1.7291079759597778))
+[smoke] rig Human.rig bones 52 in 0.4s
+    mixamorig:Hips <- None deform= True connect= False head=(-0.0016, -0.0089, 0.9675) tail=(0.0, -0.0234, 1.0538)
+    mixamorig:LeftUpLeg <- mixamorig:Hips deform= True connect= False head=(0.1085, 0.0072, 0.9179) tail=(0.1514, -0.027, 0.5039)
+    mixamorig:LeftLeg <- mixamorig:LeftUpLeg deform= True connect= True head=(0.1514, -0.027, 0.5039) tail=(0.1982, -0.0149, 0.0715)
+    mixamorig:LeftFoot <- mixamorig:LeftLeg deform= True connect= False head=(0.1982, -0.0149, 0.0715) tail=(0.1954, -0.1581, 0.0293)
+    mixamorig:LeftToeBase <- mixamorig:LeftFoot deform= True connect= False head=(0.1954, -0.1581, 0.0293) tail=(0.198, -0.2113, 0.0138)
+    mixamorig:RightUpLeg <- mixamorig:Hips deform= True connect= False head=(-0.1085, 0.0072, 0.9179) tail=(-0.1514, -0.027, 0.5039)
+    mixamorig:RightLeg <- mixamorig:RightUpLeg deform= True connect= True head=(-0.1514, -0.027, 0.5039) tail=(-0.1982, -0.0149, 0.0715)
+    mixamorig:RightFoot <- mixamorig:RightLeg deform= True connect= False head=(-0.1982, -0.0149, 0.0715) tail=(-0.1954, -0.1581, 0.0293)
+    mixamorig:RightToeBase <- mixamorig:RightFoot deform= True connect= False head=(-0.1954, -0.1581, 0.0293) tail=(-0.198, -0.2113, 0.0138)
+    mixamorig:Spine <- mixamorig:Hips deform= True connect= False head=(0.0, -0.0234, 1.0538) tail=(0.0, -0.0034, 1.1544)
+    mixamorig:Spine1 <- mixamorig:Spine deform= True connect= True head=(0.0, -0.0034, 1.1544) tail=(0.0, 0.0493, 1.2761)
+    mixamorig:Spine2 <- mixamorig:Spine1 deform= True connect= True head=(0.0, 0.0493, 1.2761) tail=(0.0, -0.0115, 1.4825)
+    mixamorig:LeftShoulder <- mixamorig:Spine2 deform= True connect= False head=(0.0634, -0.0115, 1.4477) tail=(0.1861, -0.0178, 1.3787)
+    mixamorig:LeftArm <- mixamorig:LeftShoulder deform= True connect= True head=(0.1861, -0.0178, 1.3787) tail=(0.3514, -0.0156, 1.1891)
+    mixamorig:LeftForeArm <- mixamorig:LeftArm deform= True connect= True head=(0.3514, -0.0156, 1.1891) tail=(0.4858, -0.207, 1.0609)
+    mixamorig:LeftHand <- mixamorig:LeftForeArm deform= True connect= True head=(0.4858, -0.207, 1.0609) tail=(0.5301, -0.2726, 1.0026)
+    mixamorig:LeftHandIndex1 <- mixamorig:LeftHand deform= True connect= False head=(0.5157, -0.312, 1.0202) tail=(0.5193, -0.3353, 1.0045)
+    mixamorig:LeftHandIndex2 <- mixamorig:LeftHandIndex1 deform= True connect= False head=(0.5193, -0.3353, 1.0045) tail=(0.5188, -0.3539, 0.9874)
+    mixamorig:LeftHandIndex3 <- mixamorig:LeftHandIndex2 deform= True connect= False head=(0.5188, -0.3539, 0.9874) tail=(0.5151, -0.3738, 0.9664)
+    mixamorig:LeftHandMiddle1 <- mixamorig:LeftHand deform= True connect= False head=(0.5335, -0.2932, 1.0074) tail=(0.5415, -0.3166, 0.98)
+    mixamorig:LeftHandMiddle2 <- mixamorig:LeftHandMiddle1 deform= True connect= False head=(0.5415, -0.3166, 0.98) tail=(0.5445, -0.336, 0.9574)
+    mixamorig:LeftHandMiddle3 <- mixamorig:LeftHandMiddle2 deform= True connect= False head=(0.5445, -0.336, 0.9574) tail=(0.5443, -0.3531, 0.9335)
+    mixamorig:LeftHandPinky1 <- mixamorig:LeftHand deform= True connect= False head=(0.5435, -0.2536, 0.9882) tail=(0.55, -0.2627, 0.9677)
+    mixamorig:LeftHandPinky2 <- mixamorig:LeftHandPinky1 deform= True connect= False head=(0.55, -0.2627, 0.9677) tail=(0.5519, -0.2695, 0.9522)
+    mixamorig:LeftHandPinky3 <- mixamorig:LeftHandPinky2 deform= True connect= False head=(0.5519, -0.2695, 0.9522) tail=(0.5547, -0.2778, 0.9324)
+    mixamorig:LeftHandRing1 <- mixamorig:LeftHand deform= True connect= False head=(0.5419, -0.2747, 0.9985) tail=(0.5521, -0.291, 0.9724)
+    mixamorig:LeftHandRing2 <- mixamorig:LeftHandRing1 deform= True connect= False head=(0.5521, -0.291, 0.9724) tail=(0.5569, -0.3057, 0.9501)
+    mixamorig:LeftHandRing3 <- mixamorig:LeftHandRing2 deform= True connect= False head=(0.5569, -0.3057, 0.9501) tail=(0.5595, -0.3188, 0.9243)
+    mixamorig:LeftHandThumb1 <- mixamorig:LeftHand deform= True connect= False head=(0.4866, -0.2555, 1.0541) tail=(0.4641, -0.2788, 1.0456)
+    mixamorig:LeftHandThumb2 <- mixamorig:LeftHandThumb1 deform= True connect= False head=(0.4641, -0.2788, 1.0456) tail=(0.4505, -0.3136, 1.0316)
+    mixamorig:LeftHandThumb3 <- mixamorig:LeftHandThumb2 deform= True connect= False head=(0.4505, -0.3136, 1.0316) tail=(0.4445, -0.3372, 1.0138)
+    mixamorig:Neck <- mixamorig:Spine2 deform= True connect= False head=(0.0, -0.0115, 1.4825) tail=(0.0, 0.0038, 1.5317)
+    mixamorig:Head <- mixamorig:Neck deform= True connect= False head=(0.0025, -0.0182, 1.5243) tail=(0.0, -0.0215, 1.7317)
+    mixamorig:RightShoulder <- mixamorig:Spine2 deform= True connect= False head=(-0.0629, -0.0155, 1.4372) tail=(-0.1861, -0.0178, 1.3787)
+    mixamorig:RightArm <- mixamorig:RightShoulder deform= True connect= True head=(-0.1861, -0.0178, 1.3787) tail=(-0.3514, -0.0156, 1.1891)
+    mixamorig:RightForeArm <- mixamorig:RightArm deform= True connect= True head=(-0.3514, -0.0156, 1.1891) tail=(-0.4858, -0.207, 1.0609)
+    mixamorig:RightHand <- mixamorig:RightForeArm deform= True connect= True head=(-0.4858, -0.207, 1.0609) tail=(-0.5213, -0.2672, 1.0086)
+    mixamorig:RightHandIndex1 <- mixamorig:RightHand deform= True connect= False head=(-0.5157, -0.312, 1.0202) tail=(-0.5193, -0.3353, 1.0045)
+    mixamorig:RightHandIndex2 <- mixamorig:RightHandIndex1 deform= True connect= False head=(-0.5193, -0.3353, 1.0045) tail=(-0.5188, -0.3539, 0.9874)
+    mixamorig:RightHandIndex3 <- mixamorig:RightHandIndex2 deform= True connect= False head=(-0.5188, -0.3539, 0.9874) tail=(-0.5151, -0.3738, 0.9664)
+    mixamorig:RightHandMiddle1 <- mixamorig:RightHand deform= True connect= False head=(-0.5335, -0.2932, 1.0074) tail=(-0.5415, -0.3166, 0.98)
+    mixamorig:RightHandMiddle2 <- mixamorig:RightHandMiddle1 deform= True connect= False head=(-0.5415, -0.3166, 0.98) tail=(-0.5445, -0.336, 0.9574)
+    mixamorig:RightHandMiddle3 <- mixamorig:RightHandMiddle2 deform= True connect= False head=(-0.5445, -0.336, 0.9574) tail=(-0.5443, -0.3531, 0.9335)
+    mixamorig:RightHandPinky1 <- mixamorig:RightHand deform= True connect= False head=(-0.5435, -0.2536, 0.9882) tail=(-0.55, -0.2627, 0.9677)
+    mixamorig:RightHandPinky2 <- mixamorig:RightHandPinky1 deform= True connect= False head=(-0.55, -0.2627, 0.9677) tail=(-0.5519, -0.2695, 0.9522)
+    mixamorig:RightHandPinky3 <- mixamorig:RightHandPinky2 deform= True connect= False head=(-0.5519, -0.2695, 0.9522) tail=(-0.5547, -0.2778, 0.9324)
+    mixamorig:RightHandRing1 <- mixamorig:RightHand deform= True connect= False head=(-0.5419, -0.2747, 0.9985) tail=(-0.5521, -0.291, 0.9724)
+    mixamorig:RightHandRing2 <- mixamorig:RightHandRing1 deform= True connect= False head=(-0.5521, -0.291, 0.9724) tail=(-0.5569, -0.3057, 0.9501)
+    mixamorig:RightHandRing3 <- mixamorig:RightHandRing2 deform= True connect= True head=(-0.5569, -0.3057, 0.9501) tail=(-0.5595, -0.3188, 0.9243)
+    mixamorig:RightHandThumb1 <- mixamorig:RightHand deform= True connect= False head=(-0.4866, -0.2555, 1.0541) tail=(-0.4641, -0.2788, 1.0456)
+    mixamorig:RightHandThumb2 <- mixamorig:RightHandThumb1 deform= True connect= False head=(-0.4641, -0.2788, 1.0456) tail=(-0.4505, -0.3136, 1.0316)
+    mixamorig:RightHandThumb3 <- mixamorig:RightHandThumb2 deform= True connect= False head=(-0.4505, -0.3136, 1.0316) tail=(-0.4445, -0.3372, 1.0138)
+[smoke] modifiers after rig: [('Armature', 'ARMATURE', '', bpy.data.objects['Human.rig']), ('Hide helpers', 'MASK', 'body', None)]
+[smoke] vertex groups after rig: 204
+[smoke] bone vertex groups present: 52 / 52
+[smoke] rig matrix_world: <Matrix 4x4 (1.0000, 0.0000, 0.0000, 0.0000)
+            (0.0000, 1.0000, 0.0000, 0.0000)
+            (0.0000, 0.0000, 1.0000, 0.0000)
+            (0.0000, 0.0000, 0.0000, 1.0000)> human parent: Human.rig human matrix_world translation: <Vector (0.0000, 0.0000, 0.0000)>
+[smoke] DONE in 0.4s
+Blender 4.3.2 (hash 32f5fdce0a0a built 2024-12-17 03:35:23)
+OBJ import of 'base.obj' took 9.88 ms
+
+Blender quit

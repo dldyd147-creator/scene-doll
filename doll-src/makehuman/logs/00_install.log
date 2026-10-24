@@ -1,0 +1,27 @@
+[install] Blender 4.3.2
+[install] zip: C:\dev\scene-doll\doll-src\makehuman\downloads\add-on-mpfb-v2.0.18.zip 45956992 bytes
+Log config does not exist. Creating empty template.
+Will rewrite log config C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\mpfb\config\log_levels.json
+[WARN ] services.locationservice ...............: User home directory does not exist C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb
+[INFO ] services.locationservice ...............: Not adding link to MakeHuman user data, since neither explicit path nor auto-discovery is set in preferences.
+[INFO ] services.locationservice ...............: Creating relevant directory: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb
+[INFO ] services.locationservice ...............: Creating relevant directory: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb\data
+[INFO ] services.locationservice ...............: Creating relevant directory: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb\config
+[INFO ] services.locationservice ...............: Creating relevant directory: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb\cache
+[INFO ] services.locationservice ...............: Creating relevant directory: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\.user\user_default\mpfb\logs
+[INFO ] mpfb.init ..............................: Build info 20261010
+[INFO ] mpfb.init ..............................: MPFB initialization has finished.
+[install] package_install_files -> {'FINISHED'}
+Info: Preferences saved
+[install] enabled: True
+[install] module dir: C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\extensions\user_default\mpfb
+[install] manifest: id = "mpfb"
+[install] manifest: version = "2.0.18"
+[install] manifest: name = "MPFB"
+[install] manifest: blender_version_min = "4.2.0"
+[install] manifest: license = [
+[install] DONE
+Blender 4.3.2 (hash 32f5fdce0a0a built 2024-12-17 03:35:23)
+Writing userprefs: "C:\Users\admin\AppData\Roaming\Blender Foundation\Blender\4.3\config\userpref.blend" ok
+
+Blender quit
