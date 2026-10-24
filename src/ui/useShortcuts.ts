@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { Engine } from '../engine/Engine';
 import { useStore } from '../state/store';
+import { confirmCurrentCut } from './cuts';
 import { saveNow } from './save';
 
 function isTyping(e: KeyboardEvent): boolean {
@@ -12,17 +13,29 @@ function isTyping(e: KeyboardEvent): boolean {
 
 /**
  * 단축키(기획서 '단축키' 표). 기본 편집은 클립스튜디오, 시점은 스케치업, 나머지는 씬 돌 고유.
- * 2단계(`), 5단계 컷 이동(PageUp/Down)·확정(Ctrl+Enter)은 자리만 둔다.
+ * 2단계(`)는 자리만 둔다.
  */
 export function useShortcuts(engine: Engine): void {
   const clipboard = useRef<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (isTyping(e)) return;
       const s = useStore.getState();
       const ctrl = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
+
+      // 입력란에서도 Ctrl+Enter(컷 확정)·Ctrl+S(저장)는 받는다
+      if (ctrl && e.key === 'Enter') {
+        e.preventDefault();
+        void confirmCurrentCut(engine);
+        return;
+      }
+      if (ctrl && key === 's') {
+        e.preventDefault();
+        void saveNow();
+        return;
+      }
+      if (isTyping(e)) return;
 
       if (ctrl && key === 'z' && !e.shiftKey) {
         e.preventDefault();
@@ -32,11 +45,6 @@ export function useShortcuts(engine: Engine): void {
       if ((ctrl && key === 'y') || (ctrl && e.shiftKey && key === 'z')) {
         e.preventDefault();
         s.redo();
-        return;
-      }
-      if (ctrl && key === 's') {
-        e.preventDefault();
-        void saveNow();
         return;
       }
       if (ctrl && key === 'c') {
@@ -61,12 +69,22 @@ export function useShortcuts(engine: Engine): void {
           }
           return;
         case 'Escape':
-          if (s.mode !== 'direct') s.setMode('direct');
+          if (s.settingsOpen) s.setSettingsOpen(false);
+          else if (s.exportOpen) s.setExportOpen(false);
+          else if (s.mode !== 'direct') s.setMode('direct');
           else s.select({ dollId: null, bone: null });
           return;
         case 'Tab':
           e.preventDefault();
           engine.toggleViewWithManuscript();
+          return;
+        case 'PageUp':
+          e.preventDefault();
+          s.prevCut();
+          return;
+        case 'PageDown':
+          e.preventDefault();
+          s.nextCut();
           return;
       }
       switch (key) {

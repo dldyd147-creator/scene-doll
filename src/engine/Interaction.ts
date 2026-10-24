@@ -8,9 +8,10 @@ import { rotateObjectWorld } from './three-utils';
 type DragState =
   | { kind: 'idle' }
   | { kind: 'pending'; rig: DollRig; bone: string; point: Vector3; x: number; y: number; alt: boolean }
-  | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean }
+  | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean; feet: Map<string, Vector3> | null }
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
-  | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; handle: DollHandle; moved: boolean };
+  | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; handle: DollHandle; moved: boolean }
+  | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
 
 const DRAG_THRESHOLD_PX = 3;
 /** IK 핸들 클릭 반경(px) */
@@ -27,6 +28,7 @@ const _tmp = new Vector3();
  * - 몸 부위를 잡고 끌면 그 관절이 바로 회전(화면 평면 기준 레버)
  * - Alt+드래그: 뼈 축 비틀기
  * - 손·발 핸들을 끌면 IK로 팔·다리 전체가 따라옴(핸들은 화면 평행 평면 위를 움직인다)
+ * - 원고 카메라 아이콘을 끌면 카메라가 화면 평행 평면에서 움직인다
  * - 빈 곳 클릭: 선택 해제. 시점 조작(휠/우클릭)은 OrbitControls가 맡는다.
  */
 export class Interaction {
@@ -91,6 +93,13 @@ export class Interaction {
     return best;
   }
 
+  private pickCameraIcon(e: PointerEvent): Vector3 | null {
+    if (!this.engine.manu.icon.visible) return null;
+    this.setRay(e);
+    const hits = _ray.intersectObjects(this.engine.manu.iconMeshes, false);
+    return hits.length ? hits[0].point.clone() : null;
+  }
+
   private pickPart(e: PointerEvent): { rig: DollRig; bone: string; point: Vector3 } | null {
     this.setRay(e);
     const targets: Object3D[] = [];
@@ -144,6 +153,16 @@ export class Interaction {
       return;
     }
 
+    const camHit = this.pickCameraIcon(e);
+    if (camHit) {
+      this.engine.callbacks.select({ dollId: null, bone: null, camera: true });
+      const startPos = this.engine.manu.camera.position.clone();
+      const plane = this.viewPlaneAt(camHit);
+      this.state = { kind: 'camera', plane, startHit: camHit, startPos, moved: false };
+      this.capture(e);
+      return;
+    }
+
     const hit = this.pickPart(e);
     if (hit) {
       this.engine.callbacks.select({ dollId: hit.rig.id, bone: hit.bone });
@@ -174,7 +193,13 @@ export class Interaction {
           const pivot = s.rig.worldPos(s.bone);
           const lever = s.point.clone().sub(pivot);
           if (lever.lengthSq() < 1e-8) lever.set(0, 0.01, 0);
-          this.state = { kind: 'direct', rig: s.rig, bone: s.bone, pivot, lever, plane: this.viewPlaneAt(s.point), moved: false };
+          // 골반을 돌릴 때 발 고정이 켜져 있으면 발 위치를 기억해 둔다
+          let feet: Map<string, Vector3> | null = null;
+          if (s.bone === 'Hips' && this.engine.settings.plantFeet) {
+            feet = new Map();
+            for (const eff of ['LeftFoot', 'RightFoot']) if (s.rig.skel.bones.has(eff)) feet.set(eff, s.rig.worldPos(eff));
+          }
+          this.state = { kind: 'direct', rig: s.rig, bone: s.bone, pivot, lever, plane: this.viewPlaneAt(s.point), moved: false, feet };
         }
         this.el.style.cursor = 'grabbing';
         this.onMove(e);
@@ -192,6 +217,7 @@ export class Interaction {
         rotateObjectWorld(bone, _q);
         s.lever.copy(v1);
         s.moved = true;
+        if (s.feet) for (const [eff, pos] of s.feet) this.engine.solveIk(s.rig, eff, pos, { shoulder: false });
         return;
       }
       case 'twist': {
@@ -207,6 +233,15 @@ export class Interaction {
         const target = this.rayOnPlane(e, s.plane);
         if (!target) return;
         this.engine.solveIk(s.rig, s.effector, target);
+        s.moved = true;
+        return;
+      }
+      case 'camera': {
+        const hit = this.rayOnPlane(e, s.plane);
+        if (!hit) return;
+        const cam = this.engine.manu.camera;
+        cam.position.copy(s.startPos).add(hit.sub(s.startHit));
+        cam.updateMatrixWorld(true);
         s.moved = true;
         return;
       }
@@ -227,6 +262,7 @@ export class Interaction {
     if (commit && (s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik') && s.moved) {
       this.engine.commitDoll(s.rig.id);
     }
+    if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
     this.state = { kind: 'idle' };
     this.el.style.cursor = '';
     if (this.pointerId !== null) {
@@ -269,6 +305,11 @@ export class Interaction {
       this.el.style.cursor = 'grab';
       const label = boneLabel(IK_CHAINS[handle.userData.effector].end);
       this.engine.callbacks.hint(`${label} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
+      return;
+    }
+    if (this.pickCameraIcon(e)) {
+      this.el.style.cursor = 'move';
+      this.engine.callbacks.hint('원고 카메라 · 끌어서 이동 · W: 이동 기즈모 · E: 회전 기즈모');
       return;
     }
     const hit = this.pickPart(e);

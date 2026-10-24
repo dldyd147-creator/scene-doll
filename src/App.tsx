@@ -8,6 +8,7 @@ import { WorkView } from './ui/WorkView';
 import { AssetPanel } from './ui/AssetPanel';
 import { StatusBar } from './ui/StatusBar';
 import { SettingsDialog } from './ui/SettingsDialog';
+import { ExportDialog } from './ui/ExportDialog';
 
 export default function App() {
   const engine = useEngine();
@@ -24,6 +25,7 @@ export default function App() {
       </div>
       <StatusBar />
       <SettingsDialog />
+      <ExportDialog engine={engine} />
     </div>
   );
 }

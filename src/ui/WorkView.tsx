@@ -8,6 +8,8 @@ export function WorkView({ engine }: { engine: Engine }) {
   const selection = useStore((s) => s.selection);
   const dollCount = useStore((s) => s.cuts[s.currentCutIndex].dolls.length);
   const shading = useStore((s) => s.cuts[s.currentCutIndex].light.shading);
+  const crosshair = useStore((s) => s.cuts[s.currentCutIndex].crosshair);
+  const outline = useStore((s) => s.cuts[s.currentCutIndex].outline);
   const settings = useStore((s) => s.settings);
   const updateSettings = useStore((s) => s.updateSettings);
   const commitCut = useStore((s) => s.commitCut);
@@ -90,6 +92,28 @@ export function WorkView({ engine }: { engine: Engine }) {
           >
             명암
           </button>
+          <button
+            className={crosshair ? 'active' : ''}
+            onClick={() =>
+              commitCut((c) => {
+                c.crosshair = !c.crosshair;
+              })
+            }
+            title="머리 십자선(얼굴 중심·눈높이)과 몸통 정중선. 출력에도 들어감(출력 설정에서 제외 가능)"
+          >
+            십자선
+          </button>
+          <button
+            className={outline ? 'active' : ''}
+            onClick={() =>
+              commitCut((c) => {
+                c.outline = !c.outline;
+              })
+            }
+            title="돌 실루엣 외곽선(겹친 돌 구분)"
+          >
+            외곽선
+          </button>
           <button className={settings.showGrid ? 'active' : ''} onClick={() => updateSettings({ showGrid: !settings.showGrid })} title="바닥 격자">
             격자
           </button>
@@ -98,6 +122,12 @@ export function WorkView({ engine }: { engine: Engine }) {
           </button>
           <button className={settings.shoulderLink ? 'active' : ''} onClick={() => updateSettings({ shoulderLink: !settings.shoulderLink })} title="손을 끌 때 어깨(쇄골)가 조금 따라옴">
             어깨 연동
+          </button>
+          <button className={settings.plantFeet ? 'active' : ''} onClick={() => updateSettings({ plantFeet: !settings.plantFeet })} title="돌 전체를 옮기거나 골반을 돌릴 때 발이 제자리를 지킴(다리 IK)">
+            발 고정
+          </button>
+          <button className={settings.lockEndOrientation ? 'active' : ''} onClick={() => updateSettings({ lockEndOrientation: !settings.lockEndOrientation })} title="IK로 끌 때 손·발 방향을 유지">
+            손발 방향 고정
           </button>
         </div>
       </div>

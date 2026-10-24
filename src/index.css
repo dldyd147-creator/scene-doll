@@ -125,6 +125,28 @@ input[type='color'] {
 input[type='range'] {
   accent-color: var(--accent);
 }
+.dragnum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  background: #15161b;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 7px;
+  cursor: ew-resize;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  white-space: nowrap;
+}
+.dragnum:hover {
+  border-color: #4a4d5a;
+}
+.dragnum .unit {
+  color: var(--muted);
+  margin-left: 2px;
+  font-size: 11px;
+}
 label.field {
   display: flex;
   align-items: center;
@@ -295,15 +317,20 @@ kbd {
 /* ---------- 컷 목록 ---------- */
 
 .cutlist {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 6px;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 .cut-tile {
   width: 100%;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  flex-shrink: 0;
+  background: #e9e9ec;
+  border: 2px solid var(--border);
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -311,6 +338,16 @@ kbd {
   font-size: 12px;
   cursor: pointer;
   position: relative;
+  overflow: hidden;
+}
+.cut-tile:not(.confirmed) {
+  background: var(--panel-2);
+}
+.cut-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .cut-tile.current {
   border-color: var(--accent);
@@ -318,9 +355,74 @@ kbd {
 }
 .cut-tile .num {
   position: absolute;
-  left: 4px;
+  left: 3px;
   top: 2px;
+  font-size: 10px;
+  background: #000a;
+  color: #fff;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+.cut-tile .check {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 10px;
+  background: var(--accent);
+  color: #1a1a1a;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.cutlist-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 6px;
+  border-top: 1px solid var(--border);
+}
+.cutlist-tools button {
+  padding: 4px 0;
+}
+.cutlist-tools .export {
+  grid-column: 1 / -1;
+}
+.camera-panel input.memo {
+  flex: 1;
+}
+.camera-panel button.confirm kbd {
+  margin-left: 6px;
+  color: #1a1a1a;
+  background: #ffffff66;
+  border-color: #0003;
+}
+.camera-panel button.confirm.done {
+  background: #4a7a3a;
+  border-color: #4a7a3a;
+  color: #fff;
+}
+.progress .bar {
+  height: 8px;
+  background: var(--panel-3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress .fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.15s;
+}
+.md-preview {
+  max-height: 260px;
+  overflow: auto;
+  background: #0f1014;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
   font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
 }
 
 /* ---------- 원고뷰 열 ---------- */

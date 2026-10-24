@@ -15,6 +15,10 @@ export interface Settings {
   shoulderLinkRatio: number;
   /** 직접 드래그 감도(픽셀 → 회전) */
   directDragSpeed: number;
+  /** 발 고정: 돌 전체를 옮길 때 발이 바닥 위치를 지킨다(다리 IK) */
+  plantFeet: boolean;
+  /** 손목·발목 방향 고정: IK로 끌 때 손·발의 방향을 유지한다 */
+  lockEndOrientation: boolean;
   undoLimit: number;
   autosaveSeconds: number;
   /** 조작뷰에 원고 카메라 화각 범위 표시 */
@@ -32,6 +36,8 @@ export const DEFAULT_SETTINGS: Settings = {
   shoulderLink: true,
   shoulderLinkRatio: 0.25,
   directDragSpeed: 1,
+  plantFeet: false,
+  lockEndOrientation: false,
   undoLimit: 200,
   autosaveSeconds: 60,
   showFrustum: true,

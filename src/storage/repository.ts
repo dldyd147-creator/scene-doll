@@ -1,5 +1,5 @@
 import type { Character, Cut, Episode, Work } from '../model/types';
-import type { Document } from '../state/store';
+import type { Document, Thumbnails } from '../state/store';
 import { pad3, type StorageBackend } from './backend';
 
 /** 기획서의 폴더 구조 */
@@ -14,12 +14,29 @@ export const paths = {
   episode: (code: string, n: number) => `작품/${code}/회차/${pad3(n)}/회차.json`,
   cutDir: (code: string, n: number) => `작품/${code}/회차/${pad3(n)}/컷`,
   cut: (code: string, n: number, cutNo: number) => `작품/${code}/회차/${pad3(n)}/컷/${pad3(cutNo)}.json`,
+  thumbnailDir: (code: string, n: number) => `작품/${code}/회차/${pad3(n)}/썸네일`,
   thumbnail: (code: string, n: number, cutNo: number) => `작품/${code}/회차/${pad3(n)}/썸네일/${pad3(cutNo)}.png`,
   outputDir: (code: string, n: number) => `출력/${code}/${pad3(n)}`,
   packageDir: (code: string, n: number) => `패키지/${code}/${pad3(n)}`,
 };
 
 const json = (v: unknown): string => JSON.stringify(v, null, 2);
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [head, data] = dataUrl.split(',');
+  const mime = /data:([^;]+)/.exec(head)?.[1] ?? 'image/png';
+  const bin = atob(data);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+function bufferToDataUrl(buf: ArrayBuffer, mime = 'image/png'): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${mime};base64,${btoa(bin)}`;
+}
 
 /** 도메인 단위 저장·불러오기. 백엔드가 무엇이든 같은 폴더 구조로 쓴다 */
 export class Repository {
@@ -37,6 +54,41 @@ export class Repository {
     const existing = await this.backend.list(paths.cutDir(code, ep.number));
     const keep = new Set(cuts.map((c) => `${pad3(c.number)}.json`));
     for (const f of existing) if (f.kind === 'file' && f.name.endsWith('.json') && !keep.has(f.name)) await this.backend.remove(`${paths.cutDir(code, ep.number)}/${f.name}`);
+  }
+
+  /** 썸네일 저장. all=true면 전부 다시 쓰고 남는 파일은 지운다(번호가 바뀐 뒤) */
+  async saveThumbnails(code: string, episodeNo: number, thumbnails: Thumbnails, numbers: number[], all: boolean): Promise<void> {
+    const targets = all ? Object.keys(thumbnails).map(Number) : numbers;
+    for (const n of targets) {
+      const url = thumbnails[n];
+      if (!url) continue;
+      await this.backend.writeBinary(paths.thumbnail(code, episodeNo, n), dataUrlToBlob(url));
+    }
+    if (all) {
+      const keep = new Set(Object.keys(thumbnails).map((n) => `${pad3(Number(n))}.png`));
+      const existing = await this.backend.list(paths.thumbnailDir(code, episodeNo));
+      for (const f of existing) if (f.kind === 'file' && !keep.has(f.name)) await this.backend.remove(`${paths.thumbnailDir(code, episodeNo)}/${f.name}`);
+    }
+  }
+
+  async loadThumbnails(code: string, episodeNo: number, numbers: number[]): Promise<Thumbnails> {
+    const out: Thumbnails = {};
+    for (const n of numbers) {
+      const buf = await this.backend.readBinary(paths.thumbnail(code, episodeNo, n));
+      if (buf) out[n] = bufferToDataUrl(buf);
+    }
+    return out;
+  }
+
+  /** 출력 폴더에 파일 쓰기(PNG·md·json) */
+  async writeOutput(code: string, episodeNo: number, name: string, data: string | Blob): Promise<void> {
+    const path = `${paths.outputDir(code, episodeNo)}/${name}`;
+    if (typeof data === 'string') await this.backend.writeText(path, data);
+    else await this.backend.writeBinary(path, data);
+  }
+
+  outputFolder(code: string, episodeNo: number): string {
+    return paths.outputDir(code, episodeNo);
   }
 
   async loadWork(code: string): Promise<Work | null> {

@@ -67,6 +67,8 @@ export function SettingsDialog() {
         <Range label="IK 핸들 크기" k="handleSize" min={0.5} max={2.5} step={0.1} />
         <Toggle label="어깨 연동(손 끌 때 쇄골 따라옴)" k="shoulderLink" />
         <Range label="어깨 연동 비율" k="shoulderLinkRatio" min={0} max={0.6} step={0.05} fmt={(v) => v.toFixed(2)} />
+        <Toggle label="발 고정(돌 이동·골반 회전 때 발 제자리)" k="plantFeet" />
+        <Toggle label="손·발 방향 고정(IK 때)" k="lockEndOrientation" />
 
         <h3>저장</h3>
         <Range label="되돌리기 최대 단계" k="undoLimit" min={100} max={1000} step={50} />

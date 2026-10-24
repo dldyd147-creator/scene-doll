@@ -13,10 +13,12 @@ import {
   Vector3,
   type Intersection,
 } from 'three';
+import type { Line2 } from 'three/addons/lines/Line2.js';
 import type { DollInstance, Gender, JointRotations, Quat } from '../model/types';
 import { EFFECTOR_NAMES, IK_CHAINS, type BuiltSkeleton } from './skeleton';
 import { dollHighlightMaterial, dollMaterial, handleMaterial, LAYER_HELPERS, TOON_FLAT, TOON_TWO_STEP } from './materials';
 import { mirrorJoints } from './mirror';
+import { makePolyline } from './overlays';
 import { fromQuat, roundTo, toQuat } from './three-utils';
 
 const IDENTITY = new Quaternion();
@@ -25,6 +27,15 @@ const _v = new Vector3();
 /** IK 핸들 메시 */
 export interface DollHandle extends Mesh {
   userData: { dollId: string; effector: string };
+}
+
+/** 십자선을 그리기 위한 몸 치수(돌 공간, 휴식 자세) */
+export interface CrosshairSpec {
+  head: { bone: string; center: Vector3; radii: Vector3 };
+  /** 몸통 정중선 조각: 뼈와 돌 공간 시작·끝점 */
+  torso: Array<{ bone: string; from: Vector3; to: Vector3 }>;
+  /** 표면에서 띄우는 거리 */
+  lift: number;
 }
 
 /**
@@ -42,9 +53,14 @@ export abstract class DollRig {
   color: string;
   heightCm: number;
   shading = true;
+  outline = true;
+  crosshair = true;
   protected baseMat: MeshToonMaterial;
   protected hiMat: MeshToonMaterial;
   protected highlighted: string | null = null;
+  protected outlineMeshes: Object3D[] = [];
+  protected crosshairLines: Line2[] = [];
+  private restFrames = new Map<string, Object3D>();
   private handleRadius = 0.022;
 
   /** 레이캐스트 대상 메시들. userData.dollId가 있어야 한다 */
@@ -132,6 +148,16 @@ export abstract class DollRig {
     }
   }
 
+  setOutline(on: boolean): void {
+    this.outline = on;
+    for (const m of this.outlineMeshes) m.visible = on;
+  }
+
+  setCrosshair(on: boolean): void {
+    this.crosshair = on;
+    for (const l of this.crosshairLines) l.visible = on;
+  }
+
   setHandleRadius(r: number): void {
     this.handleRadius = r;
     for (const h of this.handles.values()) h.scale.setScalar(r);
@@ -146,6 +172,62 @@ export abstract class DollRig {
 
   setSelected(on: boolean): void {
     this.groundRing.visible = on;
+  }
+
+  // ---------- 십자선 ----------
+
+  /** 뼈에 붙되 축은 돌 공간(휴식 자세)과 같은 보조 좌표계 */
+  protected restFrame(bone: string): Object3D | null {
+    const b = this.skel.bones.get(bone);
+    if (!b) return null;
+    let f = this.restFrames.get(bone);
+    if (!f) {
+      f = new Object3D();
+      f.name = `frame:${bone}`;
+      f.quaternion.copy(this.skel.rest.get(bone)!.quat).invert();
+      b.add(f);
+      this.restFrames.set(bone, f);
+    }
+    return f;
+  }
+
+  /** 머리 십자선(얼굴 중심 세로선·눈높이 가로선)과 몸통 정중선을 만든다 */
+  protected buildCrosshair(spec: CrosshairSpec): void {
+    const { head, torso, lift } = spec;
+    const headFrame = this.restFrame(head.bone);
+    if (headFrame) {
+      const origin = this.skel.rest.get(head.bone)!.pos;
+      const c = head.center.clone().sub(origin);
+      const r = head.radii;
+      const face: Vector3[] = [];
+      for (let i = 0; i <= 16; i++) {
+        const t = -0.92 + (1.84 * i) / 16;
+        face.push(new Vector3(c.x, c.y + r.y * t, c.z + (r.z + lift) * Math.sqrt(Math.max(0, 1 - t * t))));
+      }
+      const eyes: Vector3[] = [];
+      for (let i = 0; i <= 12; i++) {
+        const s = -0.88 + (1.76 * i) / 12;
+        eyes.push(new Vector3(c.x + r.x * s, c.y + r.y * 0.04, c.z + (r.z + lift) * Math.sqrt(Math.max(0, 1 - s * s))));
+      }
+      for (const pts of [face, eyes]) {
+        const line = makePolyline(pts);
+        headFrame.add(line);
+        this.crosshairLines.push(line);
+      }
+    }
+    for (const seg of torso) {
+      const f = this.restFrame(seg.bone);
+      if (!f) continue;
+      const origin = this.skel.rest.get(seg.bone)!.pos;
+      const a = seg.from.clone().sub(origin);
+      const b = seg.to.clone().sub(origin);
+      a.z += lift;
+      b.z += lift;
+      const line = makePolyline([a, b]);
+      f.add(line);
+      this.crosshairLines.push(line);
+    }
+    this.setCrosshair(this.crosshair);
   }
 
   // ---------- 관절 ----------
@@ -189,6 +271,22 @@ export abstract class DollRig {
       dq.set(name, desired);
     }
     this.root.updateMatrixWorld(true);
+  }
+
+  /** 돌 공간에서 이 뼈가 휴식 자세 대비 얼마나 돌았는지(월드 회전 아님) */
+  jointDelta(name: string): Quaternion {
+    const dq = this.dollSpaceQuats().get(name);
+    if (!dq) return new Quaternion();
+    return dq.multiply(this.skel.rest.get(name)!.quat.clone().invert());
+  }
+
+  /** 뼈의 현재 월드 방향: 휴식 자세에서 돌 공간 dir이던 방향이 지금 어디를 보는지 */
+  boneWorldDirection(name: string, restDir: Vector3, target = new Vector3()): Vector3 {
+    const b = this.skel.bones.get(name);
+    if (!b) return target.copy(restDir);
+    b.getWorldQuaternion(_q2);
+    const restQ = this.skel.rest.get(name)!.quat;
+    return target.copy(restDir).applyQuaternion(restQ.clone().invert()).applyQuaternion(_q2);
   }
 
   private restLocalQuat(name: string): Quaternion {
@@ -286,7 +384,10 @@ export abstract class DollRig {
     (this.jointMarker.material as MeshBasicMaterial).dispose();
     this.groundRing.geometry.dispose();
     (this.groundRing.material as MeshBasicMaterial).dispose();
+    for (const l of this.crosshairLines) l.geometry.dispose();
     this.root.removeFromParent();
     this.helpers.removeFromParent();
   }
 }
+
+const _q2 = new Quaternion();

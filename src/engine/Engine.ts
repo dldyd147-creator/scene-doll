@@ -11,19 +11,23 @@ import {
   Quaternion,
   Scene,
   Sphere,
+  SRGBColorSpace,
   Vector3,
   WebGLRenderer,
+  WebGLRenderTarget,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import type { Cut, DollAsset } from '../model/types';
+import type { CameraState, Cut, DollAsset } from '../model/types';
 import { dollAsset } from '../model/defaults';
 import type { Selection, ToolMode } from '../state/store';
 import { DEFAULT_SETTINGS, type Settings } from '../state/settings';
 import type { DollRig } from './DollRig';
 import { createDollRig, loadDollTemplate } from './dollTemplates';
 import { ManuscriptCamera } from './ManuscriptCamera';
+import { cameraForward, lookAtAngles, ManuscriptControls } from './ManuscriptControls';
 import { KEY_LIGHT_INTENSITY, LAYER_HELPERS } from './materials';
+import { setLineResolution } from './overlays';
 import { IK_CHAINS } from './skeleton';
 import { solveTwoBone } from './ik';
 import { Interaction } from './Interaction';
@@ -37,6 +41,11 @@ export interface EngineCallbacks {
 }
 
 export type ViewKind = 'work' | 'manuscript';
+
+export interface OffscreenOptions {
+  background: 'white' | 'transparent' | 'dark';
+  helpers?: boolean;
+}
 
 const WORK_BG = new Color('#1b1c21');
 const MANU_BG = new Color('#ffffff');
@@ -61,6 +70,7 @@ export class Engine {
   orbit: OrbitControls | null = null;
   gizmo: TransformControls | null = null;
   interaction: Interaction | null = null;
+  manuControls: ManuscriptControls | null = null;
   settings: Settings = { ...DEFAULT_SETTINGS };
   selection: Selection = { dollId: null, bone: null };
   mode: ToolMode = 'direct';
@@ -71,7 +81,7 @@ export class Engine {
   private loadingTemplates = new Set<string>();
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
-  private gizmoTarget: 'bone' | 'root' | 'ik' | null = null;
+  private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | null = null;
   private disposed = false;
 
   constructor(readonly callbacks: EngineCallbacks) {
@@ -111,6 +121,7 @@ export class Engine {
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
     this.setWorkSurface(null);
+    this.setManuscriptSurface(null);
     for (const rig of this.dolls.values()) rig.dispose();
     this.dolls.clear();
     this.dollKeys.clear();
@@ -155,7 +166,8 @@ export class Engine {
     this.scene.add(gizmo.getHelper());
     gizmo.addEventListener('dragging-changed', (e) => {
       orbit.enabled = !e.value;
-      if (!e.value) this.onGizmoEnd();
+      if (e.value) this.onGizmoStart();
+      else this.onGizmoEnd();
     });
     gizmo.addEventListener('objectChange', () => this.onGizmoChange());
     this.gizmo = gizmo;
@@ -163,6 +175,13 @@ export class Engine {
     this.interaction = new Interaction(this, el);
     this.applySettings(this.settings);
     this.updateGizmo();
+  }
+
+  /** 원고뷰 표면 요소: 원고 카메라 조작(궤도·팬·달리)을 묶는다 */
+  setManuscriptSurface(el: HTMLElement | null): void {
+    this.manuControls?.dispose();
+    this.manuControls = null;
+    if (el) this.manuControls = new ManuscriptControls(this, el);
   }
 
   // ---------- 렌더 루프 ----------
@@ -177,6 +196,7 @@ export class Engine {
 
   private render(): void {
     const r = this.renderer;
+    r.setRenderTarget(null);
     r.setScissorTest(false);
     r.setClearColor(0x000000, 0);
     r.clear();
@@ -205,19 +225,67 @@ export class Engine {
         camera.updateProjectionMatrix();
       }
     }
+    setLineResolution(w, h);
     r.render(this.scene, camera);
   }
 
+  /**
+   * 오프스크린 렌더(썸네일·일괄 출력). 원고 카메라 화각 그대로, 헬퍼 없이 그린다.
+   * 결과는 2D 캔버스(위아래 뒤집기 완료).
+   */
+  renderToCanvas(camera: PerspectiveCamera, width: number, height: number, opts: OffscreenOptions): HTMLCanvasElement {
+    const r = this.renderer;
+    const w = Math.max(1, Math.round(width));
+    const h = Math.max(1, Math.round(height));
+    const rt = new WebGLRenderTarget(w, h, { colorSpace: SRGBColorSpace, samples: 4 });
+    const prevMask = camera.layers.mask;
+    if (!opts.helpers) camera.layers.set(0);
+    const prevAspect = camera.aspect;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    for (const rig of this.dolls.values()) rig.updateHelpers();
+    r.setRenderTarget(rt);
+    r.setScissorTest(false);
+    r.setViewport(0, 0, w, h);
+    if (opts.background === 'transparent') r.setClearColor(0x000000, 0);
+    else r.setClearColor(opts.background === 'white' ? MANU_BG : WORK_BG, 1);
+    r.clear();
+    setLineResolution(w, h);
+    r.render(this.scene, camera);
+    const buf = new Uint8Array(w * h * 4);
+    r.readRenderTargetPixels(rt, 0, 0, w, h, buf);
+    r.setRenderTarget(null);
+    rt.dispose();
+    camera.layers.mask = prevMask;
+    camera.aspect = prevAspect;
+    camera.updateProjectionMatrix();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    const img = ctx.createImageData(w, h);
+    const row = w * 4;
+    for (let y = 0; y < h; y++) img.data.set(buf.subarray((h - 1 - y) * row, (h - y) * row), y * row);
+    ctx.putImageData(img, 0, 0);
+    return canvas;
+  }
+
   private updateFrustumDistance(): void {
-    if (!this.dolls.size) {
-      this.manu.setFrustumDistance(this.manu.camera.position.length());
-      return;
+    const c = this.subjectCenter();
+    this.manu.setFrustumDistance(Math.max(0.5, c.sub(this.manu.camera.position).dot(cameraForward(this.cut?.camera ?? { position: [0, 0, 0], yaw: 0, pitch: 0, roll: 0, focalLength: 50 }))));
+  }
+
+  /** 피사체 중심: 돌들의 중심(없으면 원점 가슴 높이) */
+  subjectCenter(): Vector3 {
+    if (!this.dolls.size) return new Vector3(0, 0.9, 0);
+    const c = new Vector3();
+    for (const rig of this.dolls.values()) {
+      _v.copy(rig.root.position);
+      _v.y += 0.9 * (rig.heightCm / 175);
+      c.add(_v);
     }
-    _v.set(0, 0, 0);
-    for (const rig of this.dolls.values()) _v.add(rig.root.position);
-    _v.divideScalar(this.dolls.size);
-    _v.y += 0.9;
-    this.manu.setFrustumDistance(this.manu.camera.position.distanceTo(_v));
+    return c.divideScalar(this.dolls.size);
   }
 
   // ---------- 스토어 → 씬 ----------
@@ -247,6 +315,8 @@ export class Engine {
         this.dollKeys.set(inst.id, key);
       }
       rig.setShading(cut.light.shading);
+      rig.setOutline(cut.outline);
+      rig.setCrosshair(cut.crosshair);
     }
     for (const [id, rig] of this.dolls) {
       if (!seen.has(id)) {
@@ -275,6 +345,16 @@ export class Engine {
         this.loadingTemplates.delete(asset.id);
         this.callbacks.hint(`돌을 불러오지 못했습니다: ${asset.name} (${e instanceof Error ? e.message : String(e)})`);
       });
+  }
+
+  /** 모든 GLB 템플릿이 준비될 때까지 기다린다(일괄 출력 전) */
+  async ensureTemplatesFor(cuts: Cut[]): Promise<void> {
+    const ids = new Set<string>();
+    for (const c of cuts) for (const d of c.dolls) ids.add(d.dollId);
+    for (const id of ids) {
+      const asset = dollAsset(id);
+      if (asset.glbPath) await loadDollTemplate(asset);
+    }
   }
 
   applySettings(s: Settings): void {
@@ -313,6 +393,7 @@ export class Engine {
       rig.setSelected(selected);
       rig.setHighlight(selected ? this.selection.bone : null);
     }
+    this.manu.setSelected(!!this.selection.camera);
   }
 
   selectedRig(): DollRig | null {
@@ -324,9 +405,23 @@ export class Engine {
   private updateGizmo(): void {
     const g = this.gizmo;
     if (!g) return;
+    if (this.mode === 'direct') {
+      g.detach();
+      this.gizmoTarget = null;
+      g.getHelper().visible = false;
+      return;
+    }
+    if (this.selection.camera) {
+      g.getHelper().visible = true;
+      g.setMode(this.mode);
+      g.setSpace(this.mode === 'rotate' ? 'local' : 'world');
+      g.attach(this.manu.camera);
+      this.gizmoTarget = 'camera';
+      return;
+    }
     const rig = this.selectedRig();
     const bone = this.selection.bone && rig ? (rig.skel.bones.get(this.selection.bone) ?? null) : null;
-    if (this.mode === 'direct' || !rig) {
+    if (!rig) {
       g.detach();
       this.gizmoTarget = null;
       g.getHelper().visible = false;
@@ -346,7 +441,6 @@ export class Engine {
       }
       return;
     }
-    // translate
     g.setMode('translate');
     g.setSpace('world');
     if (bone && IK_CHAINS[bone.name]) {
@@ -359,14 +453,36 @@ export class Engine {
     }
   }
 
+  private plantedFeet: Map<string, Vector3> | null = null;
+
+  private onGizmoStart(): void {
+    const rig = this.selectedRig();
+    if (rig && this.gizmoTarget === 'root' && this.settings.plantFeet) {
+      this.plantedFeet = new Map();
+      for (const eff of ['LeftFoot', 'RightFoot']) if (rig.skel.bones.has(eff)) this.plantedFeet.set(eff, rig.worldPos(eff));
+    } else {
+      this.plantedFeet = null;
+    }
+  }
+
   private onGizmoChange(): void {
+    const rig = this.selectedRig();
     if (this.gizmoTarget === 'ik') {
-      const rig = this.selectedRig();
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
+    } else if (this.gizmoTarget === 'root' && rig && this.plantedFeet) {
+      rig.root.updateMatrixWorld(true);
+      for (const [eff, pos] of this.plantedFeet) this.solveIk(rig, eff, pos, { shoulder: false });
+    } else if (this.gizmoTarget === 'camera') {
+      this.manu.camera.updateMatrixWorld(true);
     }
   }
 
   private onGizmoEnd(): void {
+    this.plantedFeet = null;
+    if (this.gizmoTarget === 'camera') {
+      this.commitCamera();
+      return;
+    }
     const rig = this.selectedRig();
     if (!rig) return;
     this.commitDoll(rig.id);
@@ -376,30 +492,36 @@ export class Engine {
   // ---------- IK ----------
 
   /** 끝점(손·발)을 월드 좌표 target으로 보내도록 팔·다리를 푼다. 어깨 연동 포함 */
-  solveIk(rig: DollRig, effector: string, target: Vector3): void {
+  solveIk(rig: DollRig, effector: string, target: Vector3, opts: { shoulder?: boolean; keepEndOrientation?: boolean } = {}): void {
     const chain = IK_CHAINS[effector];
     if (!chain) return;
-    const upper = rig.skel.bones.get(chain.upper)!;
-    const lower = rig.skel.bones.get(chain.lower)!;
-    const end = rig.skel.bones.get(chain.end)!;
+    const upper = rig.skel.bones.get(chain.upper);
+    const lower = rig.skel.bones.get(chain.lower);
+    const end = rig.skel.bones.get(chain.end);
+    if (!upper || !lower || !end) return;
     rig.root.updateMatrixWorld(true);
+    const endWorldQ = new Quaternion();
+    if (opts.keepEndOrientation ?? this.settings.lockEndOrientation) end.getWorldQuaternion(endWorldQ);
 
-    if (this.settings.shoulderLink && chain.clavicle && this.settings.shoulderLinkRatio > 0) {
-      const clav = rig.skel.bones.get(chain.clavicle)!;
-      const s = rig.worldPos(chain.clavicle);
-      const c = rig.worldPos(chain.end);
-      const from = c.sub(s);
-      const to = target.clone().sub(s);
-      if (from.lengthSq() > 1e-8 && to.lengthSq() > 1e-8) {
-        const full = new Quaternion().setFromUnitVectors(from.normalize(), to.normalize());
-        const partial = new Quaternion().slerp(full, this.settings.shoulderLinkRatio);
-        rotateObjectWorld(clav, partial);
-        // 쇄골은 휴식 자세에서 35° 넘게 벗어나지 않게
-        clav.getWorldQuaternion(_q);
-        const dollQ = rig.root.quaternion.clone().invert().multiply(_q);
-        const rel = dollQ.multiply(rig.skel.rest.get(chain.clavicle)!.quat.clone().invert());
-        const angle = 2 * Math.acos(Math.min(1, Math.abs(rel.w)));
-        if (angle > MathUtils.degToRad(35)) rotateObjectWorld(clav, partial.invert());
+    const useShoulder = opts.shoulder ?? this.settings.shoulderLink;
+    if (useShoulder && chain.clavicle && this.settings.shoulderLinkRatio > 0) {
+      const clav = rig.skel.bones.get(chain.clavicle);
+      if (clav) {
+        const s = rig.worldPos(chain.clavicle);
+        const c = rig.worldPos(chain.end);
+        const from = c.sub(s);
+        const to = target.clone().sub(s);
+        if (from.lengthSq() > 1e-8 && to.lengthSq() > 1e-8) {
+          const full = new Quaternion().setFromUnitVectors(from.normalize(), to.normalize());
+          const partial = new Quaternion().slerp(full, this.settings.shoulderLinkRatio);
+          rotateObjectWorld(clav, partial);
+          // 쇄골은 휴식 자세에서 35° 넘게 벗어나지 않게
+          clav.getWorldQuaternion(_q);
+          const dollQ = rig.root.quaternion.clone().invert().multiply(_q);
+          const rel = dollQ.multiply(rig.skel.rest.get(chain.clavicle)!.quat.clone().invert());
+          const angle = 2 * Math.acos(Math.min(1, Math.abs(rel.w)));
+          if (angle > MathUtils.degToRad(35)) rotateObjectWorld(clav, partial.invert());
+        }
       }
     }
 
@@ -411,6 +533,10 @@ export class Engine {
     rotateObjectWorld(upper, res.upper);
     rotateObjectWorld(lower, res.lower);
     end.updateWorldMatrix(true, false);
+    if (opts.keepEndOrientation ?? this.settings.lockEndOrientation) {
+      end.getWorldQuaternion(_q);
+      rotateObjectWorld(end, endWorldQ.multiply(_q.invert()));
+    }
   }
 
   // ---------- 씬 → 스토어 ----------
@@ -427,6 +553,24 @@ export class Engine {
       const i = c.dolls.findIndex((d) => d.id === id);
       if (i >= 0) c.dolls[i] = inst;
     });
+  }
+
+  /** three.js 카메라의 현재 상태를 컷에 기록한다(기즈모·아이콘 드래그 뒤) */
+  commitCamera(): void {
+    if (!this.cut) return;
+    this.commitCameraState(this.manu.read(this.cut.camera.focalLength));
+  }
+
+  commitCameraState(state: CameraState): void {
+    this.callbacks.commit((c) => {
+      c.camera = { ...state, position: [...state.position] as [number, number, number] };
+    });
+  }
+
+  /** 원고 카메라를 수치로 바꿀 때(카메라 패널·드래그 중) 즉시 반영용. 컷 데이터는 바꾸지 않는다 */
+  previewCamera(partial: Partial<CameraState>, aspect?: number): void {
+    if (!this.cut) return;
+    this.manu.apply({ ...this.cut.camera, ...partial }, aspect ?? this.cut.aspect);
   }
 
   // ---------- 돌 명령 ----------
@@ -460,7 +604,7 @@ export class Engine {
     this.commitDoll(rig.id);
   }
 
-  // ---------- 시점 ----------
+  // ---------- 조작뷰 시점 ----------
 
   private frameBox(box: Box3): void {
     if (!this.orbit || box.isEmpty()) return;
@@ -473,12 +617,16 @@ export class Engine {
     this.orbit.update();
   }
 
-  /** 전체 보기(Shift+Z): 모든 돌이 들어오는 객관 뷰 */
-  fitAll(): void {
+  private allBounds(): Box3 {
     const box = new Box3();
     for (const rig of this.dolls.values()) box.union(rig.worldBounds());
     if (box.isEmpty()) box.set(new Vector3(-0.6, 0, -0.6), new Vector3(0.6, 1.9, 0.6));
-    this.frameBox(box);
+    return box;
+  }
+
+  /** 전체 보기(Shift+Z): 모든 돌이 들어오는 객관 뷰 */
+  fitAll(): void {
+    this.frameBox(this.allBounds());
   }
 
   /** 선택한 돌로 시점 맞춤(F) */
@@ -541,9 +689,46 @@ export class Engine {
     });
   }
 
-  /** 원고 카메라를 수치로 바꿀 때(카메라 패널) 즉시 반영용 */
-  previewCamera(partial: Partial<Cut['camera']>, aspect?: number): void {
+  // ---------- 원고 카메라 명령 ----------
+
+  /** 아이레벨·하이·로우 프리셋: 높이를 바꾸고 피사체를 바라본다 */
+  cameraPreset(kind: 'eye' | 'high' | 'low'): void {
     if (!this.cut) return;
-    this.manu.apply({ ...this.cut.camera, ...partial }, aspect ?? this.cut.aspect);
+    const subject = this.subjectCenter();
+    const cam = this.cut.camera;
+    const scale = Math.max(0.6, subject.y / 0.9);
+    const height = kind === 'eye' ? 1.5 * scale : kind === 'high' ? 2.9 * scale : 0.45 * scale;
+    const pos = new Vector3(cam.position[0], height, cam.position[2]);
+    const horiz = Math.hypot(pos.x - subject.x, pos.z - subject.z);
+    if (horiz < 0.5) pos.z = subject.z + 3;
+    const aim = subject.clone();
+    if (kind === 'eye') aim.y = height; // 수평 유지
+    const { yaw, pitch } = lookAtAngles(pos, aim);
+    this.commitCameraState({ ...cam, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)], yaw, pitch, roll: 0 });
+  }
+
+  /** 원고 프레임에 맞춤: 시선 방향은 두고 거리만 바꿔 대상이 세로로 들어오게 */
+  fitManuscript(target: 'all' | 'selected'): void {
+    if (!this.cut) return;
+    const rig = this.selectedRig();
+    const box = target === 'selected' && rig ? rig.worldBounds() : this.allBounds();
+    const sphere = box.getBoundingSphere(new Sphere());
+    const cam = this.cut.camera;
+    const fwd = cameraForward(cam);
+    const vfov = MathUtils.degToRad(this.manu.camera.fov);
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * this.manu.camera.aspect);
+    const dist = (sphere.radius / Math.sin(Math.min(vfov, hfov) / 2)) * 1.05;
+    const pos = sphere.center.clone().sub(fwd.multiplyScalar(dist));
+    this.commitCameraState({ ...cam, position: [roundTo(pos.x, 4), roundTo(pos.y, 4), roundTo(pos.z, 4)] });
+  }
+
+  /** 카메라가 피사체 중심을 바라보게(위치 유지) */
+  aimManuscriptAtSubject(): void {
+    if (!this.cut) return;
+    const rig = this.selectedRig();
+    const center = rig ? rig.worldBounds().getCenter(new Vector3()) : this.subjectCenter();
+    const pos = new Vector3(...this.cut.camera.position);
+    const { yaw, pitch } = lookAtAngles(pos, center);
+    this.commitCameraState({ ...this.cut.camera, yaw, pitch });
   }
 }

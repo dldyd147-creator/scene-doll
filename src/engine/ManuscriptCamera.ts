@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   ConeGeometry,
+  Euler,
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,
@@ -26,6 +27,9 @@ export function verticalFov(focalMm: number, aspectHW: number): number {
   return MathUtils.radToDeg(2 * Math.atan(Math.tan(h / 2) * aspectHW));
 }
 
+const ICON_COLOR = '#dcdcdc';
+const ICON_SELECTED = '#ffb020';
+
 /**
  * 원고 카메라. 컷의 CameraState(위치·yaw·pitch·roll·초점거리)와 화면비를 three.js 카메라로 옮기고,
  * 조작뷰에 보이는 카메라 아이콘과 화각 범위 선(헬퍼 레이어)을 함께 관리한다.
@@ -33,19 +37,29 @@ export function verticalFov(focalMm: number, aspectHW: number): number {
 export class ManuscriptCamera {
   readonly camera = new PerspectiveCamera(50, 1 / 1.5, 0.05, 200);
   readonly icon = new Group();
+  readonly iconMeshes: Mesh[] = [];
   readonly frustum: LineSegments;
   aspect = 1.5;
   private frustumDistance = 3.5;
   private frustumKey = '';
+  private iconMat = new MeshBasicMaterial({ color: ICON_COLOR });
+  private iconWireMat = new MeshBasicMaterial({ color: ICON_COLOR, wireframe: true });
 
   constructor() {
-    const body = new Mesh(new BoxGeometry(0.1, 0.07, 0.12), new MeshBasicMaterial({ color: '#dcdcdc' }));
-    const lens = new Mesh(new ConeGeometry(0.045, 0.07, 4, 1, true), new MeshBasicMaterial({ color: '#dcdcdc', wireframe: true }));
+    const body = new Mesh(new BoxGeometry(0.1, 0.07, 0.12), this.iconMat);
+    const lens = new Mesh(new ConeGeometry(0.045, 0.07, 4, 1, true), this.iconWireMat);
     lens.rotation.x = -Math.PI / 2;
     lens.rotation.z = Math.PI / 4;
     lens.position.z = -0.095;
-    this.icon.add(body, lens);
-    this.icon.traverse((o) => o.layers.set(LAYER_HELPERS));
+    // 위쪽 표시(뷰파인더)
+    const finder = new Mesh(new BoxGeometry(0.04, 0.03, 0.05), this.iconMat);
+    finder.position.set(0, 0.05, 0.01);
+    this.icon.add(body, lens, finder);
+    this.iconMeshes.push(body, lens, finder);
+    this.icon.traverse((o) => {
+      o.layers.set(LAYER_HELPERS);
+      o.userData = { camera: true };
+    });
     this.camera.add(this.icon);
 
     this.frustum = new LineSegments(new BufferGeometry(), new LineBasicMaterial({ color: '#ffb020', transparent: true, opacity: 0.85 }));
@@ -61,12 +75,13 @@ export class ManuscriptCamera {
     this.camera.fov = verticalFov(state.focalLength, aspect);
     this.camera.aspect = 1 / aspect;
     this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld(true);
     this.updateFrustum();
   }
 
-  /** 현재 three.js 카메라에서 CameraState를 읽는다 */
+  /** 현재 three.js 카메라에서 CameraState를 읽는다(기즈모로 움직인 뒤) */
   read(focalLength: number): CameraState {
-    const e = this.camera.rotation;
+    const e = new Euler().setFromQuaternion(this.camera.quaternion, 'YXZ');
     return {
       position: [roundTo(this.camera.position.x, 4), roundTo(this.camera.position.y, 4), roundTo(this.camera.position.z, 4)],
       yaw: roundTo(MathUtils.radToDeg(e.y), 2),
@@ -74,6 +89,11 @@ export class ManuscriptCamera {
       roll: roundTo(MathUtils.radToDeg(e.z), 2),
       focalLength,
     };
+  }
+
+  setSelected(on: boolean): void {
+    this.iconMat.color.set(on ? ICON_SELECTED : ICON_COLOR);
+    this.iconWireMat.color.set(on ? ICON_SELECTED : ICON_COLOR);
   }
 
   /** 조작뷰의 화각 범위 선을 그릴 거리(피사체까지) */

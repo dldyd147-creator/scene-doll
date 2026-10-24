@@ -2,16 +2,29 @@ import { storage } from '../storage';
 import { useStore } from '../state/store';
 import { createCut, createEpisode, createWork } from '../model/defaults';
 
-export async function saveNow(): Promise<boolean> {
-  const s = useStore.getState();
-  try {
-    await storage.save(s.snapshotDocument());
-    useStore.getState().markSaved();
-    return true;
-  } catch (e) {
-    useStore.getState().setSaveError(e instanceof Error ? e.message : String(e));
-    return false;
-  }
+let saving: Promise<boolean> | null = null;
+
+/** 문서와 바뀐 썸네일을 저장소에 쓴다. 동시에 두 번 돌지 않는다 */
+export function saveNow(): Promise<boolean> {
+  if (saving) return saving;
+  saving = (async () => {
+    const s = useStore.getState();
+    try {
+      await storage.save(s.snapshotDocument());
+      if (s.thumbnailDirty.length || s.thumbnailsRenumbered) {
+        await storage.repository.saveThumbnails(s.work.code, s.episode.number, s.thumbnails, s.thumbnailDirty, s.thumbnailsRenumbered);
+        useStore.getState().markThumbnailsSaved();
+      }
+      useStore.getState().markSaved();
+      return true;
+    } catch (e) {
+      useStore.getState().setSaveError(e instanceof Error ? e.message : String(e));
+      return false;
+    } finally {
+      saving = null;
+    }
+  })();
+  return saving;
 }
 
 function syncStorageState(): void {
@@ -31,7 +44,8 @@ export async function initStorage(): Promise<void> {
 export async function openDocument(code: string, episodeNo: number, create: boolean): Promise<'loaded' | 'created' | 'missing'> {
   const doc = await storage.load(code, episodeNo).catch(() => null);
   if (doc) {
-    useStore.getState().loadDocument(doc);
+    const thumbs = await storage.repository.loadThumbnails(code, episodeNo, doc.cuts.map((c) => c.number)).catch(() => ({}));
+    useStore.getState().loadDocument(doc, thumbs);
     return 'loaded';
   }
   if (!create) return 'missing';
