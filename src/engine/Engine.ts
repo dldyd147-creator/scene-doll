@@ -122,6 +122,9 @@ export class Engine {
     if (!this.canvas.isConnected) document.body.appendChild(this.canvas);
     this.resize();
     window.addEventListener('resize', this.resize);
+    // dispose() 뒤 다시 mount()될 때(개발 중 핫 리로드) 뷰 요소는 그대로이므로 조작기를 다시 묶는다
+    if (!this.orbit && this.views.work?.isConnected) this.setWorkSurface(this.views.work);
+    if (!this.manuControls && this.views.manuscript?.isConnected) this.setManuscriptSurface(this.views.manuscript);
     cancelAnimationFrame(this.raf);
     this.raf = requestAnimationFrame(this.frame);
   }
