@@ -1,4 +1,4 @@
-import type { CameraState, Character, Cut, DollAsset, Episode, Gender, LightState, Work } from './types';
+import type { CameraState, Character, Cut, DollAsset, Episode, Gender, LightState, ReferenceImage, RefSlot, Work } from './types';
 import { newId } from './ids';
 
 export const nowIso = (): string => new Date().toISOString();
@@ -49,6 +49,31 @@ export function defaultDollFor(gender: Gender): DollAsset {
   return DOLL_ASSETS.find((d) => d.gender === gender) ?? DOLL_ASSETS[0];
 }
 
+/** 레퍼런스 기본 슬롯 8종(순서대로 보여 준다) */
+export const REF_SLOTS: Array<{ id: RefSlot; label: string; group: '얼굴' | '전신' }> = [
+  { id: 'face_front', label: '얼굴 정면', group: '얼굴' },
+  { id: 'face_side', label: '얼굴 측면', group: '얼굴' },
+  { id: 'face_quarter', label: '얼굴 반측면', group: '얼굴' },
+  { id: 'face_quarter2', label: '얼굴 반측면 2', group: '얼굴' },
+  { id: 'face_back', label: '얼굴 후면', group: '얼굴' },
+  { id: 'body_front', label: '전신 전면', group: '전신' },
+  { id: 'body_side', label: '전신 측면', group: '전신' },
+  { id: 'body_back', label: '전신 후면', group: '전신' },
+];
+
+/** 사용자 지정 레퍼런스(복장·무기 등) 최대 장수 */
+export const MAX_CUSTOM_REFS = 10;
+
+export function refLabel(r: ReferenceImage): string {
+  if (r.slot) return REF_SLOTS.find((s) => s.id === r.slot)?.label ?? r.slot;
+  return r.name.trim() || '추가 자료';
+}
+
+/** 대표 레퍼런스(지정이 없으면 첫 장) */
+export function mainReferenceOf(chr: Character): ReferenceImage | null {
+  return chr.references.find((r) => r.id === chr.mainReference) ?? chr.references[0] ?? null;
+}
+
 export function createWork(code = 'TMP', name = '임시 작품'): Work {
   const t = nowIso();
   return { code, name, output: { width: 1024, background: 'white', crosshair: true, shading: true }, createdAt: t, updatedAt: t };
@@ -89,18 +114,66 @@ export function createCut(number: number): Cut {
   };
 }
 
+/** 등록 캐릭터 새로 만들기. 돌은 성별 기본 돌, 키는 그 돌의 기준 키 */
+export function createCharacter(workCode: string, name: string, gender: Gender | 'other', color: string): Character {
+  const doll = defaultDollFor(gender === 'female' ? 'female' : 'male');
+  const t = nowIso();
+  return {
+    id: newId('chr'),
+    workCode,
+    name,
+    color,
+    info: { gender },
+    description: '',
+    appearanceTags: [],
+    heightCm: doll.baseHeightCm,
+    dollId: doll.id,
+    references: [],
+    temporary: false,
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
 export function createTemporaryCharacter(workCode: string, dollId: string, heightCm: number, color: string, index: number): Character {
   const asset = dollAsset(dollId);
+  const t = nowIso();
   return {
     id: newId('chr'),
     workCode,
     name: `임시${index}`,
     color,
     info: { gender: asset.gender },
+    description: '',
     appearanceTags: [],
     heightCm,
     dollId: asset.id,
-    referenceImages: [],
+    references: [],
     temporary: true,
+    createdAt: t,
+    updatedAt: t,
+  };
+}
+
+/** 저장소에서 읽은 캐릭터를 현재 구조로 맞춘다(1단계 데이터에는 설명·레퍼런스 필드가 없다) */
+export function normalizeCharacter(raw: Partial<Character>): Character {
+  const t = nowIso();
+  const gender = raw.info?.gender ?? 'male';
+  const doll = defaultDollFor(gender === 'female' ? 'female' : 'male');
+  return {
+    id: raw.id ?? newId('chr'),
+    workCode: raw.workCode ?? 'TMP',
+    name: raw.name ?? '이름 없음',
+    color: raw.color ?? CHARACTER_COLORS[0].hex,
+    info: { ...raw.info, gender },
+    description: raw.description ?? '',
+    appearanceTags: Array.isArray(raw.appearanceTags) ? raw.appearanceTags : [],
+    heightCm: raw.heightCm ?? doll.baseHeightCm,
+    dollId: raw.dollId ?? doll.id,
+    references: Array.isArray(raw.references) ? raw.references : [],
+    mainReference: raw.mainReference,
+    temporary: !!raw.temporary,
+    createdAt: raw.createdAt ?? t,
+    updatedAt: raw.updatedAt ?? t,
   };
 }

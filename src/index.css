@@ -880,3 +880,356 @@ code {
 .popover .item:hover {
   background: var(--panel-3);
 }
+
+/* ---------- 시작 화면(작품 관리) ---------- */
+
+.start {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  display: grid;
+  grid-template-rows: var(--topbar-h) 1fr;
+  z-index: 2;
+}
+.start-body {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  min-height: 0;
+}
+.start-works {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.start-detail {
+  overflow-y: auto;
+  padding: 18px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 1000px;
+}
+.work-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.work-card .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.work-card .code,
+.detail-head .code {
+  font-family: Consolas, 'Courier New', monospace;
+  background: var(--panel-3);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.work-card .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.work-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.card.new-work {
+  margin-top: 4px;
+}
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.detail-head .work-name {
+  font-size: 18px;
+  font-weight: 600;
+  width: 360px;
+  max-width: 50%;
+}
+.section-title {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-title button {
+  margin-left: auto;
+}
+.episode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+}
+.episode-tile {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.episode-tile:hover {
+  border-color: var(--accent-2);
+}
+.episode-tile .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+.chr-card {
+  display: flex;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+.chr-card:hover {
+  border-color: var(--accent-2);
+}
+.chr-card .thumb {
+  width: 56px;
+  height: 72px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  background: var(--panel-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.chr-card .thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.chr-card .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.chr-card .meta .row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.chr-card .one-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+}
+
+/* ---------- 캐릭터 관리 ---------- */
+
+.modal.cm {
+  width: 960px;
+}
+.cm-layout {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 460px;
+}
+.cm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid var(--border);
+  padding-right: 12px;
+}
+.cm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cm-item .grow {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cm-item:hover {
+  background: var(--panel-3);
+}
+.cm-item.selected {
+  background: var(--btn-active-bg);
+  box-shadow: inset 0 0 0 1px var(--btn-active-border);
+}
+.cm-list .primary {
+  margin-top: 6px;
+}
+.cm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.field-row.top {
+  align-items: start;
+}
+.field-row label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.field-row input[type='text'],
+.field-row textarea {
+  width: 100%;
+}
+.field-row textarea {
+  resize: vertical;
+  font: inherit;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+}
+:root[data-theme='dark'] .field-row textarea {
+  background: var(--panel-2);
+}
+.row-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.row-wrap .grow {
+  flex: 1;
+  min-width: 120px;
+}
+.swatch.big {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+.refs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.ref-slot {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: var(--panel-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--muted);
+}
+.ref-slot:hover {
+  border-color: var(--accent-2);
+}
+.ref-slot.filled {
+  border-style: solid;
+}
+.ref-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ref-slot .cap,
+.ref-slot .cap-input {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #000a;
+  color: #fff;
+  font-size: 11px;
+  padding: 3px 5px;
+  text-align: center;
+  border: none;
+  border-radius: 0;
+}
+.ref-slot .cap-input {
+  text-align: left;
+}
+.ref-slot .rm,
+.ref-slot .star {
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: #000a;
+  color: #fff;
+  justify-content: center;
+  line-height: 1;
+}
+.ref-slot .rm {
+  right: 4px;
+}
+.ref-slot .star {
+  left: 4px;
+  color: #ffffffaa;
+}
+.ref-slot .star.on {
+  color: var(--accent);
+}
+.ref-slot.add {
+  gap: 4px;
+}
+.mini-thumb {
+  width: 34px;
+  height: 42px;
+  border-radius: 5px;
+  border: 2px solid var(--border);
+  background: var(--panel-3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.mini-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

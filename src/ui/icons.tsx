@@ -49,6 +49,11 @@ const PATHS: Record<string, string> = {
   toManu: 'M14 5h7v14h-7M3 5h7v14H3M13 12H6m0 0l3-3m-3 3l3 3',
   toWork: 'M3 5h7v14H3M14 5h7v14h-7M11 12h7m0 0l-3-3m3 3l-3 3',
   doll: 'M12 3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM7 10h10l-2 5v6h-2v-4h-2v4H9v-6z',
+  home: 'M3 11l9-8 9 8v10h-6v-6H9v6H3z',
+  user: 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 21a8 8 0 0 1 16 0',
+  upload: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16',
+  edit: 'M4 20h4L18 10l-4-4L4 16zM13 7l4 4',
+  package: 'M12 3l9 5v8l-9 5-9-5V8zM3 8l9 5 9-5M12 13v8',
 };
 
 export interface IconProps {

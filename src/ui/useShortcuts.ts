@@ -23,6 +23,8 @@ export function useShortcuts(engine: Engine): void {
       const s = useStore.getState();
       const ctrl = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
+      // 시작 화면(작품 관리)에서는 편집 단축키를 받지 않는다
+      if (s.screen !== 'editor') return;
 
       // 입력란에서도 Ctrl+Enter(컷 확정)·Ctrl+S(저장)는 받는다
       if (ctrl && e.key === 'Enter') {

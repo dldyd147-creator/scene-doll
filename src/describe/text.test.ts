@@ -51,8 +51,8 @@ describe('설명 텍스트', () => {
     const cut = createCut(1);
     cut.dolls.push({ id: 'd1', characterId: 'c1', dollId: 'mannequin_m', heightCm: 175, color: '#F5C518', position: [0, 0, 0], rotation: [0, 0, 0, 1], joints: {} });
     const chars = [
-      { id: 'c1', workCode: 'ACS', name: 'A캐릭터', color: '#F5C518', info: { gender: 'male' as const }, appearanceTags: ['검은 단발', '교복'], heightCm: 175, dollId: 'mannequin_m', referenceImages: [], temporary: false },
-      { id: 'c2', workCode: 'ACS', name: 'B캐릭터', color: '#2F6FEB', info: { gender: 'female' as const }, appearanceTags: [], heightCm: 162, dollId: 'mannequin_f', referenceImages: [], temporary: true },
+      { id: 'c1', workCode: 'ACS', name: 'A캐릭터', color: '#F5C518', info: { gender: 'male' as const }, appearanceTags: ['검은 단발', '교복'], heightCm: 175, dollId: 'mannequin_m', description: '', references: [], createdAt: '', updatedAt: '', temporary: false },
+      { id: 'c2', workCode: 'ACS', name: 'B캐릭터', color: '#2F6FEB', info: { gender: 'female' as const }, appearanceTags: [], heightCm: 162, dollId: 'mannequin_f', description: '', references: [], createdAt: '', updatedAt: '', temporary: true },
     ];
     const head = episodeHeader(work, ep, [cut], chars, 1024);
     expect(head).toContain('# ACS 012 — 컷 설명 (총 1컷)');

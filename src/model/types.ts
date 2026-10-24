@@ -38,6 +38,8 @@ export interface Work {
 export interface Episode {
   workCode: string;
   number: number;
+  /** 회차 제목(선택) */
+  title?: string;
   /** 컷 번호 순서 */
   cutOrder: number[];
   /** 가져온 글콘티 파일(NTT 엑셀) 정보 */
@@ -112,7 +114,25 @@ export interface Cut {
   updatedAt: string;
 }
 
-/** 캐릭터 */
+/**
+ * 레퍼런스 기본 슬롯 8종: 얼굴 정면·측면·반측면·반측면2·후면, 전신 전면·측면·후면.
+ * 다 채우지 않아도 되고(AI는 1장만 있어도 동작), 품질을 위해 채워 나간다.
+ */
+export type RefSlot = 'face_front' | 'face_side' | 'face_quarter' | 'face_quarter2' | 'face_back' | 'body_front' | 'body_side' | 'body_back';
+
+/** 캐릭터 레퍼런스 이미지 하나. 파일은 작품/{코드}/캐릭터/{ID}/레퍼런스/ 에 둔다 */
+export interface ReferenceImage {
+  id: string;
+  /** 기본 슬롯. null이면 사용자 지정 항목(복장·무기 등, 최대 10장) */
+  slot: RefSlot | null;
+  /** 사용자 지정 항목 이름(슬롯이면 비움) */
+  name: string;
+  /** 레퍼런스 폴더 안 파일명 */
+  file: string;
+  addedAt: string;
+}
+
+/** 캐릭터(작품에 종속). 돌에 지정하면 돌의 성별·키·고정색이 이 값을 따르고, AI 전달 패키지에 설명·레퍼런스가 실린다 */
 export interface Character {
   id: string;
   workCode: string;
@@ -120,13 +140,19 @@ export interface Character {
   /** 고정색 HEX */
   color: string;
   info: { age?: number; gender: Gender | 'other'; role?: string; oneLine?: string };
+  /** 간략한 설명(AI 전달용 자유 서술) */
+  description: string;
   appearanceTags: string[];
   heightCm: number;
   dollId: string;
-  referenceImages: string[];
+  /** 레퍼런스 이미지: 기본 슬롯 8 + 사용자 지정 최대 10 */
+  references: ReferenceImage[];
+  /** 대표 레퍼런스(references의 id) */
   mainReference?: string;
-  /** 1단계 임시 캐릭터(돌 추가 시 자동 등록) */
+  /** 1단계 임시 캐릭터(돌 추가 시 자동 등록). 캐릭터 관리 목록에는 보이지 않는다 */
   temporary: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** 돌(프로그램 에셋) */

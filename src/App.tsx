@@ -12,6 +12,8 @@ import { SettingsDialog } from './ui/SettingsDialog';
 import { ExportDialog } from './ui/ExportDialog';
 import { HelpDialog } from './ui/HelpDialog';
 import { OutputGallery } from './ui/OutputGallery';
+import { StartScreen } from './ui/StartScreen';
+import { CharacterManager } from './ui/CharacterManager';
 import { useStore } from './state/store';
 
 export default function App() {
@@ -19,23 +21,31 @@ export default function App() {
   useShortcuts(engine);
   useAutosave();
   const theme = useStore((s) => s.settings.theme);
+  const screen = useStore((s) => s.screen);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
   return (
-    <div className="app">
-      <TopBar />
-      <div className="main">
-        <CutList />
-        <ManuscriptColumn engine={engine} />
-        <WorkView engine={engine} />
-        <AssetPanel />
-      </div>
-      <StatusBar />
+    <>
+      {screen === 'start' ? (
+        <StartScreen />
+      ) : (
+        <div className="app">
+          <TopBar />
+          <div className="main">
+            <CutList />
+            <ManuscriptColumn engine={engine} />
+            <WorkView engine={engine} />
+            <AssetPanel />
+          </div>
+          <StatusBar />
+          <ExportDialog engine={engine} />
+          <OutputGallery />
+        </div>
+      )}
       <SettingsDialog />
-      <ExportDialog engine={engine} />
       <HelpDialog />
-      <OutputGallery />
-    </div>
+      <CharacterManager />
+    </>
   );
 }

@@ -14,6 +14,7 @@ export function ExportDialog({ engine }: { engine: Engine }) {
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [result, setResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [withPackage, setWithPackage] = useState(true);
   const signal = useRef({ cancelled: false });
   if (!open) return null;
   const confirmed = cuts.filter((c) => c.confirmed).length;
@@ -25,7 +26,7 @@ export function ExportDialog({ engine }: { engine: Engine }) {
     signal.current = { cancelled: false };
     setProgress({ done: 0, total: confirmed, current: '' });
     try {
-      const r = await exportEpisode(engine, setProgress, signal.current);
+      const r = await exportEpisode(engine, setProgress, signal.current, { withPackage });
       setResult(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -55,6 +56,15 @@ export function ExportDialog({ engine }: { engine: Engine }) {
           <span />
         </div>
         {storageKind !== 'folder' && <div className="small" style={{ color: 'var(--accent)' }}>작업 폴더를 지정하지 않아 브라우저 안에 저장됩니다. 탐색기에서 보려면 먼저 상단의 작업 폴더 지정을 누르세요.</div>}
+        <div className="setting">
+          <span>AI 전달 패키지</span>
+          <span>
+            <button className={withPackage ? 'active' : ''} onClick={() => setWithPackage(!withPackage)} title="패키지/{작품}/{회차}/ 에 컷 폴더(PNG·패키지 JSON·프롬프트)·캐릭터 시트(설명·레퍼런스)·회차 요약을 함께 씁니다. 5단계 이미지 생성의 입력">
+              {withPackage ? '함께 추출' : '추출 안 함'}
+            </button>
+          </span>
+          <span />
+        </div>
         <h3>출력 설정</h3>
         <div className="setting">
           <span>배경</span>
@@ -114,6 +124,11 @@ export function ExportDialog({ engine }: { engine: Engine }) {
             <div>
               완료: PNG {result.count}장 · 설명 .md 1개 · 컷 JSON {result.count}개 → <code>{result.folder}</code>
             </div>
+            {result.packageFolder && (
+              <div>
+                AI 전달 패키지: 컷 폴더 {result.count}개(PNG·JSON·prompt.md) + 캐릭터 시트 + 회차.json → <code>{result.packageFolder}</code>
+              </div>
+            )}
             {result.failed.length > 0 && <div style={{ color: 'var(--danger)' }}>실패: {result.failed.join(', ')}</div>}
             <details style={{ marginTop: 8 }}>
               <summary>설명 텍스트 미리보기</summary>

@@ -49,6 +49,10 @@ export interface StoreState extends Document {
   thumbnailDirty: number[];
   /** 컷 번호가 바뀌어 저장소의 썸네일 파일을 모두 다시 써야 함 */
   thumbnailsRenumbered: boolean;
+  /** 시작 화면(작품 관리) / 편집 화면 */
+  screen: 'start' | 'editor';
+  /** 캐릭터 관리 대화상자가 열린 작품코드(null이면 닫힘) */
+  characterManagerFor: string | null;
 
   currentCut: () => Cut;
   /** 현재 컷을 바꾸고 되돌리기 기록을 남긴다 */
@@ -82,6 +86,15 @@ export interface StoreState extends Document {
   setSaveError: (msg: string | null) => void;
   setStatusHint: (hint: string) => void;
   snapshotDocument: () => Document;
+  setScreen: (screen: 'start' | 'editor') => void;
+  setCharacterManagerFor: (code: string | null) => void;
+  /** 저장소에서 다시 읽은 캐릭터로 바꾼다. 아직 저장 안 된 임시 캐릭터는 남긴다 */
+  setCharacters: (chars: Character[]) => void;
+  /** 등록 캐릭터의 돌(성별 돌·키·고정색)을 현재 컷에 추가 */
+  addCharacterDoll: (characterId: string) => string | null;
+  /** 돌에 캐릭터 지정. null이면 임시 캐릭터로 되돌린다 */
+  assignCharacter: (dollId: string, characterId: string | null) => void;
+  setEpisodeTitle: (title: string) => void;
 
   // 컷 확정·목록
   /** 현재 컷을 확정(설명 텍스트 기록)하고 다음 컷으로. 다음 컷이 없으면 현재 씬을 복사해 만든다 */
@@ -143,6 +156,8 @@ export const useStore = create<StoreState>()(
     thumbnails: {},
     thumbnailDirty: [],
     thumbnailsRenumbered: false,
+    screen: 'start',
+    characterManagerFor: null,
 
     currentCut: () => get().cuts[get().currentCutIndex],
 
@@ -251,7 +266,8 @@ export const useStore = create<StoreState>()(
       const s = get();
       const inst = s.currentCut().dolls.find((d) => d.id === id);
       if (!inst) return;
-      set({ characters: s.characters.map((c) => (c.id === inst.characterId ? { ...c, color } : c)) });
+      // 임시 캐릭터는 돌을 따라 바뀌고, 등록 캐릭터는 캐릭터 관리에서만 바꾼다(여기서는 이 돌만)
+      set({ characters: s.characters.map((c) => (c.id === inst.characterId && c.temporary ? { ...c, color } : c)) });
       get().commitCut((c) => {
         const d = c.dolls.find((x) => x.id === id);
         if (d) d.color = color;
@@ -262,7 +278,7 @@ export const useStore = create<StoreState>()(
       const s = get();
       const inst = s.currentCut().dolls.find((d) => d.id === id);
       if (!inst) return;
-      set({ characters: s.characters.map((c) => (c.id === inst.characterId ? { ...c, heightCm } : c)) });
+      set({ characters: s.characters.map((c) => (c.id === inst.characterId && c.temporary ? { ...c, heightCm } : c)) });
       get().commitCut((c) => {
         const d = c.dolls.find((x) => x.id === id);
         if (d) d.heightCm = heightCm;
@@ -341,6 +357,70 @@ export const useStore = create<StoreState>()(
       const s = get();
       return { work: s.work, episode: { ...s.episode, cutOrder: s.cuts.map((c) => c.number) }, cuts: s.cuts, characters: s.characters };
     },
+
+    setScreen: (screen) => set({ screen }),
+    setCharacterManagerFor: (code) => set({ characterManagerFor: code }),
+
+    setCharacters: (chars) => {
+      const s = get();
+      const kept = s.characters.filter((c) => c.temporary && !chars.some((d) => d.id === c.id));
+      set({ characters: [...chars, ...kept] });
+    },
+
+    addCharacterDoll: (characterId) => {
+      const s = get();
+      const chr = s.characters.find((c) => c.id === characterId);
+      if (!chr) return null;
+      const cut = s.currentCut();
+      const id = newId('doll');
+      const offsetX = cut.dolls.length === 0 ? 0 : (cut.dolls.length % 2 === 1 ? 1 : -1) * Math.ceil(cut.dolls.length / 2) * 0.7;
+      const inst: DollInstance = {
+        id,
+        characterId: chr.id,
+        dollId: dollAsset(chr.dollId).id,
+        heightCm: chr.heightCm,
+        color: chr.color,
+        position: [offsetX, 0, 0],
+        rotation: [0, 0, 0, 1],
+        joints: {},
+      };
+      get().commitCut((c) => {
+        c.dolls.push(inst);
+      });
+      set({ selection: { dollId: id, bone: null } });
+      return id;
+    },
+
+    assignCharacter: (dollId, characterId) => {
+      const s = get();
+      const inst = s.currentCut().dolls.find((d) => d.id === dollId);
+      if (!inst) return;
+      if (characterId) {
+        const chr = s.characters.find((c) => c.id === characterId);
+        if (!chr) return;
+        get().commitCut((c) => {
+          const d = c.dolls.find((x) => x.id === dollId);
+          if (!d) return;
+          d.characterId = chr.id;
+          d.color = chr.color;
+          d.heightCm = chr.heightCm;
+          d.dollId = dollAsset(chr.dollId).id;
+        });
+        return;
+      }
+      // 지정 해제: 새 임시 캐릭터를 붙인다
+      const color = pickColor(s.characters.map((c) => c.color));
+      const character = createTemporaryCharacter(s.work.code, inst.dollId, inst.heightCm, color, s.characters.length + 1);
+      set({ characters: [...s.characters, character] });
+      get().commitCut((c) => {
+        const d = c.dolls.find((x) => x.id === dollId);
+        if (!d) return;
+        d.characterId = character.id;
+        d.color = color;
+      });
+    },
+
+    setEpisodeTitle: (title) => set({ episode: { ...get().episode, title, updatedAt: nowIso() }, dirty: true }),
 
     // ---------- 컷 ----------
 

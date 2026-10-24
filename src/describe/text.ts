@@ -1,5 +1,5 @@
 import type { Character, Cut, Episode, Work } from '../model/types';
-import { colorName } from '../model/defaults';
+import { colorName, mainReferenceOf } from '../model/defaults';
 import { pad3 } from '../storage/backend';
 import { ANGLE_LABEL, SHOT_LABEL, type CutAnalysis } from './analyze';
 
@@ -47,8 +47,9 @@ export function episodeHeader(work: Work, episode: Episode, cuts: Cut[], charact
   lines.push('캐릭터(색 = 이름 · 외형 · 레퍼런스):');
   for (const chr of characters) {
     if (!used.has(chr.id)) continue;
-    const look = chr.appearanceTags.length ? chr.appearanceTags.join(', ') : '외형 미등록';
-    const ref = chr.mainReference ? `캐릭터/${chr.name}/레퍼런스/${chr.mainReference}` : '레퍼런스 없음';
+    const look = chr.appearanceTags.length ? chr.appearanceTags.join(', ') : chr.info.oneLine?.trim() || '외형 미등록';
+    const main = mainReferenceOf(chr);
+    const ref = main ? `캐릭터/${chr.name}/${main.file}` : '레퍼런스 없음';
     lines.push(`- ${colorName(chr.color)} = ${chr.name} · ${look} · ${ref}`);
   }
   // 캐릭터 파일이 없는 돌(예: 불러온 옛 데이터)도 색만으로 적어 둔다
