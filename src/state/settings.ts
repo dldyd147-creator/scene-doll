@@ -52,6 +52,11 @@ export interface Settings {
   genEndpoint: string;
   /** 함수 접근 토큰(함수 배포 때 정한 값). OpenAI API 키는 절대 여기 넣지 않는다 */
   genToken: string;
+  // ---------- 6단계 NTT 연동 ----------
+  /** NTT 서버 주소(예: https://ntt.greenkirin.kr) */
+  nttUrl: string;
+  /** NTT 서버의 씬 돌 연동 토큰(서버의 NTT_SCENE_DOLL_TOKEN과 같은 값) */
+  nttToken: string;
   /** 묶음 상한(4·6·8컷) */
   genMaxPerBatch: number;
   genPreset: GenPreset;
@@ -96,6 +101,8 @@ export const DEFAULT_SETTINGS: Settings = {
   genEngine: 'mock',
   genEndpoint: '',
   genToken: '',
+  nttUrl: '',
+  nttToken: '',
   genMaxPerBatch: 4,
   genPreset: 'balanced',
   genSizeMode: 'custom',

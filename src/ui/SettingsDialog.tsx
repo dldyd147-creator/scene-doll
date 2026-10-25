@@ -68,7 +68,7 @@ function Seg<T extends string | number>({ label, value, options, labels, onChang
   );
 }
 
-function TextSetting({ label, k, placeholder, type = 'text', title }: { label: string; k: 'genEndpoint' | 'genToken' | 'genStyle'; placeholder?: string; type?: 'text' | 'password'; title?: string }) {
+function TextSetting({ label, k, placeholder, type = 'text', title }: { label: string; k: 'genEndpoint' | 'genToken' | 'genStyle' | 'nttUrl' | 'nttToken'; placeholder?: string; type?: 'text' | 'password'; title?: string }) {
   const value = useStore((s) => s.settings[k]);
   const update = useStore((s) => s.updateSettings);
   return (
@@ -94,6 +94,8 @@ function GenerateSettings() {
         </>
       )}
       <div className="small muted">OpenAI API 키는 브라우저에 두지 않습니다. 키는 서버리스 함수(저장소의 serverless/openai-image, Cloudflare Worker 또는 Vercel)의 환경 변수에만 넣고, 여기에는 그 함수의 주소와 접근 토큰만 넣습니다(이 브라우저의 설정에 저장됨).</div>
+      <TextSetting label="NTT 서버 주소(6단계)" k="nttUrl" placeholder="https://ntt.greenkirin.kr" title="원고 내보내기에서 CLIP 콘티를 만들 NTT 서버" />
+      <TextSetting label="NTT 연동 토큰" k="nttToken" type="password" placeholder="서버의 NTT_SCENE_DOLL_TOKEN" title="NTT 서버에만 있는 연동용 토큰. NTT 로그인 비밀번호가 아님" />
       <Seg label="묶음 상한" value={s.genMaxPerBatch} options={[4, 6, 8] as const} labels={{ 4: '4컷', 6: '6컷', 8: '8컷' }} onChange={(v) => update({ genMaxPerBatch: v })} title="한 번에 격자로 묶어 보내는 컷 수. 같은 묶음 태그끼리 묶이고 넘치면 균등 분할" />
       <Seg label="기본 강도 프리셋" value={s.genPreset} options={PRESET_ORDER} labels={{ doll: PRESETS.doll.label, balanced: PRESETS.balanced.label, prompt: PRESETS.prompt.label }} onChange={(v) => update({ genPreset: v })} title={PRESET_ORDER.map((p) => `${PRESETS[p].label}: ${PRESETS[p].short}`).join('\n')} />
       <Seg label="출력 크기" value={s.genSizeMode} options={['custom', 'fixed', 'auto'] as const} labels={{ custom: '격자 비율', fixed: '고정 3종', auto: '자동' }} onChange={(v) => update({ genSizeMode: v })} title="격자 비율: 격자 크기 그대로 16의 배수·픽셀 상한 안으로(gpt-image-2 계열). 고정 3종: 1024×1024·1024×1536·1536×1024 중 가까운 것(gpt-image-1.5). 자동: API가 정함" />

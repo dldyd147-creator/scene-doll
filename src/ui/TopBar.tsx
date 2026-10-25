@@ -79,7 +79,7 @@ export function TopBar() {
       <button className={`icon ${candidateCount ? 'has-output' : ''}`} onClick={() => setGenerateOpen(true)} title={candidateCount ? `이미지 생성(5단계): 생성 후보 ${candidateCount}장. 묶음 생성·후보 비교` : '이미지 생성(5단계): 확정 컷을 묶어 AI 이미지 후보를 만들고 고름'}>
         <Icon name="sparkles" />
       </button>
-      <button className="icon" onClick={() => setAssembleOpen(true)} title="원고 내보내기(6단계): 컷마다 고른 그림을 NTT 글콘티의 CLIP 내보내기에 올릴 컷 PNG로 내보내기">
+      <button className="icon" onClick={() => setAssembleOpen(true)} title="원고 내보내기(6단계): 컷 그림과 대사를 NTT 서버로 보내 클립 스튜디오 콘티(.clip)를 받기">
         <Icon name="layers" />
       </button>
       <div className="sep" />

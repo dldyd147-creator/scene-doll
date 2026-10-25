@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { exportCutImages, type AssembleExportResult } from '../assemble/exporter';
 import { loadSource, releaseSource, type LoadedSource } from '../assemble/images';
+import { buildMeta, clipCuts, makeClip } from '../assemble/ntt';
+import { pngName } from '../describe/text';
+import { storage } from '../storage';
+import { logAction } from '../storage/remote/service';
 import { planExport, SOURCE_LABEL } from '../assemble/plan';
 import { useStore } from '../state/store';
 import { Icon } from './icons';
@@ -18,6 +22,8 @@ export function AssembleDialog() {
   const episode = useStore((s) => s.episode);
   const cuts = useStore((s) => s.cuts);
   const thumbnails = useStore((s) => s.thumbnails);
+  const settings = useStore((s) => s.settings);
+  const setSettingsOpen = useStore((s) => s.setSettingsOpen);
 
   const [sources, setSources] = useState<Record<number, LoadedSource>>({});
   const ref = useRef<Record<number, LoadedSource>>({});
@@ -26,6 +32,7 @@ export function AssembleDialog() {
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<AssembleExportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [clipNote, setClipNote] = useState<string | null>(null);
 
   const sig = cuts.map((c) => `${c.number}:${c.generatedImages?.[0] ?? ''}:${thumbnails[c.number] ? 1 : 0}`).join('|');
   useEffect(() => {
@@ -63,6 +70,7 @@ export function AssembleDialog() {
     ref.current = {};
     setSources({});
     setResult(null);
+    setClipNote(null);
     setError(null);
   }, [open]);
 
@@ -70,6 +78,39 @@ export function AssembleDialog() {
 
   if (!open) return null;
   const close = () => !busy && setOpen(false);
+
+  const nttReady = settings.nttUrl.trim() !== '' && settings.nttToken.trim() !== '';
+
+  /** NTT 서버로 컷 그림 + 대사를 보내 CLIP 콘티(zip)를 받아 출력 폴더에 두고 내려받는다 */
+  const doClip = async () => {
+    setBusy('준비 중…');
+    setError(null);
+    setClipNote(null);
+    try {
+      const kinds = Object.fromEntries(Object.entries(sources).map(([n, src]) => [Number(n), src.kind]));
+      const list = clipCuts(cuts, kinds, skip);
+      if (!list.length) throw new Error('보낼 컷이 없습니다');
+      const images = list.flatMap((c) => {
+        const blob = sources[c.number]?.blob;
+        return blob ? [{ name: pngName(work.code, episode.number, c.number), blob }] : [];
+      });
+      const zip = await makeClip({ url: settings.nttUrl, token: settings.nttToken, meta: buildMeta(work, episode, list), images, onProgress: setBusy });
+      const name = work.code + '_' + String(episode.number).padStart(3, '0') + '_콘티.zip';
+      await storage.repository.writeOutput(work.code, episode.number, '원고/' + name, zip);
+      const url = URL.createObjectURL(zip);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      logAction('assemble', episode.number + '화 CLIP 콘티 ' + list.length + '컷', { images: images.length }, work.code);
+      setClipNote('CLIP 콘티를 받았습니다 → 출력/' + work.code + '/' + String(episode.number).padStart(3, '0') + '/원고/' + name + ' (' + list.length + '컷, 그림 ' + images.length + '장). 압축을 풀어 .clip을 클립 스튜디오로 여세요.');
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const doExport = async () => {
     setBusy('준비 중…');
@@ -95,7 +136,7 @@ export function AssembleDialog() {
           </button>
         </h2>
         <div className="small muted">
-          컷마다 고른 대표 후보를 <code>출력/{work.code}/{String(episode.number).padStart(3, '0')}/원고/{work.code}_{String(episode.number).padStart(3, '0')}_컷번호.png</code>로 내보냅니다. 대사·장면 설명·컷 위치가 든 CLIP 파일은 NTT 글콘티의 [내보내기 → CLIP]에서 이 그림들을 올려 만듭니다(파일 이름 끝 숫자 = NTT 컷 번호).
+          컷마다 고른 대표 후보와 글콘티 대사를 NTT 서버로 보내 클립 스튜디오 콘티(.clip)를 받습니다. 그림은 컷 칸 안에 놓이고 대사는 NTT의 말풍선 규칙으로 텍스트 레이어가 됩니다. [컷 그림만]은 PNG만 <code>출력/…/원고/</code>에 내보냅니다.
         </div>
         {loading && <div className="muted small">컷 그림을 읽는 중…</div>}
         <div className="asm-grid2">
@@ -126,9 +167,18 @@ export function AssembleDialog() {
             <b>내보냈습니다</b> → <code>{result.folder}/</code> · {result.files.length}장. 이 폴더의 PNG를 모두 골라 NTT 글콘티 [내보내기 → CLIP] 창의 '컷 그림 넣기'에 올리세요.
           </div>
         )}
+        {clipNote && <div className="asm-result small">{clipNote}</div>}
+        {!nttReady && (
+          <div className="small muted">
+            CLIP 콘티를 바로 받으려면 설정에 NTT 서버 주소와 연동 토큰을 넣으세요. <button onClick={() => setSettingsOpen(true)}>설정 열기</button>
+          </div>
+        )}
         <div className="actions">
-          <button className="primary" disabled={!!busy || loading || !plan.items.length} onClick={() => void doExport()}>
-            <Icon name="export" /> {busy ?? '컷 그림 내보내기'}
+          <button className="primary" disabled={!!busy || loading || !nttReady || !cuts.length} onClick={() => void doClip()} title="컷 그림과 대사를 NTT 서버로 보내 클립 스튜디오 콘티(.clip)를 만들어 받습니다">
+            <Icon name="export" /> {busy ?? 'CLIP 콘티 받기'}
+          </button>
+          <button disabled={!!busy || loading || !plan.items.length} onClick={() => void doExport()} title="컷 그림만 PNG로 내보냅니다">
+            <Icon name="export" /> 컷 그림만
           </button>
         </div>
       </div>
