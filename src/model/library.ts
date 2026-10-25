@@ -4,6 +4,7 @@
 import type { AngleTag, Character, Cut, DollInstance, JointRotations, Pose, PropInstance, Quat, SceneLibraryItem, SceneSlot, ShotSize, Vec3 } from './types';
 import type { CutAnalysis } from '../describe/analyze';
 import { ANGLE_LABEL, SHOT_LABEL } from '../describe/analyze';
+import { placementLabel } from '../describe/placement';
 import { createCamera, createTemporaryCharacter, dollAsset, nowIso, pickColor } from './defaults';
 import { newId } from './ids';
 
@@ -91,7 +92,7 @@ export function sceneFromCut(cut: Cut, analysis: Pick<CutAnalysis, 'count' | 'sh
     shot: analysis.shot,
     angle: analysis.angle,
     aspect: Math.round(cut.aspect * 100) / 100,
-    placement: analysis.dolls.map((d) => (d.depthZone ? `${d.xZone} ${d.depthZone}` : d.xZone)),
+    placement: analysis.dolls.map((d) => placementLabel(d)),
     shots: analysis.dolls.map((d) => d.shot),
   };
   return {

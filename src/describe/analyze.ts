@@ -3,6 +3,7 @@ import type { Engine } from '../engine/Engine';
 import type { DollRig } from '../engine/DollRig';
 import type { AngleTag, Character, Cut, ShotSize } from '../model/types';
 import { colorName } from '../model/defaults';
+import { refinePlacement } from './placement';
 
 export type XZone = '왼쪽' | '중앙' | '오른쪽';
 export type DepthZone = '앞' | '중간' | '뒤';
@@ -19,6 +20,10 @@ export interface DollAnalysis {
   projectedHeight: number;
   xZone: XZone;
   depthZone: DepthZone | null;
+  /** 화면 가로 위치(NDC, -1 왼쪽 ~ 1 오른쪽). 같은 칸에 둘 이상일 때 좌우 관계를 정하는 데 쓴다 */
+  screenX?: number;
+  /** 같은 칸의 다른 인물과의 좌우 관계(예: '파랑 돌 왼쪽'). placement.ts가 정한다 */
+  relation?: string | null;
   /** 8방위 향함 */
   facing: string;
   /** 서 있음·앉음·누움 */
@@ -175,6 +180,8 @@ export function analyzeCut(engine: Engine, cut: Cut, characters: Character[]): C
       projectedHeight,
       xZone,
       depthZone: null,
+      screenX: cx,
+      relation: null,
       facing: facingLabel(theta),
       stance: pose.stance,
       stanceConj: pose.stanceConj,
@@ -184,12 +191,7 @@ export function analyzeCut(engine: Engine, cut: Cut, characters: Character[]): C
   }
 
   const inFrame = dolls.filter((d) => d.inFrame);
-  if (inFrame.length >= 2) {
-    const sorted = [...inFrame].sort((a, b) => a.distance - b.distance);
-    sorted.forEach((d, i) => {
-      d.depthZone = i === 0 ? '앞' : i === sorted.length - 1 ? '뒤' : '중간';
-    });
-  }
+  refinePlacement(inFrame);
   let main: DollAnalysis | null = null;
   for (const d of inFrame) if (!main || d.projectedHeight > main.projectedHeight) main = d;
   const pitch = cut.camera.pitch;

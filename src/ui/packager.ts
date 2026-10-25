@@ -1,5 +1,6 @@
 import type { CutAnalysis, DollAnalysis } from '../describe/analyze';
 import { ANGLE_LABEL, SHOT_LABEL } from '../describe/analyze';
+import { placementLabel } from '../describe/placement';
 import { formatAspect, pngName } from '../describe/text';
 import { colorName, mainReferenceOf, refLabel } from '../model/defaults';
 import type { Character, Cut, Episode, Work } from '../model/types';
@@ -100,7 +101,7 @@ function packageCharacter(d: DollAnalysis, chr: Character | undefined, folders: 
     oneLine: chr?.info.oneLine,
     description: chr?.description ?? '',
     appearanceTags: chr?.appearanceTags ?? [],
-    placement: d.depthZone ? `${d.xZone} ${d.depthZone}` : d.xZone,
+    placement: placementLabel(d),
     facing: d.facing,
     pose,
     shot: SHOT_LABEL[d.shot],

@@ -172,6 +172,17 @@ describe('결과 분할', () => {
     expect(findGridLine(far, 512, 25, 15).found).toBe(false);
   });
 
+  it('선 두께는 절반 깊이로 잰다: 선 옆의 살짝 어두운 전이 픽셀은 선이 아니다', () => {
+    // 실측(2인 묶음, low): … 158 157 156 153 | 59 50 54 51 | 179 188 …
+    const profile = Array<number>(1024).fill(158);
+    for (let x = 514; x < 1024; x++) profile[x] = 187;
+    profile[508] = 156;
+    profile[509] = 135; // 예전 기준(중앙값 − 20)이면 선에 들어갔을 전이
+    [59, 50, 54, 51].forEach((v, i) => (profile[510 + i] = v));
+    profile[514] = 140;
+    expect(findGridLine(profile, 512, 26, 15)).toEqual({ pos: 511, start: 510, end: 514, found: true });
+  });
+
   it('찾은 선의 두께만큼(+1px) 비켜 자르고, 못 찾은 경계는 비율대로 자른다', () => {
     const L = layoutGrid([1, 2, 3, 4].map((n) => ({ number: n, aspect: 1.5 })), 512); // 1024×1536
     const cols = Array<number>(1024).fill(160);

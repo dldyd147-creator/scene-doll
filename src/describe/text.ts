@@ -3,6 +3,7 @@ import { colorName, mainReferenceOf } from '../model/defaults';
 import { HAND_LABEL } from '../model/props';
 import { pad3 } from '../storage/backend';
 import { ANGLE_LABEL, SHOT_LABEL, type CutAnalysis } from './analyze';
+import { placementLabel } from './placement';
 
 export function formatAspect(aspect: number): string {
   const v = Math.round(aspect * 100) / 100;
@@ -44,7 +45,7 @@ export function cutBlock(a: CutAnalysis, cut: Cut, code: string, episodeNo: numb
   const lines: string[] = [];
   lines.push(`## ${pad3(cut.number)} · ${pngName(code, episodeNo, cut.number)} · ${formatAspect(cut.aspect)} · ${ANGLE_LABEL[a.angle]} · ${SHOT_LABEL[a.shot]} · ${a.count}인`);
   for (const d of a.dolls) {
-    const place = d.depthZone ? `${d.xZone} ${d.depthZone}` : d.xZone;
+    const place = placementLabel(d);
     const pose = d.phrases.length ? `${d.stanceConj} ${d.phrases.join(', ')}` : d.stance;
     const held = heldPropPhrases(cut, d.id, props);
     lines.push(`${d.colorName} ${d.name}: ${place} · ${d.facing} · ${pose}${held.length ? ` · ${held.join(', ')}` : ''}`);

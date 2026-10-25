@@ -208,14 +208,17 @@ export interface GridLines {
 }
 
 /**
- * 경계선 검출 기본값. 실제 결과(gpt-image-2.5, 칸 512px)에서 모델은 칸 경계에 4~5px 검은 선을 기대 위치 그대로 그렸다.
+ * 경계선 검출 기본값. 실제 결과(gpt-image-2.5, 칸 512px)에서 모델은 칸 경계에 4~5px 검은 선을 기대 위치 그대로 그렸다
+ * (열 밝기 예: 배경 158 · 전이 153 · 선 59 50 54 51 · 반대편 179 188).
  * 탐색 폭 = 칸 크기의 5%(최소 6px), 선 최대 두께 = 칸의 3%(최소 8px), 창의 중앙값보다 이만큼 어두우면 선으로 본다.
  */
 export const LINE_DETECT = { searchRatio: 0.05, minSearch: 6, maxWidthRatio: 0.03, minMaxWidth: 8, darker: 40, pad: 1 } as const;
 
 /**
  * 밝기 프로파일(열 또는 행마다의 평균 밝기 0~255)에서 기대 위치 근처의 어두운 선을 찾는다.
- * 탐색 창 안의 중앙값보다 `darker` 이상 어두운 최저점을 선 중심으로 보고, 양옆으로 절반 기준보다 어두운 동안 구간을 넓힌다(최대 maxWidth).
+ * 탐색 창 안의 중앙값보다 `darker` 이상 어두운 최저점을 선 중심으로 보고, 양옆으로 '절반 깊이'(최저점과 중앙값의 가운데)보다
+ * 어두운 동안 구간을 넓힌다(최대 maxWidth). 예전 기준(중앙값 − darker/2)은 선 옆의 살짝 어두운 전이 픽셀·어두운 그림까지 선으로 잡아
+ * 칸마다 3px쯤 더 깎았다(medium 결과에서 4px 선을 10px로 잡음).
  */
 export function findGridLine(profile: number[], expected: number, search: number, maxWidth: number, darker: number = LINE_DETECT.darker): GridLine {
   const n = profile.length;
@@ -230,7 +233,7 @@ export function findGridLine(profile: number[], expected: number, search: number
   let m = lo;
   for (let i = lo; i <= hi; i++) if (profile[i] < profile[m]) m = i;
   if (profile[m] > median - darker) return none;
-  const limit = median - darker / 2;
+  const limit = (profile[m] + median) / 2;
   let start = m;
   let end = m + 1;
   while (start > 0 && end - start < maxWidth && profile[start - 1] < limit) start--;
