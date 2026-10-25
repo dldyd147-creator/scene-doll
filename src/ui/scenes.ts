@@ -3,6 +3,7 @@ import { analyzeCut } from '../describe/analyze';
 import type { Pose, SceneLibraryItem } from '../model/types';
 import { createPose, sceneFromCut } from '../model/library';
 import { useStore } from '../state/store';
+import { logAction } from '../storage/remote/service';
 import { captureThumbnail } from './cuts';
 import { useLibrary } from './library';
 
@@ -29,6 +30,7 @@ export async function saveSceneDraft(draft: SceneDraft, name: string, situationT
   const item: SceneLibraryItem = { ...draft.item, name: name.trim() || draft.item.name, situationTags };
   const stored = await useLibrary.getState().saveScene(item, draft.thumb);
   useStore.getState().setStatusHint(`씬 '${stored.name}'을(를) 라이브러리에 저장했습니다 (공용/씬)`);
+  logAction('scene', stored.name, null, useStore.getState().work.code);
   return stored;
 }
 

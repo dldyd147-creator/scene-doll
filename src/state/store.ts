@@ -64,6 +64,8 @@ export interface StoreState extends Document {
   thumbnailsRenumbered: boolean;
   /** 시작 화면(작품 관리) / 편집 화면 */
   screen: 'start' | 'editor';
+  /** 남이 잠근 회차를 보는 중(공유 저장소): 컷 편집·확정·저장이 막힌다 */
+  readOnly: boolean;
   /** 캐릭터 관리 대화상자가 열린 작품코드(null이면 닫힘) */
   characterManagerFor: string | null;
   /** 이 회차 출력 폴더의 PNG 수(출력물 보기 아이콘 색) */
@@ -116,6 +118,7 @@ export interface StoreState extends Document {
   setStatusHint: (hint: string) => void;
   snapshotDocument: () => Document;
   setScreen: (screen: 'start' | 'editor') => void;
+  setReadOnly: (on: boolean) => void;
   setCharacterManagerFor: (code: string | null) => void;
   /** 저장소에서 다시 읽은 캐릭터로 바꾼다. 아직 저장 안 된 임시 캐릭터는 남긴다 */
   setCharacters: (chars: Character[]) => void;
@@ -228,6 +231,7 @@ export const useStore = create<StoreState>()(
     thumbnailDirty: [],
     thumbnailsRenumbered: false,
     screen: 'start',
+    readOnly: false,
     characterManagerFor: null,
     outputCount: 0,
     handOperatorOpen: false,
@@ -243,6 +247,7 @@ export const useStore = create<StoreState>()(
 
     commitCut: (mutate) => {
       const s = get();
+      if (s.readOnly) return; // 보기 전용 회차
       const before = s.cuts[s.currentCutIndex];
       const next = structuredClone(before);
       mutate(next);
@@ -446,6 +451,7 @@ export const useStore = create<StoreState>()(
     },
 
     setScreen: (screen) => set({ screen }),
+    setReadOnly: (on) => set({ readOnly: on }),
     setCharacterManagerFor: (code) => set({ characterManagerFor: code }),
 
     setCharacters: (chars) => {
@@ -671,6 +677,7 @@ export const useStore = create<StoreState>()(
 
     confirmCut: (desc) => {
       const s = get();
+      if (s.readOnly) return;
       const cuts = s.cuts.slice();
       const cur: Cut = { ...cuts[s.currentCutIndex], confirmed: true, desc, updatedAt: nowIso() };
       cuts[s.currentCutIndex] = cur;

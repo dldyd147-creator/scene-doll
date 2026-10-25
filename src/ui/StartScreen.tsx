@@ -7,6 +7,9 @@ import { Icon } from './icons';
 import { useRefUrl } from './refImages';
 import { lastOpened, openDocument, saveNow } from './save';
 import { StorageControls } from './StorageControls';
+import { LockBadge, SharePanel } from './SharePanel';
+import { episodeLockPath } from '../storage/remote/locks';
+import { logAction, useShare, watchWorkLocks } from '../storage/remote/service';
 
 function dateLabel(iso: string): string {
   const d = new Date(iso);
@@ -17,6 +20,9 @@ function dateLabel(iso: string): string {
 /** 시작 화면: 작품을 고르고 회차를 열거나, 캐릭터를 등록한다 */
 export function StartScreen() {
   const storageKind = useStore((s) => s.storageKind);
+  const shareStatus = useShare((s) => s.status);
+  const shareUser = useShare((s) => s.user);
+  const locks = useShare((s) => s.locks);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const setHelpOpen = useStore((s) => s.setHelpOpen);
   const managerFor = useStore((s) => s.characterManagerFor);
@@ -40,7 +46,12 @@ export function StartScreen() {
 
   useEffect(() => {
     void reload();
-  }, [reload, storageKind]);
+  }, [reload, storageKind, shareStatus]);
+
+  // 공유 저장소면 고른 작품의 회차 잠금을 보여 준다(다른 사람이 작업 중인 회차)
+  useEffect(() => {
+    void watchWorkLocks(selected);
+  }, [selected, shareStatus]);
 
   // 캐릭터 관리를 닫으면 요약을 새로 읽는다
   useEffect(() => {
@@ -62,6 +73,7 @@ export function StartScreen() {
     setBusy(true);
     try {
       await storage.repository.createWork(createWork(code, newName.trim() || code));
+      logAction('create', `작품 ${code}`, null, code);
       setNewCode('');
       setNewName('');
       setError(null);
@@ -89,6 +101,7 @@ export function StartScreen() {
     try {
       await openDocument(w.work.code, next, true);
       await saveNow();
+      logAction('create', `회차 ${next}`, null, w.work.code);
     } finally {
       setBusy(false);
     }
@@ -104,12 +117,14 @@ export function StartScreen() {
   const deleteWork = async (w: WorkInfo) => {
     if (!window.confirm(`작품 ${w.work.code} "${w.work.name}"을 회차·컷·캐릭터까지 모두 지울까요? 되돌릴 수 없습니다. (출력·패키지 폴더는 남습니다)`)) return;
     await storage.repository.deleteWork(w.work.code);
+    logAction('delete', `작품 ${w.work.code}`, null, w.work.code);
     await reload();
   };
 
   const deleteEpisode = async (w: WorkInfo, n: number) => {
     if (!window.confirm(`${w.work.code} ${n}화를 컷·썸네일까지 지울까요? 되돌릴 수 없습니다.`)) return;
     await storage.repository.deleteEpisode(w.work.code, n);
+    logAction('delete', `회차 ${n}`, null, w.work.code);
     await reload();
   };
 
@@ -158,6 +173,7 @@ export function StartScreen() {
               </button>
             </div>
           </div>
+          <SharePanel workCode={selected} onChanged={() => void reload()} />
           {error && (
             <div className="small" style={{ color: 'var(--danger)' }}>
               {error}
@@ -191,6 +207,7 @@ export function StartScreen() {
                   <div key={ep.number} className="episode-tile" onClick={() => void open(info.work.code, ep.number)} title="열기(편집 화면)">
                     <div className="row">
                       <b>{String(ep.number).padStart(3, '0')}화</b>
+                      <LockBadge lock={locks[episodeLockPath(info.work.code, ep.number)]} me={shareUser?.id ?? null} />
                       <span className="grow muted small" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {ep.title ?? ''}
                       </span>

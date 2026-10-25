@@ -1,14 +1,15 @@
 import { storage } from '../storage';
+import { initShare, lockEpisode, unlockEpisode } from '../storage/remote/service';
 import { useStore } from '../state/store';
 import { createCut, createEpisode, createWork } from '../model/defaults';
-import { useLibrary } from './library';
 
 let saving: Promise<boolean> | null = null;
 const LAST_KEY = 'scene-doll.last-opened';
 
-/** 문서와 바뀐 썸네일을 저장소에 쓴다. 동시에 두 번 돌지 않는다 */
+/** 문서와 바뀐 썸네일을 저장소에 쓴다. 동시에 두 번 돌지 않는다. 보기 전용 회차는 쓰지 않는다 */
 export function saveNow(): Promise<boolean> {
   if (saving) return saving;
+  if (useStore.getState().readOnly) return Promise.resolve(false);
   saving = (async () => {
     const s = useStore.getState();
     try {
@@ -31,14 +32,15 @@ export function saveNow(): Promise<boolean> {
 
 function syncStorageState(): void {
   const st = storage.status;
-  // 공유 저장소에 로그인한 동안에도 상단 칩은 로컬(작업 폴더/브라우저) 쪽을 보여 준다. 공유 상태는 공유 칸이 따로 보여 준다
+  // 공유 저장소에 로그인한 동안에도 상단 칩은 로컬(작업 폴더/브라우저) 쪽을 보여 준다. 공유 상태는 공유 칩이 따로 보여 준다
   const kind = st.kind === 'remote' ? st.localKind : st.kind;
   useStore.getState().setStorage(kind, kind === 'folder' ? st.localLabel : null);
 }
 
-/** 앱 시작: 저장소 연결. 문서는 열지 않고 시작 화면(작품 관리)을 보여 준다 */
+/** 앱 시작: 저장소 연결(공유 저장소 세션이 남아 있으면 되살림). 문서는 열지 않고 시작 화면(작품 관리)을 보여 준다 */
 export async function initStorage(): Promise<void> {
   await storage.init();
+  await initShare().catch(() => undefined);
   syncStorageState();
   useStore.getState().setScreen('start');
 }
@@ -61,40 +63,45 @@ function rememberOpened(code: string, episode: number): void {
   }
 }
 
-/** 작품·회차 열기 → 편집 화면. 없으면 create=true일 때 새로 만든다 */
-export async function openDocument(code: string, episodeNo: number, create: boolean): Promise<'loaded' | 'created' | 'missing'> {
-  // 컷의 소품을 그리려면 등록 소품 정의가 필요하다
-  void useLibrary.getState().loadProps();
-  const doc = await storage.load(code, episodeNo).catch(() => null);
-  if (doc) {
-    const thumbs = await storage.repository.loadThumbnails(code, episodeNo, doc.cuts.map((c) => c.number)).catch(() => ({}));
-    useStore.getState().loadDocument(doc, thumbs);
-    useStore.getState().setScreen('editor');
-    rememberOpened(code, episodeNo);
-  void refreshOutputCount();
-    return 'loaded';
-  }
-  if (!create) return 'missing';
-  const work = (await storage.repository.loadWork(code).catch(() => null)) ?? createWork(code, code);
-  useStore.getState().loadDocument({ work, episode: createEpisode(code, episodeNo), cuts: [createCut(1)], characters: await storage.repository.loadCharacters(code).catch(() => []) });
-  useStore.getState().setScreen('editor');
-  rememberOpened(code, episodeNo);
-  void refreshOutputCount();
-  return 'created';
-}
-
-/** 편집 화면 → 시작 화면(작품 관리). 바뀐 것은 먼저 저장한다 */
-export async function goToStart(): Promise<void> {
-  if (useStore.getState().dirty) await saveNow();
-  useStore.getState().select({ dollId: null, bone: null });
-  useStore.getState().setScreen('start');
-}
-
 /** 이 회차 출력 폴더의 PNG 수를 세어 둔다(출력물 보기 아이콘 색) */
 export async function refreshOutputCount(): Promise<void> {
   const s = useStore.getState();
   const files = await storage.backend.list(storage.repository.outputFolder(s.work.code, s.episode.number)).catch(() => []);
   useStore.getState().setOutputCount(files.filter((f) => f.kind === 'file' && f.name.endsWith('.png')).length);
+}
+
+/**
+ * 작품·회차 열기 → 편집 화면. 없으면 create=true일 때 새로 만든다.
+ * 공유 저장소에 로그인한 상태면 회차 잠금을 먼저 잡고, 남이 쥐고 있으면 보기 전용으로 연다
+ */
+export async function openDocument(code: string, episodeNo: number, create: boolean): Promise<'loaded' | 'created' | 'missing'> {
+  const doc = await storage.load(code, episodeNo).catch(() => null);
+  if (!doc && !create) return 'missing';
+  const lock = await lockEpisode(code, episodeNo);
+  const st = useStore.getState();
+  if (doc) {
+    const thumbs = await storage.repository.loadThumbnails(code, episodeNo, doc.cuts.map((c) => c.number)).catch(() => ({}));
+    st.loadDocument(doc, thumbs);
+  } else {
+    const work = (await storage.repository.loadWork(code).catch(() => null)) ?? createWork(code, code);
+    st.loadDocument({ work, episode: createEpisode(code, episodeNo), cuts: [createCut(1)], characters: await storage.repository.loadCharacters(code).catch(() => []) });
+  }
+  st.setReadOnly(!lock.mine);
+  st.setScreen('editor');
+  rememberOpened(code, episodeNo);
+  void refreshOutputCount();
+  if (!lock.mine) st.setStatusHint(`보기 전용: ${lock.holder?.userEmail ?? '다른 사람'}이(가) 이 회차를 작업 중입니다. 저장·확정이 막힙니다`);
+  return doc ? 'loaded' : 'created';
+}
+
+/** 편집 화면 → 시작 화면(작품 관리). 바뀐 것은 먼저 저장하고 회차 잠금을 푼다 */
+export async function goToStart(): Promise<void> {
+  const s = useStore.getState();
+  if (s.dirty && !s.readOnly) await saveNow();
+  await unlockEpisode();
+  useStore.getState().setReadOnly(false);
+  useStore.getState().select({ dollId: null, bone: null });
+  useStore.getState().setScreen('start');
 }
 
 /** 캐릭터 관리에서 고친 뒤 편집 중인 문서의 캐릭터를 저장소에서 다시 읽는다 */
@@ -104,10 +111,9 @@ export async function reloadCharacters(): Promise<void> {
   if (chars) useStore.getState().setCharacters(chars);
 }
 
-/** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장). 공용 라이브러리 캐시도 비운다 */
+/** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장) */
 async function afterStorageChange(): Promise<void> {
   syncStorageState();
-  useLibrary.getState().reset();
   const s = useStore.getState();
   if (s.screen !== 'editor') return;
   const result = await openDocument(s.work.code, s.episode.number, false);

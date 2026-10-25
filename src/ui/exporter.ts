@@ -7,6 +7,7 @@ import { storage } from '../storage';
 import { useStore } from '../state/store';
 import { buildCutPackage, characterFolders, writeCharacterSheets, writeCutPackage, writeEpisodeSummary, type CutPackage } from './packager';
 import { useLibrary } from './library';
+import { logAction } from '../storage/remote/service';
 import { refreshOutputCount, saveNow } from './save';
 
 export interface ExportProgress {
@@ -129,5 +130,6 @@ export async function exportEpisode(engine: Engine, onProgress: (p: ExportProgre
   }
   onProgress({ done: confirmed.length, total: confirmed.length, current: '' });
   await refreshOutputCount();
+  logAction('export', `${episode.number}화 ${confirmed.length - failed.length}컷`, failed.length ? { failed: failed.length } : null, work.code);
   return { folder, packageFolder, count: confirmed.length - failed.length, failed, markdown };
 }

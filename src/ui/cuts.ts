@@ -3,6 +3,7 @@ import type { Engine } from '../engine/Engine';
 import { analyzeCut } from '../describe/analyze';
 import { cutBlock } from '../describe/text';
 import { selectCurrentCut, useStore } from '../state/store';
+import { logAction } from '../storage/remote/service';
 import { useLibrary } from './library';
 import { saveNow } from './save';
 
@@ -26,6 +27,10 @@ export function describeCurrentCut(engine: Engine): string {
  * 다음 컷이 없으면 방금 확정한 씬을 복사한 컷이 생긴다. 썸네일은 저장되는 컷과 항상 같은 화면이다.
  */
 export async function confirmCurrentCut(engine: Engine): Promise<void> {
+  if (useStore.getState().readOnly) {
+    useStore.getState().setStatusHint('보기 전용 회차라 확정할 수 없습니다(다른 사람이 작업 중)');
+    return;
+  }
   // 아직 기록 안 된 원고뷰 조작(휠 뒤 대기)과 화면에 보이는 카메라를 먼저 컷에 쓴다
   engine.flushCameraEdits();
   engine.syncCameraToCut();
@@ -35,6 +40,7 @@ export async function confirmCurrentCut(engine: Engine): Promise<void> {
   const thumb = captureThumbnail(engine, cut.aspect);
   s.setThumbnail(cut.number, thumb);
   s.confirmCut(desc);
+  logAction('confirm', `${s.episode.number}화 컷 ${cut.number}`, null, s.work.code);
   await saveNow();
 }
 

@@ -2,6 +2,7 @@ import { useStore } from '../state/store';
 import { Icon } from './icons';
 import { goToStart, saveNow } from './save';
 import { StorageControls } from './StorageControls';
+import { useShare } from '../storage/remote/service';
 
 function timeLabel(iso: string | null): string {
   if (!iso) return '';
@@ -21,6 +22,10 @@ export function TopBar() {
   const setExportOpen = useStore((s) => s.setExportOpen);
   const setCharacterManagerFor = useStore((s) => s.setCharacterManagerFor);
   const outputCount = useStore((s) => s.outputCount);
+  const readOnly = useStore((s) => s.readOnly);
+  const shareUser = useShare((s) => s.user);
+  const lockHolder = useShare((s) => s.lock?.holder?.userEmail ?? null);
+  const holderName = lockHolder?.split('@')[0] ?? '다른 사람';
   const setGenerateOpen = useStore((s) => s.setGenerateOpen);
   const candidateCount = useStore((s) => s.cuts.reduce((n, c) => n + (c.generatedImages?.length ?? 0), 0));
 
@@ -47,6 +52,16 @@ export function TopBar() {
       <div className="grow" />
 
       <StorageControls />
+      {readOnly && (
+        <span className="storage-chip share-chip readonly" title={`보기 전용: ${lockHolder ?? '다른 사람'}이(가) 이 회차를 작업 중입니다. 컷 편집·확정·저장이 막힙니다. 작품 관리로 돌아가 다른 회차를 고르거나, 5분 동안 신호가 없으면 다시 열어 넘겨받으세요`}>
+          <Icon name="lock" /> 보기 전용 · {holderName}
+        </span>
+      )}
+      {shareUser && !readOnly && (
+        <span className="storage-chip share-chip" title={`공유 저장소에 로그인: ${shareUser.email ?? ''} · 작품·공용은 공유, 출력물은 내 폴더`}>
+          <Icon name="cloudOn" /> {shareUser.email?.split('@')[0] ?? '공유'}
+        </span>
+      )}
       <div className="sep" />
       <button className="icon" onClick={() => void saveNow()} title="저장 (Ctrl+S)">
         <Icon name="save" />

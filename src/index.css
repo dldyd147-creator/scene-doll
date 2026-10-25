@@ -1536,3 +1536,67 @@ code {
   padding: 0 4px;
   border-radius: 3px;
 }
+
+/* ---------- 공유 저장소 ---------- */
+
+.share-panel {
+  gap: 8px;
+}
+.share-panel input[type='text'],
+.share-panel input[type='password'],
+.share-panel input[type='email'] {
+  width: 100%;
+}
+.share-panel a {
+  color: var(--accent-2);
+}
+.work-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.work-log-row {
+  display: grid;
+  grid-template-columns: 74px 64px 72px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+.work-log-row .who,
+.work-log-row .grow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.work-log-row .who {
+  font-weight: 600;
+}
+.lock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #fff;
+  white-space: nowrap;
+}
+.lock-badge.mine {
+  background: var(--accent-2);
+}
+.storage-chip.share-chip {
+  background: var(--btn-active-bg);
+  border-color: var(--btn-active-border);
+  color: var(--text);
+  cursor: default;
+}
+.storage-chip.share-chip.readonly {
+  background: #fde8e8;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+:root[data-theme='dark'] .storage-chip.share-chip.readonly {
+  background: #4a2224;
+}
