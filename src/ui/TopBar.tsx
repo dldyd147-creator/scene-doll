@@ -27,6 +27,7 @@ export function TopBar() {
   const lockHolder = useShare((s) => s.lock?.holder?.userEmail ?? null);
   const holderName = lockHolder?.split('@')[0] ?? '다른 사람';
   const setGenerateOpen = useStore((s) => s.setGenerateOpen);
+  const setAssembleOpen = useStore((s) => s.setAssembleOpen);
   const candidateCount = useStore((s) => s.cuts.reduce((n, c) => n + (c.generatedImages?.length ?? 0), 0));
 
   const openCharacters = async () => {
@@ -77,6 +78,9 @@ export function TopBar() {
       </button>
       <button className={`icon ${candidateCount ? 'has-output' : ''}`} onClick={() => setGenerateOpen(true)} title={candidateCount ? `이미지 생성(5단계): 생성 후보 ${candidateCount}장. 묶음 생성·후보 비교` : '이미지 생성(5단계): 확정 컷을 묶어 AI 이미지 후보를 만들고 고름'}>
         <Icon name="sparkles" />
+      </button>
+      <button className="icon" onClick={() => setAssembleOpen(true)} title="원고 조립(6단계): 생성 후보를 세로 스트립으로 잇고 대사 말풍선을 얹어 PNG·슬라이스·PSD로 내보내기">
+        <Icon name="layers" />
       </button>
       <div className="sep" />
       <button className="icon" onClick={() => setSettingsOpen(true)} title="설정">
