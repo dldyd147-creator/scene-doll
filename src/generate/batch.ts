@@ -189,16 +189,105 @@ export interface SplitRect extends Rect {
   cutNumber: number;
 }
 
-/** 결과 이미지 크기가 요청과 달라도 격자 비율대로 칸(안쪽 영역)을 자른다 */
-export function splitRects(layout: GridLayout, resultW: number, resultH: number): SplitRect[] {
+// ---------- 격자 경계선 검출 ----------
+
+export interface GridLine {
+  /** 선 중심(결과 px). 못 찾으면 기대 위치 */
+  pos: number;
+  /** 선이 차지하는 구간 [start, end). 못 찾으면 둘 다 기대 위치 */
+  start: number;
+  end: number;
+  found: boolean;
+}
+
+export interface GridLines {
+  /** 세로 경계선 cols+1개(왼쪽 바깥 → 오른쪽 바깥) */
+  cols: GridLine[];
+  /** 가로 경계선 rows+1개(위 바깥 → 아래 바깥) */
+  rows: GridLine[];
+}
+
+/**
+ * 경계선 검출 기본값. 실제 결과(gpt-image-2.5, 칸 512px)에서 모델은 칸 경계에 4~5px 검은 선을 기대 위치 그대로 그렸다.
+ * 탐색 폭 = 칸 크기의 5%(최소 6px), 선 최대 두께 = 칸의 3%(최소 8px), 창의 중앙값보다 이만큼 어두우면 선으로 본다.
+ */
+export const LINE_DETECT = { searchRatio: 0.05, minSearch: 6, maxWidthRatio: 0.03, minMaxWidth: 8, darker: 40, pad: 1 } as const;
+
+/**
+ * 밝기 프로파일(열 또는 행마다의 평균 밝기 0~255)에서 기대 위치 근처의 어두운 선을 찾는다.
+ * 탐색 창 안의 중앙값보다 `darker` 이상 어두운 최저점을 선 중심으로 보고, 양옆으로 절반 기준보다 어두운 동안 구간을 넓힌다(최대 maxWidth).
+ */
+export function findGridLine(profile: number[], expected: number, search: number, maxWidth: number, darker: number = LINE_DETECT.darker): GridLine {
+  const n = profile.length;
+  const e = Math.max(0, Math.min(n, Math.round(expected)));
+  const none: GridLine = { pos: e, start: e, end: e, found: false };
+  if (n === 0) return none;
+  const lo = Math.max(0, e - search);
+  const hi = Math.min(n - 1, e + search);
+  if (lo > hi) return none;
+  const sorted = profile.slice(lo, hi + 1).sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  let m = lo;
+  for (let i = lo; i <= hi; i++) if (profile[i] < profile[m]) m = i;
+  if (profile[m] > median - darker) return none;
+  const limit = median - darker / 2;
+  let start = m;
+  let end = m + 1;
+  while (start > 0 && end - start < maxWidth && profile[start - 1] < limit) start--;
+  while (end < n && end - start < maxWidth && profile[end] < limit) end++;
+  return { pos: m, start, end, found: true };
+}
+
+/** 결과 격자의 열·행 밝기 프로파일에서 모든 칸 경계선(바깥 테두리 포함)을 찾는다 */
+export function gridLines(layout: GridLayout, colProfile: number[], rowProfile: number[]): GridLines {
+  const cw = (layout.cellW * colProfile.length) / layout.width;
+  const ch = (layout.cellH * rowProfile.length) / layout.height;
+  const params = (cell: number) => ({ search: Math.max(LINE_DETECT.minSearch, Math.round(cell * LINE_DETECT.searchRatio)), maxWidth: Math.max(LINE_DETECT.minMaxWidth, Math.round(cell * LINE_DETECT.maxWidthRatio)) });
+  const pc = params(cw);
+  const pr = params(ch);
+  return {
+    cols: Array.from({ length: layout.cols + 1 }, (_, i) => findGridLine(colProfile, i * cw, pc.search, pc.maxWidth)),
+    rows: Array.from({ length: layout.rows + 1 }, (_, i) => findGridLine(rowProfile, i * ch, pr.search, pr.maxWidth)),
+  };
+}
+
+/** 안쪽 경계선(바깥 테두리 제외) 검출 요약: 찾은 수 / 전체, 기대 위치와의 최대 편차(px). 안쪽 경계가 없으면 null */
+export function describeGridLines(layout: GridLayout, lines: GridLines, resultW: number, resultH: number): string | null {
+  const inner = [...lines.cols.slice(1, -1).map((l, i) => ({ l, e: ((i + 1) * layout.cellW * resultW) / layout.width })), ...lines.rows.slice(1, -1).map((l, i) => ({ l, e: ((i + 1) * layout.cellH * resultH) / layout.height }))];
+  if (!inner.length) return null;
+  const found = inner.filter((x) => x.l.found);
+  const shift = found.reduce((m, x) => Math.max(m, Math.abs((x.l.start + x.l.end) / 2 - x.e)), 0);
+  return `경계선 ${found.length}/${inner.length} 검출${found.length ? ` · 최대 편차 ${Math.round(shift)}px` : ' · 비율대로 자름'}`;
+}
+
+/**
+ * 결과 이미지 크기가 요청과 달라도 격자 비율대로 칸(안쪽 영역)을 자른다.
+ * 경계선 검출 결과(lines)가 있으면 찾은 선의 두께만큼(+여유 1px) 비켜 자른다 — 모델이 경계선을 칸 쪽으로 그려 넣기 때문.
+ */
+export function splitRects(layout: GridLayout, resultW: number, resultH: number, lines?: GridLines): SplitRect[] {
   const sx = resultW / layout.width;
   const sy = resultH / layout.height;
+  const pad = LINE_DETECT.pad;
   return layout.cells.map((c) => {
-    const x = Math.round(c.inner.x * sx);
-    const y = Math.round(c.inner.y * sy);
-    const x2 = Math.round((c.inner.x + c.inner.w) * sx);
-    const y2 = Math.round((c.inner.y + c.inner.h) * sy);
-    return { index: c.index, cutNumber: c.cutNumber, x, y, w: Math.max(1, Math.min(resultW, x2) - x), h: Math.max(1, Math.min(resultH, y2) - y) };
+    const col = (c.index - 1) % layout.cols;
+    const row = Math.floor((c.index - 1) / layout.cols);
+    const L = lines?.cols[col];
+    const R = lines?.cols[col + 1];
+    const T = lines?.rows[row];
+    const B = lines?.rows[row + 1];
+    // 칸 전체 영역(경계선 안쪽)
+    const cx0 = L?.found ? L.end + pad : Math.round(c.x * sx);
+    const cx1 = R?.found ? R.start - pad : Math.round((c.x + c.w) * sx);
+    const cy0 = T?.found ? T.end + pad : Math.round(c.y * sy);
+    const cy1 = B?.found ? B.start - pad : Math.round((c.y + c.h) * sy);
+    // 안쪽 영역(화면비가 다른 컷의 여백 제외)은 칸 안에서 비율로
+    const fx = (cx1 - cx0) / c.w;
+    const fy = (cy1 - cy0) / c.h;
+    const x = Math.round(cx0 + (c.inner.x - c.x) * fx);
+    const y = Math.round(cy0 + (c.inner.y - c.y) * fy);
+    const x2 = Math.round(cx0 + (c.inner.x - c.x + c.inner.w) * fx);
+    const y2 = Math.round(cy0 + (c.inner.y - c.y + c.inner.h) * fy);
+    return { index: c.index, cutNumber: c.cutNumber, x: Math.max(0, x), y: Math.max(0, y), w: Math.max(1, Math.min(resultW, x2) - Math.max(0, x)), h: Math.max(1, Math.min(resultH, y2) - Math.max(0, y)) };
   });
 }
 
@@ -221,7 +310,10 @@ export const PRESETS: Record<GenPreset, PresetDef> = {
     id: 'doll',
     label: '돌 우선',
     short: '포즈·카메라를 정확히 따름 · 원본 렌더 · 충실도 높게',
-    lines: ['각 칸의 돌 포즈(관절 각도·고개 방향), 카메라 앵글, 인물의 화면 위치와 크기를 정확히 그대로 따른다.', '돌과 다른 자세·구도로 바꾸지 않는다. 손·표정·옷 주름 같은 세부만 자연스럽게 채운다.'],
+    lines: [
+      '각 칸의 돌 포즈(관절 각도·고개 방향·손 위치), 카메라 앵글과 화각, 인물의 화면 위치와 크기를 정확히 그대로 따른다.',
+      '돌과 다른 자세·구도로 바꾸지 않는다. 다만 돌의 생김새(민머리·매끈한 얼굴·무표정·맨몸)는 따라 그리지 않는다: 머리카락·표정·옷은 캐릭터 설명과 레퍼런스대로 그리고, 손가락·옷 주름 같은 세부는 자연스럽게 채운다.',
+    ],
     input: 'render',
     fidelity: 'high',
   },
@@ -236,7 +328,7 @@ export const PRESETS: Record<GenPreset, PresetDef> = {
     id: 'prompt',
     label: '프롬프트 우선',
     short: '느슨한 참고 · 색 실루엣 입력 · 충실도 낮게',
-    lines: ['첨부한 격자는 인물의 배치와 대략의 자세만 알려 주는 색 실루엣이다. 느슨한 참고로만 쓰고, 아래 글 설명을 우선해 가장 설득력 있는 연출로 그린다.'],
+    lines: ['첨부한 격자는 인물의 배치와 대략의 자세만 알려 주는 색 실루엣이다. 실루엣의 색은 인물 구분용이지 옷 색이 아니다. 느슨한 참고로만 쓰고, 아래 글 설명을 우선해 가장 설득력 있는 연출로 그린다.'],
     input: 'silhouette',
     fidelity: 'low',
   },
@@ -320,7 +412,8 @@ export function buildBatchPrompt(inp: BatchPromptInput): string {
     L.push(`# ${inp.work.code}_${pad3(inp.episode)} 묶음 생성 — 컷 ${packages.map((p) => pad3(p.cut)).join('·')} (${layout.cols}×${layout.rows} 격자 ${n}칸)`);
     L.push(`첨부 1 \`${gridName}\`는 3D 돌로 짠 웹툰 콘티 컷 ${n}개를 ${layout.cols}×${layout.rows} 격자로 붙인 한 장이다(가로 ${layout.width}×세로 ${layout.height}px, 칸 ${layout.cellW}×${layout.cellH}px, 각 칸 왼쪽 위의 숫자가 칸 번호). 같은 격자 구성(${layout.cols}열 ${layout.rows}행, 같은 칸 경계)으로 완성된 웹툰 컷 ${n}개를 한 장에 그려라.${sizeText}`);
   }
-  L.push('돌은 색으로 캐릭터를 구분한다. 같은 색의 돌은 모든 칸에서 같은 인물이다.');
+  L.push('돌은 색으로 캐릭터를 구분한다. 같은 색의 돌은 모든 칸에서 같은 인물이다. 돌의 색은 인물을 구분하는 표시일 뿐이며 옷·피부·머리 색이 아니다.');
+  L.push('돌은 옷도 머리카락도 없는 미술용 데생 인형(마네킹)이다. 돌의 생김새는 외형 지시가 아니다: 인물은 옷을 입고 머리카락이 있는 모습으로, 캐릭터 설명·레퍼런스대로 그린다(설명이 없으면 상황에 맞는 평범한 옷과 머리 모양).');
   L.push('');
   if (n > 1) {
     L.push('## 칸 ↔ 컷');
@@ -368,7 +461,10 @@ export function buildBatchPrompt(inp: BatchPromptInput): string {
   }
   L.push('');
   L.push('## 규칙');
-  if (n > 1) L.push('- 격자 구성(열·행·칸 경계)을 유지하고 칸을 합치거나 나누지 않는다. 각 칸은 독립된 한 컷으로 완성한다.');
+  if (n > 1) {
+    L.push('- 격자 구성(열·행·칸 경계)을 유지하고 칸을 합치거나 나누지 않는다. 각 칸은 독립된 한 컷으로 완성한다.');
+    L.push('- 칸 사이 경계선은 원본과 같은 자리에 가는 검은 선으로 그대로 둔다. 어느 칸의 그림도 경계선을 넘지 않는다.');
+  }
   L.push(`- ${n > 1 ? '칸 번호 숫자, ' : ''}돌의 십자선, 회색 여백은 그리지 않는다(여백은 컷 바깥이다).`);
   L.push('- 같은 색의 돌은 모든 칸에서 같은 인물이다. 레퍼런스가 있는 캐릭터는 얼굴·머리 모양·복장을 레퍼런스에 맞추고, 없는 돌은 위 지시대로 임의의 인물로 그리되 모든 칸에서 일관되게 유지한다.');
   L.push('- 화면 밖 인물은 그리지 않는다. 배경은 메모·지문을 따르고, 없으면 단순하게 둔다.');

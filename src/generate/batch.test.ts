@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCut } from '../model/defaults';
 import type { CutPackage, PackageCharacter } from '../ui/packager';
-import { buildBatchPrompt, chunkSizes, colorTable, customSize, descriptionLines, gridFor, groupCuts, layoutGrid, nearestFixedSize, nextCandidateIndex, requestSize, SIZE_LIMITS, splitRects } from './batch';
+import { buildBatchPrompt, chunkSizes, colorTable, customSize, describeGridLines, descriptionLines, findGridLine, gridFor, gridLines, groupCuts, layoutGrid, nearestFixedSize, nextCandidateIndex, requestSize, SIZE_LIMITS, splitRects } from './batch';
 
 function cut(number: number, tags: string[] = [], aspect = 1.5) {
   const c = createCut(number);
@@ -160,6 +160,41 @@ describe('결과 분할', () => {
     const rects = splitRects(L, 2000, 2000);
     expect(rects[0]).toMatchObject({ x: 0, y: 500, w: 1000, h: 1000 });
     expect(rects[1]).toMatchObject({ x: 1000, y: 0, w: 1000, h: 2000 });
+  });
+
+  it('경계선 검출: 기대 위치 근처의 어두운 선을 찾고 두께를 잰다', () => {
+    const profile = Array<number>(1024).fill(150);
+    for (let x = 514; x < 518; x++) profile[x] = 50; // 기대 512에서 2px 밀린 4px 선
+    expect(findGridLine(profile, 512, 25, 15)).toEqual({ pos: 514, start: 514, end: 518, found: true });
+    expect(findGridLine(Array<number>(1024).fill(150), 512, 25, 15).found).toBe(false);
+    const far = Array<number>(1024).fill(150);
+    for (let x = 560; x < 564; x++) far[x] = 50; // 탐색 창(±25) 밖의 선은 무시
+    expect(findGridLine(far, 512, 25, 15).found).toBe(false);
+  });
+
+  it('찾은 선의 두께만큼(+1px) 비켜 자르고, 못 찾은 경계는 비율대로 자른다', () => {
+    const L = layoutGrid([1, 2, 3, 4].map((n) => ({ number: n, aspect: 1.5 })), 512); // 1024×1536
+    const cols = Array<number>(1024).fill(160);
+    for (let x = 510; x < 514; x++) cols[x] = 40; // 세로 경계선: 512 ± 2
+    const rows = Array<number>(1536).fill(160);
+    for (let y = 771; y < 775; y++) rows[y] = 40; // 가로 경계선: 768에서 5px 밀림
+    const lines = gridLines(L, cols, rows);
+    expect(lines.cols.map((l) => l.found)).toEqual([false, true, false]);
+    expect(lines.rows.map((l) => l.found)).toEqual([false, true, false]);
+    const rects = splitRects(L, 1024, 1536, lines);
+    expect(rects[0]).toMatchObject({ x: 0, y: 0, w: 509, h: 770 });
+    expect(rects[3]).toMatchObject({ x: 515, y: 776, w: 509, h: 760 });
+    expect(describeGridLines(L, lines, 1024, 1536)).toBe('경계선 2/2 검출 · 최대 편차 5px');
+    expect(describeGridLines(layoutGrid([{ number: 1, aspect: 1.5 }], 512), gridLines(layoutGrid([{ number: 1, aspect: 1.5 }], 512), cols.slice(0, 512), rows.slice(0, 768)), 512, 768)).toBeNull();
+  });
+
+  it('결과가 요청보다 작아도 기대 경계는 결과 픽셀 기준으로 찾는다', () => {
+    const L = layoutGrid([1, 2].map((n) => ({ number: n, aspect: 1.5 })), 1024); // 2048×1536
+    const cols = Array<number>(1024).fill(200);
+    for (let x = 511; x < 514; x++) cols[x] = 30;
+    const lines = gridLines(L, cols, Array<number>(768).fill(200));
+    expect(lines.cols[1]).toMatchObject({ start: 511, end: 514, found: true });
+    expect(splitRects(L, 1024, 768, lines)[1]).toMatchObject({ x: 515, y: 0, w: 509, h: 768 });
   });
 });
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Engine } from '../engine/Engine';
 import { PRESET_ORDER, PRESETS } from '../generate/batch';
-import { engineFor, GEN_ERROR_LABEL } from '../generate/engine';
+import { engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
 import { disposeBatches, disposeOutcomes, prepareBatches, runBatches, type BatchOutcome, type PreparedBatch, type Progress } from '../generate/runner';
 import type { Cut } from '../model/types';
 import type { GenPreset, GenSizeMode } from '../state/settings';
@@ -353,6 +353,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                 {outcomes.map((o) => (
                   <div key={o.batchId}>
                     컷 {o.cuts.map(pad3).join('·')}: {o.ok ? <span className="gen-status ok">완료</span> : <span className="gen-status fail">{GEN_ERROR_LABEL[o.errorKind ?? 'request']}</span>} {o.error && <span className="muted">{o.error}</span>}
+                    {o.ok && <span className="muted"> {[o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ')}</span>}
                   </div>
                 ))}
               </div>
@@ -410,6 +411,15 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
               완료: 묶음 {outcomes.filter((o) => o.ok).length}/{outcomes.length} 성공 · 새 후보 {[...lastOk.values()].reduce((a, b) => a + b, 0)}장 → <code>{folder}</code>
               {lastFailed.size ? <span style={{ color: 'var(--danger)' }}> · 실패 컷 {lastFailed.size}</span> : null}
             </div>
+            {outcomes.some((o) => o.usage || o.boundary || o.error) && (
+              <div className="small muted">
+                {outcomes.map((o) => (
+                  <div key={o.batchId}>
+                    컷 {o.cuts.map(pad3).join('·')}: {o.ok ? [o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ') || '완료' : `${GEN_ERROR_LABEL[o.errorKind ?? 'request']}${o.error ? `: ${o.error}` : ''}`}
+                  </div>
+                ))}
+              </div>
+            )}
             {outcomes.some((o) => o.resultUrls.length) && (
               <details open>
                 <summary className="small">결과 격자(자르기 전)</summary>

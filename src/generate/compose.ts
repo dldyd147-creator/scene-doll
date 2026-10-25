@@ -1,4 +1,4 @@
-import { splitRects, type GridLayout } from './batch';
+import { describeGridLines, gridLines, splitRects, type GridLayout, type GridLines } from './batch';
 
 /** 격자 합성·분할(브라우저 캔버스). 순수 좌표 계산은 batch.ts에 있다 */
 
@@ -77,19 +77,56 @@ export function composeGrid(layout: GridLayout, sources: ReadonlyMap<number, Can
   return canvas;
 }
 
-/** 결과 격자 한 장을 칸(안쪽 영역)대로 잘라 컷 번호 → PNG로 돌려준다 */
-export async function splitResult(result: Blob, layout: GridLayout): Promise<Map<number, Blob>> {
+/** 열마다·행마다의 평균 밝기(0~255). 경계선 검출용 — 한 번의 픽셀 순회로 둘 다 구한다 */
+export function luminanceProfiles(src: CanvasImageSource & { width: number; height: number }): { cols: number[]; rows: number[] } {
+  const w = src.width;
+  const h = src.height;
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(src, 0, 0);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const cols = new Float64Array(w);
+  const rows = new Float64Array(h);
+  let i = 0;
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++, i += 4) {
+      const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      cols[x] += l;
+      rowSum += l;
+    }
+    rows[y] = rowSum / w;
+  }
+  return { cols: Array.from(cols, (v) => v / h), rows: Array.from(rows) };
+}
+
+export interface SplitOutcome {
+  parts: Map<number, Blob>;
+  lines: GridLines;
+  /** 검출 요약(안쪽 경계가 있을 때) */
+  note: string | null;
+}
+
+/**
+ * 결과 격자 한 장을 칸(안쪽 영역)대로 잘라 컷 번호 → PNG로 돌려준다.
+ * 모델이 칸 경계에 그려 넣은 선(실제 결과: 4~5px 검은 선)을 찾아 그 두께만큼 비켜 자른다. 선을 못 찾은 경계는 비율대로.
+ */
+export async function splitResult(result: Blob, layout: GridLayout): Promise<SplitOutcome> {
   const bmp = await createImageBitmap(result);
   try {
-    const out = new Map<number, Blob>();
-    for (const r of splitRects(layout, bmp.width, bmp.height)) {
+    const profiles = luminanceProfiles(bmp);
+    const lines = gridLines(layout, profiles.cols, profiles.rows);
+    const parts = new Map<number, Blob>();
+    for (const r of splitRects(layout, bmp.width, bmp.height, lines)) {
       const c = document.createElement('canvas');
       c.width = r.w;
       c.height = r.h;
       c.getContext('2d')!.drawImage(bmp, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
-      out.set(r.cutNumber, await canvasToBlob(c));
+      parts.set(r.cutNumber, await canvasToBlob(c));
     }
-    return out;
+    return { parts, lines, note: describeGridLines(layout, lines, bmp.width, bmp.height) };
   } finally {
     bmp.close();
   }

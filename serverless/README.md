@@ -22,13 +22,21 @@ serverless/
 ```bash
 cd serverless/openai-image
 npm install
-npx wrangler login                      # 브라우저로 Cloudflare 로그인
-npx wrangler secret put OPENAI_API_KEY  # OpenAI 키(sk-…) 붙여 넣기 — 저장소·설정 어디에도 적지 않는다
-npx wrangler secret put ACCESS_TOKEN    # 길고 무작위한 문자열(예: openssl rand -hex 24). 씬 돌 설정에 같은 값을 넣는다
-npx wrangler deploy
+npx wrangler login                      # 브라우저가 열리면 Cloudflare 로그인 → Allow
+npx wrangler deploy                     # 처음이면 workers.dev 서브도메인 등록을 묻는다 → y → 소문자 영문 이름(예: GitHub ID) 입력
+npx wrangler secret put OPENAI_API_KEY  # OpenAI 키(sk-…) 붙여 넣기(화면에 안 보임) — 저장소·설정 어디에도 적지 않는다
+node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"   # 접근 토큰 만들기(48자). 복사해 둔다
+npx wrangler secret put ACCESS_TOKEN    # 위 문자열 붙여 넣기. 씬 돌 설정에 같은 값을 넣는다
 ```
 
-배포가 끝나면 `https://scene-doll-image.<계정>.workers.dev` 주소가 나온다. 브라우저에서 그 주소를 열면 `{"ok":true,"model":"gpt-image-2.5-sunburst","keyConfigured":true,"tokenRequired":true}`가 보여야 한다.
+배포가 끝나면 `https://scene-doll-image.<서브도메인>.workers.dev` 주소가 나온다. 브라우저에서 그 주소를 열면 `{"ok":true,"model":"gpt-image-2.5-sunburst","keyConfigured":true,"tokenRequired":true}`가 보여야 한다. 비밀값은 배포 뒤에 넣어도 바로 적용된다(다시 배포하지 않아도 됨).
+
+실제 배포(2026-10-25)에서 겪은 것:
+
+- 서브도메인 질문에 빈 값이나 띄어쓰기가 있는 이름을 넣으면 "is invalid"가 반복된다. 소문자·숫자·하이픈만.
+- 새 서브도메인은 TLS 인증서가 붙기까지 몇 분 걸린다. 그동안 curl·브라우저가 "SSL/TLS 보안 채널" 오류를 낸다. 기다렸다 다시 연다.
+- `npm install`은 `@cloudflare/workers-types` v5가 필요하다(wrangler 4.152 이상의 peer). npm이 `workerd` 설치 스크립트를 막았다고 경고하면 `wrangler dev`(로컬 실행)에만 영향이 있고 `deploy`·`secret put`은 상관없다.
+- 배포 전 점검: `npx wrangler deploy --dry-run --outdir /tmp/x` (로그인 없이 번들만 확인).
 
 `wrangler.toml`의 `[vars]`:
 
@@ -56,7 +64,7 @@ npx wrangler deploy
 
 1. 엔진을 **원격(서버리스 함수)**로.
 2. 함수 주소에 배포 URL(Worker는 루트 `/`, Vercel은 `/api/openai-image`).
-3. 함수 접근 토큰에 `ACCESS_TOKEN`과 같은 값. (OpenAI 키가 아니다. 이 값은 브라우저 설정(localStorage)에 저장된다.)
+3. 함수 접근 토큰에 `ACCESS_TOKEN`과 같은 값. (OpenAI 키가 아니다. 이 값은 브라우저 설정(localStorage)에 저장되므로 브라우저·PC마다 다시 넣는다.)
 4. 상단 바 반짝 아이콘 → 묶음 준비 → 프롬프트 확인 → 보내기.
 
 연결을 확인하기 전에는 엔진을 **모의**로 두고 흐름만 돌려 볼 수 있다(네트워크 없음, 돌 격자에 MOCK 표시).
@@ -94,7 +102,7 @@ curl -s -X POST "https://scene-doll-image.<계정>.workers.dev/" \
 
 ## 5. 비용·크기·시간 주의
 
-- **과금은 토큰 단위**(2026-10 문서, gpt-image-2 / 2.5 계열): 이미지 출력 $30/백만 토큰, 이미지 입력 $8/백만 토큰, 텍스트 입력 $5/백만 토큰. 토큰 수는 크기·품질에 비례하므로 응답의 `usage`로 확인한다. 참고용 옛 단가(gpt-image-2, 1024×1536 한 장): low ≈ $0.005, medium ≈ $0.04, high ≈ $0.17. 격자 한 장은 컷 4개 분량이고 레퍼런스 입력 토큰이 더해진다. 처음에는 `quality=low`·칸 512px로 흐름을 확인하고 올린다.
+- **과금은 토큰 단위**(2026-10 문서, gpt-image-2 / 2.5 계열): 이미지 출력 $30/백만 토큰, 이미지 입력 $8/백만 토큰, 텍스트 입력 $5/백만 토큰. 토큰 수는 크기·품질에 비례하므로 응답의 `usage`로 확인한다(씬 돌 완료 화면에 표시됨). 실측(2026-10-25, gpt-image-2.5-sunburst, 2×2 격자 1024×1536, 레퍼런스 없음, 품질 medium): 입력 2,734 토큰(그중 이미지 1,536) · 출력 343 토큰 → 묶음 한 번 약 3센트. 응답은 30초 안팎. 참고용 옛 단가(gpt-image-2, 1024×1536 한 장): low ≈ $0.005, medium ≈ $0.04, high ≈ $0.17. 격자 한 장은 컷 4개 분량이고 레퍼런스 입력 토큰이 더해진다. 처음에는 `quality=low`·칸 512px로 흐름을 확인하고 올린다.
 - **크기 규칙**(gpt-image-2 계열): 가로·세로 16의 배수, 비율 3:1 이내, 변 ≤ 3840px, 총 픽셀 655,360~8,294,400(2560×1440 초과는 실험적). 씬 돌의 '격자 비율' 모드가 이 규칙 안으로 맞춘다. gpt-image-1.5는 1024×1024·1024×1536·1536×1024·auto만 받으므로 '고정 3종' 모드를 쓴다.
 - **입력**: 최대 16장(격자 1 + 선화·마스크 0~2 + 레퍼런스), 한 장 50MB 미만. 레퍼런스는 입력 토큰을 늘린다(캐릭터당 1장이 기본).
 - **시간**: 복잡한 요청은 2분까지 걸릴 수 있다. Worker는 응답을 기다리는 시간이 CPU 시간에 들지 않지만, Vercel은 `maxDuration` 상한을 넘기면 끊긴다.

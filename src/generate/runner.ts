@@ -11,7 +11,7 @@ import { buildCutPackage, characterFolders, safeFolderName, type CutPackage } fr
 import { saveNow } from '../ui/save';
 import { batchKey, buildBatchPrompt, groupCuts, layoutGrid, nextCandidateIndex, PRESETS, requestSize, type CutBatch, type GridLayout, type PromptAttachment } from './batch';
 import { canvasToBlob, composeGrid, onWhite, splitResult } from './compose';
-import { GenError, type GenEngine, type GenErrorKind, type GenInputImage } from './engine';
+import { GenError, type GenEngine, type GenErrorKind, type GenInputImage, type GenUsage } from './engine';
 
 /**
  * 묶음 생성 흐름(브라우저 쪽 조립):
@@ -194,6 +194,11 @@ export interface BatchOutcome {
   resultUrls: string[];
   /** 컷 번호 → 이번에 저장한 후보 경로 */
   saved: Record<number, string[]>;
+  /** API가 돌려준 토큰 사용량(과금 확인용)·모델 */
+  usage?: GenUsage;
+  model?: string;
+  /** 경계선 검출 요약(결과마다 한 줄, 묶음이 2칸 이상일 때) */
+  boundary?: string;
 }
 
 export interface RunOptions {
@@ -224,12 +229,16 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
     try {
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 보내는 중…` });
       const result = await gen.generate({ prompt: b.prompt, images: b.images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, signal: opts.signal });
+      outcome.usage = result.usage;
+      outcome.model = result.model;
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 분할·저장` });
       const existing = new Map<number, string[]>();
       for (const cut of b.cuts) existing.set(cut.number, await repo.listGenerated(work.code, episode.number, cut.number).catch(() => []));
+      const notes: string[] = [];
       for (const img of result.images) {
         outcome.resultUrls.push(URL.createObjectURL(img));
-        const parts = await splitResult(img, b.layout);
+        const { parts, note } = await splitResult(img, b.layout);
+        if (note) notes.push(note);
         for (const cut of b.cuts) {
           const blob = parts.get(cut.number);
           if (!blob) continue;
@@ -241,6 +250,7 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
         }
       }
       for (const cut of b.cuts) useStore.getState().addGeneratedImages(cut.number, outcome.saved[cut.number] ?? []);
+      if (notes.length) outcome.boundary = notes.length === 1 ? notes[0] : notes.map((n, k) => `${k + 1}: ${n}`).join(' / ');
       outcome.ok = Object.keys(outcome.saved).length > 0;
       if (!outcome.ok) {
         outcome.errorKind = 'server';

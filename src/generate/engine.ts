@@ -30,10 +30,39 @@ export interface GenRequest {
   signal?: AbortSignal;
 }
 
+/** OpenAI Images API usage(토큰 과금 모델). 그대로 보관하고 표시만 한다 */
+export interface GenUsage {
+  input_tokens?: number;
+  output_tokens?: number;
+  total_tokens?: number;
+  input_tokens_details?: { text_tokens?: number; image_tokens?: number };
+  [k: string]: unknown;
+}
+
 export interface GenResult {
   images: Blob[];
   model?: string;
-  usage?: Record<string, unknown>;
+  usage?: GenUsage;
+}
+
+/** usage → '토큰 입력 1,234(이미지 1,000) · 출력 6,240'. 숫자가 없으면 null */
+export function formatUsage(usage: GenUsage | undefined): string | null {
+  if (!usage) return null;
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('en-US') : null);
+  const parts: string[] = [];
+  const input = n(usage.input_tokens);
+  if (input) {
+    const img = n(usage.input_tokens_details?.image_tokens);
+    parts.push(`입력 ${input}${img ? `(이미지 ${img})` : ''}`);
+  }
+  const output = n(usage.output_tokens);
+  if (output) parts.push(`출력 ${output}`);
+  if (!parts.length) {
+    const total = n(usage.total_tokens);
+    if (!total) return null;
+    parts.push(`합계 ${total}`);
+  }
+  return `토큰 ${parts.join(' · ')}`;
 }
 
 /** refused: 생성 거부(모더레이션) · auth: 접근 토큰 · request: 요청 형식 · network · server · cancelled · config: 설정 부족 */
@@ -213,7 +242,7 @@ export class RemoteEngine implements GenEngine {
     const images: Blob[] = [];
     for (const d of data) if (d.b64_json) images.push(base64ToBlob(d.b64_json, mime));
     if (!images.length) throw new GenError('server', '응답 이미지가 base64(b64_json)가 아닙니다');
-    return { images, model: (body as { model?: string }).model, usage: (body as { usage?: Record<string, unknown> }).usage };
+    return { images, model: (body as { model?: string }).model, usage: (body as { usage?: GenUsage }).usage };
   }
 }
 
