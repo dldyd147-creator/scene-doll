@@ -68,6 +68,9 @@ returns boolean language sql stable security definer set search_path = public as
   select auth.uid() is not null and (
     public.work_code_of(p) is null
     or public.my_role(public.work_code_of(p)) is not null
+    -- 아직 아무도 없는 작품(처음 만드는 중)도 읽을 수 있어야 한다. 앱은 upsert(on conflict do update)로 쓰는데,
+    -- PostgreSQL은 이때 select 정책도 insert 검사에 넣는다. 트리거가 admin을 넣어도 같은 문장 안에서는 보이지 않으므로 이 줄이 없으면 첫 파일 쓰기가 막힌다.
+    or not exists (select 1 from public.work_members where work_code = public.work_code_of(p))
   )
 $$;
 
@@ -145,6 +148,60 @@ drop policy if exists log_insert on public.work_log;
 create policy log_insert on public.work_log for insert
   with check (auth.uid() is not null and user_id = auth.uid());
 
+-- ---------- 구성원 관리(앱의 작품 관리 화면에서 admin이 이메일로 추가·역할 변경·제거) ----------
+
+-- 작품 구성원 목록(이메일 포함). 그 작품의 구성원만 볼 수 있다(아니면 빈 목록)
+create or replace function public.work_members_of(code text)
+returns table (user_id uuid, email text, role text, added_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select m.user_id, u.email::text, m.role, m.added_at
+  from public.work_members m
+  join auth.users u on u.id = m.user_id
+  where m.work_code = code and public.my_role(code) is not null
+  order by case m.role when 'admin' then 0 when 'write' then 1 else 2 end, m.added_at
+$$;
+
+-- 이메일로 구성원 추가(이미 있으면 역할만 바꿈). 그 작품의 admin만. 추가된 사람의 id를 돌려준다
+create or replace function public.add_work_member(code text, member_email text, member_role text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare uid uuid;
+begin
+  if public.my_role(code) is distinct from 'admin' then
+    raise exception '이 작품의 관리(admin) 역할만 구성원을 바꿀 수 있습니다';
+  end if;
+  if member_role not in ('read', 'write', 'admin') then
+    raise exception '역할은 read / write / admin 중 하나입니다';
+  end if;
+  select id into uid from auth.users where lower(email) = lower(trim(member_email)) limit 1;
+  if uid is null then
+    raise exception '그 이메일의 계정이 없습니다. Supabase의 Authentication → Users에서 먼저 계정을 만드세요';
+  end if;
+  if member_role <> 'admin'
+     and exists (select 1 from public.work_members where work_code = code and user_id = uid and role = 'admin')
+     and (select count(*) from public.work_members where work_code = code and role = 'admin') <= 1 then
+    raise exception '마지막 관리 역할은 내릴 수 없습니다. 먼저 다른 사람을 관리로 올리세요';
+  end if;
+  insert into public.work_members (work_code, user_id, role) values (code, uid, member_role)
+  on conflict (work_code, user_id) do update set role = excluded.role;
+  return uid;
+end
+$$;
+
+-- 구성원 빼기. admin만. 마지막 admin은 뺄 수 없다
+create or replace function public.remove_work_member(code text, member_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_role(code) is distinct from 'admin' then
+    raise exception '이 작품의 관리(admin) 역할만 구성원을 바꿀 수 있습니다';
+  end if;
+  if exists (select 1 from public.work_members where work_code = code and user_id = member_id and role = 'admin')
+     and (select count(*) from public.work_members where work_code = code and role = 'admin') <= 1 then
+    raise exception '마지막 관리 역할은 뺄 수 없습니다. 먼저 다른 사람을 관리로 올리세요';
+  end if;
+  delete from public.work_members where work_code = code and user_id = member_id;
+end
+$$;
+
 -- ---------- 파일 저장소(이진 파일) ----------
 
 insert into storage.buckets (id, name, public)
@@ -168,7 +225,7 @@ drop policy if exists scene_doll_delete on storage.objects;
 create policy scene_doll_delete on storage.objects for delete
   using (bucket_id = 'scene-doll' and auth.uid() is not null);
 
--- ---------- 실시간 알림(씬 저장·잠금) ----------
+-- ---------- 실시간 알림(파일·잠금·구성원·작업 로그) ----------
 
 do $$
 begin
@@ -177,6 +234,12 @@ begin
   end if;
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'episode_locks') then
     alter publication supabase_realtime add table public.episode_locks;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'work_members') then
+    alter publication supabase_realtime add table public.work_members;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'work_log') then
+    alter publication supabase_realtime add table public.work_log;
   end if;
 end
 $$;

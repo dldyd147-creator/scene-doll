@@ -4,6 +4,7 @@ import { HybridBackend, isRemotePath } from './hybridBackend';
 import { canTake, episodeLockPath, isStale } from './locks';
 import { childrenOf } from './remoteBackend';
 import { copyTree, isTextPath, walk } from './sync';
+import { isEmail } from './members';
 
 /** 시험용 메모리 백엔드 */
 class MemoryBackend implements StorageBackend {
@@ -104,5 +105,14 @@ describe('올리기·내려받기', () => {
     const p2 = await copyTree(src, dst, '작품/ACS', { overwrite: true });
     expect(p2.copied).toBe(3);
     expect(await dst.readText('작품/ACS/작품.json')).toBe('{"code":"ACS"}');
+  });
+});
+
+describe('구성원', () => {
+  it('이메일 꼴만 추가 버튼이 켜진다(앞뒤 공백은 무시)', () => {
+    expect(isEmail(' a@b.co ')).toBe(true);
+    expect(isEmail('a@b')).toBe(false);
+    expect(isEmail('a b@c.d')).toBe(false);
+    expect(isEmail('')).toBe(false);
   });
 });

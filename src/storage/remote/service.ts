@@ -2,11 +2,12 @@ import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { storage } from '..';
 import { useLibrary } from '../../ui/library';
-import { currentUser, getClient, loadShareConfig, normalizeShareUrl, onAuth, saveShareConfig, signIn, signOut } from './client';
-import { acquireLock, episodeLockPath, heartbeatLock, listLocks, LOCK_HEARTBEAT_MS, releaseLock } from './locks';
+import { currentSession, getClient, loadShareConfig, normalizeShareUrl, onAuth, saveShareConfig, signIn, signOut } from './client';
+import { acquireLock, episodeLockPath, heartbeatLock, listLocks, LOCK_HEARTBEAT_MS, releaseLock, releaseLockKeepalive } from './locks';
 import { RemoteBackend } from './remoteBackend';
 import { appendLog, listLog } from './worklog';
-import type { EpisodeLock, LogAction, ShareConfig, ShareUser, WorkLogEntry } from './types';
+import { addMember, listMembers, removeMember, ROLE_LABEL } from './members';
+import type { EpisodeLock, LogAction, MemberRole, ShareConfig, ShareUser, WorkLogEntry, WorkMemberInfo } from './types';
 
 /**
  * 공유 저장소 세션: 접속 정보·로그인 상태·회차 잠금·작업 로그·실시간 알림.
@@ -25,6 +26,13 @@ export interface ShareState {
   locks: Record<string, EpisodeLock>;
   watchedWork: string | null;
   log: WorkLogEntry[] | null;
+  /** 작업 로그 칸이 보고 있는 작품(null=전체). 로그가 늘면 이걸로 다시 읽는다 */
+  logWork: string | null;
+  /** 작업 로그 칸이 화면에 있는가(없으면 자동 갱신을 건너뛴다) */
+  logWatched: boolean;
+  /** 공유 저장소의 작품 파일·구성원이 바뀔 때마다 1씩 는다 → 시작 화면이 목록을 다시 읽는다 */
+  worksVersion: number;
+  membersVersion: number;
 }
 
 export const useShare = create<ShareState>()(() => ({
@@ -37,11 +45,37 @@ export const useShare = create<ShareState>()(() => ({
   locks: {},
   watchedWork: null,
   log: null,
+  logWork: null,
+  logWatched: false,
+  worksVersion: 0,
+  membersVersion: 0,
 }));
 
 let unsubAuth: (() => void) | null = null;
 let heartbeat = 0;
 let channel: RealtimeChannel | null = null;
+/** 지금 세션의 접근 토큰(창을 닫을 때 잠금을 푸는 keepalive 요청용). 토큰 갱신 때마다 바뀐다 */
+let accessToken: string | null = null;
+let worksTimer = 0;
+let membersTimer = 0;
+let logTimer = 0;
+
+/** 작품 목록·구성원·로그 갱신은 잠깐 모아서(연달아 오는 알림을 한 번으로) */
+function bumpWorks(): void {
+  window.clearTimeout(worksTimer);
+  worksTimer = window.setTimeout(() => useShare.setState((s) => ({ worksVersion: s.worksVersion + 1 })), 400);
+}
+function bumpMembers(): void {
+  window.clearTimeout(membersTimer);
+  membersTimer = window.setTimeout(() => useShare.setState((s) => ({ membersVersion: s.membersVersion + 1 })), 400);
+}
+function scheduleLogRefresh(): void {
+  window.clearTimeout(logTimer);
+  logTimer = window.setTimeout(() => {
+    const s = useShare.getState();
+    if (s.logWatched && s.status === 'signedIn') void refreshLog(s.logWork);
+  }, 400);
+}
 
 function client(): SupabaseClient | null {
   return getClient(useShare.getState().config);
@@ -57,10 +91,12 @@ export function isReadOnly(): boolean {
 export async function initShare(): Promise<void> {
   const sb = client();
   if (!sb) return;
-  const user = await currentUser(sb).catch(() => null);
+  const { user, token } = await currentSession(sb).catch(() => ({ user: null, token: null }));
+  accessToken = token;
   if (user) await activate(sb, user);
   unsubAuth?.();
-  unsubAuth = onAuth(sb, (u) => {
+  unsubAuth = onAuth(sb, (u, t) => {
+    accessToken = t;
     const cur = useShare.getState();
     if (u && cur.status !== 'signedIn') void activate(sb, u);
     else if (!u && cur.status === 'signedIn') deactivate();
@@ -108,14 +144,17 @@ export async function loginShare(email: string, password: string): Promise<boole
   const sb = client();
   if (!sb) return false;
   useShare.setState({ busy: true, error: null });
-  const { user, error } = await signIn(sb, email, password);
+  const { user, token, error } = await signIn(sb, email, password);
   if (error || !user) {
     useShare.setState({ busy: false, error: error ?? '로그인 실패' });
     return false;
   }
+  accessToken = token;
   await activate(sb, user);
   useShare.setState({ busy: false });
-  void appendLog(sb, user, { action: 'login' });
+  // 로그를 남긴 뒤 칸을 다시 읽는다(칸이 먼저 읽으면 내 로그인이 안 보이던 것)
+  await appendLog(sb, user, { action: 'login' });
+  scheduleLogRefresh();
   return true;
 }
 
@@ -190,11 +229,12 @@ export function logAction(action: LogAction | string, target?: string | null, de
   const sb = client();
   const user = useShare.getState().user;
   if (!sb || !user) return;
-  void appendLog(sb, user, { workCode, action, target, detail });
+  void appendLog(sb, user, { workCode, action, target, detail }).then(() => scheduleLogRefresh());
 }
 
 export async function refreshLog(workCode: string | null): Promise<void> {
   const sb = client();
+  useShare.setState({ logWork: workCode });
   if (!sb || useShare.getState().status !== 'signedIn') return;
   try {
     useShare.setState({ log: await listLog(sb, workCode) });
@@ -203,7 +243,37 @@ export async function refreshLog(workCode: string | null): Promise<void> {
   }
 }
 
-// ---------- 실시간: 공용 라이브러리가 바뀌면 다시 읽고, 잠금이 바뀌면 목록 갱신 ----------
+/** 작업 로그 칸이 화면에 있는 동안만 자동 갱신한다(칸이 붙을 때 true, 떨어질 때 false) */
+export function watchLog(on: boolean): void {
+  useShare.setState({ logWatched: on });
+}
+
+// ---------- 구성원(작품별 권한) ----------
+
+export async function listWorkMembers(code: string): Promise<WorkMemberInfo[]> {
+  const sb = client();
+  if (!sb || useShare.getState().status !== 'signedIn') return [];
+  return listMembers(sb, code);
+}
+
+/** 이메일로 구성원 추가(이미 있으면 역할만 바꿈). 실패하면 서버의 이유를 그대로 던진다 */
+export async function addWorkMember(code: string, email: string, role: MemberRole): Promise<void> {
+  const sb = client();
+  if (!sb) throw new Error('로그인이 필요합니다');
+  await addMember(sb, code, email, role);
+  logAction('member', `${email.trim()} → ${ROLE_LABEL[role]}`, null, code);
+  bumpMembers();
+}
+
+export async function removeWorkMember(code: string, userId: string, email?: string | null): Promise<void> {
+  const sb = client();
+  if (!sb) throw new Error('로그인이 필요합니다');
+  await removeMember(sb, code, userId);
+  logAction('member', `${email ?? userId} 뺌`, null, code);
+  bumpMembers();
+}
+
+// ---------- 실시간: 공용 라이브러리가 바뀌면 다시 읽고, 작품 파일·잠금·구성원·로그가 바뀌면 시작 화면 갱신 ----------
 
 function startRealtime(sb: SupabaseClient): void {
   stopRealtime();
@@ -213,7 +283,8 @@ function startRealtime(sb: SupabaseClient): void {
       const row = (payload.new ?? payload.old) as { path?: string } | null;
       const path = row?.path ?? '';
       const lib = useLibrary.getState();
-      if (path.startsWith('공용/씬/')) void lib.loadScenes(true);
+      if (path.startsWith('작품/')) bumpWorks();
+      else if (path.startsWith('공용/씬/')) void lib.loadScenes(true);
       else if (path.startsWith('공용/포즈/')) void lib.loadPoses(true);
       else if (path.startsWith('공용/소품/')) void lib.loadProps(true);
       else if (path.startsWith('공용/손포즈/')) void lib.loadHandPoses(true);
@@ -222,6 +293,11 @@ function startRealtime(sb: SupabaseClient): void {
       const w = useShare.getState().watchedWork;
       if (w) void watchWorkLocks(w);
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'work_members' }, () => {
+      bumpWorks();
+      bumpMembers();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'work_log' }, () => scheduleLogRefresh())
     .subscribe();
 }
 
@@ -232,9 +308,16 @@ function stopRealtime(): void {
   }
 }
 
+/** 창을 닫거나 새로 고칠 때: 내가 쥔 잠금을 keepalive 요청으로 푼다(응답을 기다릴 수 없다). 못 풀어도 5분 뒤 죽은 잠금으로 넘어간다 */
+function unlockOnUnload(): void {
+  const s = useShare.getState();
+  stopHeartbeat();
+  if (!s.user || !s.lock || !s.lock.mine) return;
+  useShare.setState({ lock: null });
+  if (s.config && accessToken) releaseLockKeepalive(s.config, accessToken, s.lock.path, s.user.id);
+}
+
 if (typeof window !== 'undefined') {
-  window.addEventListener('beforeunload', () => {
-    // 창을 닫을 때 잠금을 풀어 본다(못 풀어도 5분 뒤 죽은 잠금으로 넘겨받을 수 있다)
-    void unlockEpisode();
-  });
+  // pagehide는 취소할 수 없고 탭 닫기·새로 고침·다른 주소로 이동 모두에서 온다
+  window.addEventListener('pagehide', unlockOnUnload);
 }

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { pad3 } from '../backend';
-import type { EpisodeLock, ShareUser } from './types';
+import type { EpisodeLock, ShareConfig, ShareUser } from './types';
 
 /** 이만큼 신호가 없으면 잠금이 죽은 것으로 보고 넘겨받는다 */
 export const LOCK_STALE_MS = 5 * 60_000;
@@ -51,6 +51,19 @@ export async function heartbeatLock(sb: SupabaseClient, path: string, userId: st
 
 export async function releaseLock(sb: SupabaseClient, path: string, userId: string): Promise<void> {
   await sb.from('episode_locks').delete().eq('path', path).eq('user_id', userId);
+}
+
+/**
+ * 창을 닫거나 새로 고칠 때 푼다. 응답을 기다릴 수 없으므로 keepalive 요청(브라우저가 창이 닫힌 뒤에도 보내 준다)으로
+ * 같은 삭제를 REST에 직접 보낸다. 보통 경로(supabase-js)는 언로드 중에 끊겨 잠금이 5분 동안 남았다
+ */
+export function releaseLockKeepalive(cfg: ShareConfig, token: string, path: string, userId: string): void {
+  const url = `${cfg.url}/rest/v1/episode_locks?path=eq.${encodeURIComponent(path)}&user_id=eq.${encodeURIComponent(userId)}`;
+  try {
+    void fetch(url, { method: 'DELETE', keepalive: true, headers: { apikey: cfg.anonKey, Authorization: `Bearer ${token}` } }).catch(() => undefined);
+  } catch {
+    /* 언로드 중 실패는 5분 뒤 죽은 잠금으로 넘어간다 */
+  }
 }
 
 /** 한 작품의 회차 잠금 전부(시작 화면 표시용) */

@@ -90,7 +90,8 @@ export async function openDocument(code: string, episodeNo: number, create: bool
   st.setScreen('editor');
   rememberOpened(code, episodeNo);
   void refreshOutputCount();
-  if (!lock.mine) st.setStatusHint(`보기 전용: ${lock.holder?.userEmail ?? '다른 사람'}이(가) 이 회차를 작업 중입니다. 저장·확정이 막힙니다`);
+  // 남이 쥔 회차면 안내, 내가 쥐었으면 전에 남은 안내를 지운다(보기 전용으로 열었다가 넘겨받은 뒤에도 문구가 남지 않게)
+  st.setStatusHint(lock.mine ? '' : `보기 전용: ${lock.holder?.userEmail ?? '다른 사람'}이(가) 이 회차를 작업 중입니다. 저장·확정이 막힙니다`);
   return doc ? 'loaded' : 'created';
 }
 

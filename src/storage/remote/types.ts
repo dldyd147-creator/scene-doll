@@ -20,6 +20,14 @@ export interface WorkMember {
   role: MemberRole;
 }
 
+/** 구성원 칸에 보이는 한 사람(이메일은 서버 함수 work_members_of가 auth.users에서 붙여 준다) */
+export interface WorkMemberInfo {
+  userId: string;
+  email: string | null;
+  role: MemberRole;
+  addedAt: string;
+}
+
 /** 회차 잠금: 경로는 작품/{코드}/회차/{번호} */
 export interface EpisodeLock {
   path: string;
@@ -29,7 +37,7 @@ export interface EpisodeLock {
   heartbeatAt: string;
 }
 
-export type LogAction = 'login' | 'open' | 'save' | 'confirm' | 'export' | 'create' | 'delete' | 'scene' | 'character' | 'upload' | 'download';
+export type LogAction = 'login' | 'open' | 'save' | 'confirm' | 'export' | 'create' | 'delete' | 'scene' | 'character' | 'upload' | 'download' | 'member';
 
 export interface WorkLogEntry {
   id: number;

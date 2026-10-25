@@ -41,4 +41,5 @@ export const LOG_ACTION_LABEL: Record<string, string> = {
   character: '캐릭터 수정',
   upload: '공유 저장소로 올림',
   download: '내 폴더로 내려받음',
+  member: '구성원',
 };

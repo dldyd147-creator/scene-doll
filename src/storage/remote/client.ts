@@ -55,19 +55,25 @@ export async function currentUser(sb: SupabaseClient): Promise<ShareUser | null>
   return toUser(data.session?.user);
 }
 
-export async function signIn(sb: SupabaseClient, email: string, password: string): Promise<{ user: ShareUser | null; error: string | null }> {
+/** 지금 세션의 사용자와 접근 토큰(창을 닫을 때 keepalive 요청에 쓴다). 없으면 둘 다 null */
+export async function currentSession(sb: SupabaseClient): Promise<{ user: ShareUser | null; token: string | null }> {
+  const { data } = await sb.auth.getSession();
+  return { user: toUser(data.session?.user), token: data.session?.access_token ?? null };
+}
+
+export async function signIn(sb: SupabaseClient, email: string, password: string): Promise<{ user: ShareUser | null; token: string | null; error: string | null }> {
   const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
-  if (error) return { user: null, error: describeAuthError(error.message) };
-  return { user: toUser(data.user), error: null };
+  if (error) return { user: null, token: null, error: describeAuthError(error.message) };
+  return { user: toUser(data.user), token: data.session?.access_token ?? null, error: null };
 }
 
 export async function signOut(sb: SupabaseClient): Promise<void> {
   await sb.auth.signOut().catch(() => undefined);
 }
 
-/** 로그인 상태 변화 구독. 해제 함수를 돌려준다 */
-export function onAuth(sb: SupabaseClient, cb: (user: ShareUser | null) => void): () => void {
-  const { data } = sb.auth.onAuthStateChange((_event, session) => cb(toUser(session?.user)));
+/** 로그인 상태 변화 구독(토큰 갱신 포함). 해제 함수를 돌려준다 */
+export function onAuth(sb: SupabaseClient, cb: (user: ShareUser | null, token: string | null) => void): () => void {
+  const { data } = sb.auth.onAuthStateChange((_event, session) => cb(toUser(session?.user), session?.access_token ?? null));
   return () => data.subscription.unsubscribe();
 }
 

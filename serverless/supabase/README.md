@@ -9,7 +9,7 @@
 
 ## 2. 표와 권한 만들기
 
-SQL Editor 에 [`schema.sql`](schema.sql) 내용을 붙여 넣고 실행한다. 다시 실행해도 안전하다. 만들어지는 것:
+SQL Editor 에 [`schema.sql`](schema.sql) 내용을 붙여 넣고 실행한다. 다시 실행해도 안전하다(`if not exists` / `or replace`). 앱을 새 판으로 올린 뒤에는 같은 파일을 한 번 더 실행해 서버 쪽도 맞춘다(2026-10-25: 첫 파일 쓰기를 막던 `can_read` 수정, 구성원 함수 `work_members_of`·`add_work_member`·`remove_work_member`, 구성원·작업 로그 실시간 발행). 만들어지는 것:
 
 | 이름 | 역할 |
 | --- | --- |
@@ -27,7 +27,9 @@ Authentication → Providers 에서 **Email** 을 켠다. 사내에서 쓰면 **
 
 ## 4. 작품 권한 주기
 
-작품을 처음 만든 사람은 자동으로 그 작품의 admin 이다. 다른 사람을 붙이려면 SQL Editor 에서:
+작품을 처음 만든 사람은 자동으로 그 작품의 admin 이다. 다른 사람은 **앱 안에서** 붙인다: 시작 화면(작품 관리)에서 작품을 고르면 캐릭터 아래에 **구성원** 칸이 있고, admin 은 이메일을 넣어 추가하고 역할을 바꾸거나 뺄 수 있다. 상대 계정은 Authentication → Users 에 먼저 있어야 한다(없으면 "그 이메일의 계정이 없습니다"). 마지막 admin 은 내리거나 뺄 수 없다.
+
+SQL 로 하려면 SQL Editor 에서:
 
 ```sql
 insert into public.work_members (work_code, user_id, role)

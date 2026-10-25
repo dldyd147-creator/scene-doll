@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { storage } from '../storage';
 import { copyTree, type SyncProgress } from '../storage/remote/sync';
-import { connectShare, disconnectShare, loginShare, logAction, logoutShare, refreshLog, useShare } from '../storage/remote/service';
+import { connectShare, disconnectShare, loginShare, logAction, logoutShare, refreshLog, useShare, watchLog } from '../storage/remote/service';
 import type { EpisodeLock } from '../storage/remote/types';
 import { LOG_ACTION_LABEL } from '../storage/remote/worklog';
 import { Icon } from './icons';
@@ -37,6 +37,12 @@ export function SharePanel({ workCode, onChanged }: { workCode: string | null; o
   useEffect(() => {
     if (status === 'signedIn') void refreshLog(workCode);
   }, [status, workCode]);
+
+  // 칸이 화면에 있는 동안은 로그가 늘 때(내 작업·다른 사람의 작업) 자동으로 다시 읽는다
+  useEffect(() => {
+    watchLog(true);
+    return () => watchLog(false);
+  }, []);
 
   const connect = () => {
     const err = connectShare(url, key);

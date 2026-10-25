@@ -8,6 +8,7 @@ import { useRefUrl } from './refImages';
 import { lastOpened, openDocument, saveNow } from './save';
 import { StorageControls } from './StorageControls';
 import { LockBadge, SharePanel } from './SharePanel';
+import { MembersPanel } from './MembersPanel';
 import { episodeLockPath } from '../storage/remote/locks';
 import { logAction, useShare, watchWorkLocks } from '../storage/remote/service';
 
@@ -23,6 +24,7 @@ export function StartScreen() {
   const shareStatus = useShare((s) => s.status);
   const shareUser = useShare((s) => s.user);
   const locks = useShare((s) => s.locks);
+  const worksVersion = useShare((s) => s.worksVersion);
   const setSettingsOpen = useStore((s) => s.setSettingsOpen);
   const setHelpOpen = useStore((s) => s.setHelpOpen);
   const managerFor = useStore((s) => s.characterManagerFor);
@@ -44,9 +46,10 @@ export function StartScreen() {
     }
   }, []);
 
+  // 저장소가 바뀌거나(폴더/공유), 공유 저장소의 작품 파일·구성원이 바뀌면(다른 사람의 작업) 다시 읽는다
   useEffect(() => {
     void reload();
-  }, [reload, storageKind, shareStatus]);
+  }, [reload, storageKind, shareStatus, worksVersion]);
 
   // 공유 저장소면 고른 작품의 회차 잠금을 보여 준다(다른 사람이 작업 중인 회차)
   useEffect(() => {
@@ -235,6 +238,8 @@ export function StartScreen() {
                 ))}
                 {info.characters.length === 0 && <div className="muted small">등록된 캐릭터가 없습니다. 캐릭터 관리에서 이름·설명·레퍼런스를 등록하면 돌에 지정할 수 있습니다.</div>}
               </div>
+
+              {shareStatus === 'signedIn' && <MembersPanel workCode={info.work.code} />}
             </>
           )}
         </section>

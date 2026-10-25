@@ -1600,3 +1600,36 @@ code {
 :root[data-theme='dark'] .storage-chip.share-chip.readonly {
   background: #4a2224;
 }
+
+/* 작품 관리 · 구성원 칸 */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 620px;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+.member-row .email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.member-row select {
+  width: auto;
+}
+.member-row.add {
+  background: transparent;
+  border-style: dashed;
+}
+.member-row.add input {
+  flex: 1;
+  min-width: 0;
+}
