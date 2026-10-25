@@ -99,12 +99,24 @@ export function StartScreen() {
   };
 
   const newEpisode = async (w: WorkInfo) => {
-    const next = (w.episodes.length ? Math.max(...w.episodes.map((e) => e.number)) : 0) + 1;
+    const suggested = (w.episodes.length ? Math.max(...w.episodes.map((e) => e.number)) : 0) + 1;
+    const answer = window.prompt('만들 회차 번호를 입력하세요(숫자). 이미 있는 번호면 그 회차를 엽니다.', String(suggested));
+    if (answer === null) return;
+    const next = Number.parseInt(answer.trim(), 10);
+    if (!Number.isInteger(next) || next < 1 || next > 9999) {
+      window.alert('회차 번호는 1~9999 사이의 숫자여야 합니다.');
+      return;
+    }
+    const exists = w.episodes.some((e) => e.number === next);
     setBusy(true);
     try {
       await openDocument(w.work.code, next, true);
-      await saveNow();
-      logAction('create', `회차 ${next}`, null, w.work.code);
+      if (!exists) {
+        await saveNow();
+        logAction('create', `회차 ${next}`, null, w.work.code);
+        // 새 회차는 글콘티(NTT 엑셀) 가져오기부터 — 필요 없으면 닫으면 된다
+        useStore.getState().setScriptImportOpen(true);
+      }
     } finally {
       setBusy(false);
     }
@@ -202,7 +214,7 @@ export function StartScreen() {
               <h3 className="section-title">
                 회차 <span className="muted">{info.episodes.length}</span>
                 <button className="primary" onClick={() => void newEpisode(info)} disabled={busy}>
-                  <Icon name="plus" /> 새 회차
+                  <Icon name="plus" /> 새 회차(번호 입력)
                 </button>
               </h3>
               <div className="episode-grid">

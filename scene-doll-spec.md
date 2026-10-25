@@ -617,3 +617,11 @@ NTT 서버 환경에 `NTT_SCENE_DOLL_TOKEN=<길고 무작위한 문자열>`을 �
 - 씬 돌: `src/assemble/`(`plan.ts` 내보낼 컷·경고, `images.ts` 그림 읽기, `exporter.ts` PNG 쓰기, `ntt.ts` 서버 호출·진행·받기, 시험 있음), `src/ui/AssembleDialog.tsx`, 설정 `nttUrl`·`nttToken`.
 - NTT(`C:
 tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/worker.py`(`paste_cut_image`), `lib/clip.ts`(`image`·`inputDir`).
+
+## 생성 거부(수위) 대응 (2026-10-26)
+
+실사용에서 `moderation_blocked`로 거부되는 컷이 많았다. 원인 후보와 대응:
+1. **한 컷이 묶음 전체를 막는다.** 묶음(2×2 등)은 한 번의 요청이라 한 컷의 내용이 걸리면 네 컷이 모두 실패한다. 대응: 거부된 묶음은 **컷 단독**(후보 비교 탭의 [단독 재생성])으로 다시 보내 걸리는 컷만 가려낸다. (자동 분할 재시도는 다음 작업 후보.)
+2. **OpenAI 안전 검사 강도.** 설정 > 이미지 생성 > 안전 검사를 '완화(low)'로 두면 함수가 Images API에 `moderation=low`를 보낸다(기본은 보내지 않아 auto). 함수(`serverless/openai-image`)를 다시 배포해야 반영된다. 사용 정책이 금지하는 내용은 low에서도 막힌다.
+3. **입력 이미지·문구.** 돌 렌더(맨몸 마네킹)가 걸릴 수 있으면 강도 프리셋 '프롬프트 우선'(색 실루엣 입력)을 쓰고, 컷 설명·메모의 자극적 표현을 순화한다.
+4. **끝까지 거부되는 컷**은 AI 그림 없이 확정 컷 PNG(돌 렌더)로 두면 CLIP 콘티에서 그 컷은 돌 렌더가 그대로 놓인다(그림 출처 폴백).

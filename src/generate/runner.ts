@@ -204,6 +204,7 @@ export interface BatchOutcome {
 export interface RunOptions {
   n: number;
   quality: GenQuality;
+  moderation?: 'auto' | 'low';
   signal: AbortSignal;
   onProgress?: (p: Progress) => void;
   /** 묶음 하나가 끝날 때마다 */
@@ -228,7 +229,7 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
     const label = `묶음 ${i + 1}/${batches.length} (컷 ${b.cuts.map((c) => c.number).join('·')})`;
     try {
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 보내는 중…` });
-      const result = await gen.generate({ prompt: b.prompt, images: b.images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, signal: opts.signal });
+      const result = await gen.generate({ prompt: b.prompt, images: b.images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, moderation: opts.moderation, signal: opts.signal });
       outcome.usage = result.usage;
       outcome.model = result.model;
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 분할·저장` });

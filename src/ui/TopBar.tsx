@@ -28,6 +28,8 @@ export function TopBar() {
   const holderName = lockHolder?.split('@')[0] ?? '다른 사람';
   const setGenerateOpen = useStore((s) => s.setGenerateOpen);
   const setAssembleOpen = useStore((s) => s.setAssembleOpen);
+  const setScriptImportOpen = useStore((s) => s.setScriptImportOpen);
+  const hasScript = useStore((s) => !!s.episode.scriptSource);
   const candidateCount = useStore((s) => s.cuts.reduce((n, c) => n + (c.generatedImages?.length ?? 0), 0));
 
   const openCharacters = async () => {
@@ -70,6 +72,9 @@ export function TopBar() {
       <span className={`save-state ${saveError ? 'error' : dirty ? 'dirty' : ''}`} title={saveError ?? undefined}>
         {saveError ? '저장 실패' : dirty ? '변경됨' : lastSavedAt ? timeLabel(lastSavedAt) : ''}
       </span>
+      <button className={hasScript ? 'active' : ''} onClick={() => setScriptImportOpen(true)} title="NTT 글콘티(엑셀·CSV)를 이 회차에 가져옵니다. 컷마다 대사·지문이 한 번에 들어옵니다">
+        <Icon name="script" /> 글콘티 가져오기
+      </button>
       <button className="icon" onClick={() => setExportOpen(true)} title="회차 일괄 출력(PNG + 설명 텍스트 + AI 전달 패키지)">
         <Icon name="export" />
       </button>

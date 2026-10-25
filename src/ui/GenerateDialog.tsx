@@ -171,6 +171,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
     const results = await runBatches(gen, batches, {
       n: settings.genCandidates,
       quality: settings.genQuality,
+      moderation: settings.genModeration,
       signal: ac.signal,
       onProgress: setProgress,
       onBatch: (o) => {
