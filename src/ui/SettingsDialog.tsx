@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { DEFAULT_SITUATION_TAGS, parseTagList } from '../model/library';
 import { useStore } from '../state/store';
 import type { Settings } from '../state/settings';
 
@@ -24,6 +26,25 @@ function Toggle({ label, k }: { label: string; k: keyof Settings }) {
           {value ? '켬' : '끔'}
         </button>
       </span>
+      <span />
+    </div>
+  );
+}
+
+/** 씬 저장 때 찍는 상황 태그 버튼 목록(쉼표로 구분). 비우면 기본 10개로 돌아간다 */
+function SituationTagsSetting() {
+  const tags = useStore((s) => s.settings.situationTags);
+  const update = useStore((s) => s.updateSettings);
+  const [text, setText] = useState(tags.join(', '));
+  useEffect(() => setText(tags.join(', ')), [tags]);
+  const commit = () => {
+    const list = parseTagList(text);
+    update({ situationTags: list.length ? list : [...DEFAULT_SITUATION_TAGS] });
+  };
+  return (
+    <div className="setting">
+      <span>상황 태그 버튼(쉼표로 구분)</span>
+      <input type="text" value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && commit()} spellCheck={false} title="씬 저장 대화상자와 씬 검색기 필터에 나오는 상황 태그 버튼. 비우면 기본 10개" />
       <span />
     </div>
   );
@@ -86,6 +107,9 @@ export function SettingsDialog() {
         <Range label="직접 드래그 감도" k="directDragSpeed" min={0.3} max={2} step={0.1} />
         <Range label="기즈모 크기" k="gizmoSize" min={0.5} max={2} step={0.1} />
         <Range label="제어점 크기" k="handleSize" min={0.6} max={2.5} step={0.1} />
+
+        <h3>씬 라이브러리</h3>
+        <SituationTagsSetting />
 
         <h3>저장</h3>
         <Range label="되돌리기 최대 단계" k="undoLimit" min={100} max={1000} step={50} />

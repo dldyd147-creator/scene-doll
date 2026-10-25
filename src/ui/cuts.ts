@@ -6,9 +6,9 @@ import { saveNow } from './save';
 
 const THUMB_WIDTH = 192;
 
-/** 현재 원고 카메라로 썸네일을 그린다(데이터 URL) */
-export function captureThumbnail(engine: Engine, aspect: number): string {
-  const canvas = engine.renderToCanvas(engine.manu.camera, THUMB_WIDTH, THUMB_WIDTH * aspect, { background: 'white' });
+/** 현재 원고 카메라로 썸네일을 그린다(데이터 URL). width 기본은 컷 목록용 192px */
+export function captureThumbnail(engine: Engine, aspect: number, width = THUMB_WIDTH): string {
+  const canvas = engine.renderToCanvas(engine.manu.camera, width, width * aspect, { background: 'white' });
   return canvas.toDataURL('image/png');
 }
 

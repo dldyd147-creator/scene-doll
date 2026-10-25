@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Character, Cut, DollInstance, Episode, Work } from '../model/types';
+import type { Character, Cut, DollInstance, Episode, SceneLibraryItem, Vec3, Work } from '../model/types';
 import { createCut, createEpisode, createTemporaryCharacter, createWork, dollAsset, nowIso, pickColor } from '../model/defaults';
+import { dollsFromScene, type SlotAssignments } from '../model/library';
 import { newId } from '../model/ids';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
 
@@ -53,6 +54,11 @@ export interface StoreState extends Document {
   screen: 'start' | 'editor';
   /** 캐릭터 관리 대화상자가 열린 작품코드(null이면 닫힘) */
   characterManagerFor: string | null;
+  /** 씬 검색기(` 키) 열림. 열 때 미리 고를 씬 ID */
+  sceneBrowserOpen: boolean;
+  sceneBrowserSelectId: string | null;
+  /** 씬 저장 대화상자 */
+  sceneSaveOpen: boolean;
 
   currentCut: () => Cut;
   /** 현재 컷을 바꾸고 되돌리기 기록을 남긴다 */
@@ -95,6 +101,16 @@ export interface StoreState extends Document {
   /** 돌에 캐릭터 지정. null이면 임시 캐릭터로 되돌린다 */
   assignCharacter: (dollId: string, characterId: string | null) => void;
   setEpisodeTitle: (title: string) => void;
+
+  // 씬 라이브러리
+  openSceneBrowser: (selectId?: string | null) => void;
+  setSceneBrowserOpen: (open: boolean) => void;
+  setSceneSaveOpen: (open: boolean) => void;
+  /**
+   * 씬 라이브러리 항목을 현재 컷에 넣는다. replace: 씬 전체 교체(돌·소품·카메라·화면비), add: 돌만 추가.
+   * 슬롯마다 지정한 캐릭터의 돌(성별 돌·키·고정색)로 들어오고, 비운 슬롯은 임시 캐릭터가 된다.
+   */
+  applyLibraryScene: (item: SceneLibraryItem, assignments: SlotAssignments, mode: 'replace' | 'add') => void;
 
   // 컷 확정·목록
   /** 현재 컷을 확정(설명 텍스트 기록)하고 다음 컷으로. 다음 컷이 없으면 현재 씬을 복사해 만든다 */
@@ -158,6 +174,9 @@ export const useStore = create<StoreState>()(
     thumbnailsRenumbered: false,
     screen: 'start',
     characterManagerFor: null,
+    sceneBrowserOpen: false,
+    sceneBrowserSelectId: null,
+    sceneSaveOpen: false,
 
     currentCut: () => get().cuts[get().currentCutIndex],
 
@@ -421,6 +440,29 @@ export const useStore = create<StoreState>()(
     },
 
     setEpisodeTitle: (title) => set({ episode: { ...get().episode, title, updatedAt: nowIso() }, dirty: true }),
+
+    // ---------- 씬 라이브러리 ----------
+
+    openSceneBrowser: (selectId = null) => set({ sceneBrowserOpen: true, sceneBrowserSelectId: selectId, sceneSaveOpen: false }),
+    setSceneBrowserOpen: (open) => set(open ? { sceneBrowserOpen: true } : { sceneBrowserOpen: false, sceneBrowserSelectId: null }),
+    setSceneSaveOpen: (open) => set({ sceneSaveOpen: open }),
+
+    applyLibraryScene: (item, assignments, mode) => {
+      const s = get();
+      const { dolls, newCharacters } = dollsFromScene(item, assignments, s.characters, s.work.code);
+      if (newCharacters.length) set({ characters: [...s.characters, ...newCharacters] });
+      get().commitCut((c) => {
+        if (mode === 'replace') {
+          c.dolls = dolls;
+          c.props = structuredClone(item.props);
+          c.camera = { ...item.camera, position: [...item.camera.position] as Vec3 };
+          c.aspect = item.aspect;
+        } else {
+          c.dolls.push(...dolls);
+        }
+      });
+      set({ selection: mode === 'add' && dolls.length ? { dollId: dolls[0].id, bone: null } : NO_SELECTION, sceneBrowserOpen: false, sceneBrowserSelectId: null });
+    },
 
     // ---------- 컷 ----------
 

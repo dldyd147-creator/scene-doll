@@ -1,0 +1,277 @@
+/* ---------- 씬 라이브러리 · 씬 검색기 · 포즈 라이브러리 ---------- */
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.tag-row .label {
+  color: var(--muted);
+  font-size: 11px;
+  margin-right: 2px;
+}
+.tag-row .sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 6px;
+}
+button.tag {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: var(--panel-2);
+}
+button.tag.active {
+  background: var(--btn-active-bg);
+  border-color: var(--btn-active-border);
+}
+button.small {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--panel-3);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.chip.situation {
+  background: var(--btn-active-bg);
+  color: var(--text);
+}
+
+/* 씬 검색기 */
+.modal.sb {
+  width: 1040px;
+  max-width: calc(100vw - 32px);
+  height: 86vh;
+  gap: 10px;
+}
+.sb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sb-head h2 {
+  flex: 0 0 auto;
+}
+.sb-head input.sb-search {
+  flex: 1;
+  max-width: 300px;
+}
+.sb-head .icon.ghost {
+  margin-left: auto;
+}
+.sb-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sb-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+.sb-grid {
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+  align-content: start;
+  padding: 2px;
+}
+.sb-tile {
+  background: #ffffff;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sb-tile:hover {
+  border-color: var(--accent-2);
+}
+.sb-tile.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.sb-tile .img,
+.pose-card .img {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+}
+.sb-tile img,
+.pose-card img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+.sb-tile .cap,
+.pose-card .cap {
+  padding: 2px 6px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sb-tile .cap:first-of-type,
+.pose-card .cap {
+  padding-top: 3px;
+}
+.sb-tile .cap:last-child,
+.pose-card .cap {
+  padding-bottom: 3px;
+}
+.sb-tile .cap b,
+.pose-card .cap b {
+  color: var(--text);
+}
+.sb-preview {
+  border-left: 1px solid var(--border);
+  padding-left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sb-preview .big {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  max-height: 300px;
+  flex-shrink: 0;
+}
+.sb-preview .big img {
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+}
+.slot-row {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.slot-row .n {
+  font-size: 11px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.slot-row select {
+  width: 100%;
+}
+
+/* 포즈 카드 · 최근 씬 */
+.pose-grid,
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.pose-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.pose-card:hover {
+  border-color: var(--accent-2);
+}
+.pose-card.disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.pose-card .img {
+  height: 110px;
+}
+.recent-grid .pose-card .img {
+  height: 84px;
+}
+.pose-card .rm {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  min-width: 0;
+  border-radius: 50%;
+  border: none;
+  background: #000a;
+  color: #fff;
+  justify-content: center;
+  display: none;
+}
+.pose-card:hover .rm {
+  display: inline-flex;
+}
+.pose-form {
+  gap: 6px;
+}
+.pose-form input[type='text'] {
+  width: 100%;
+}
+
+/* 씬 저장 */
+.modal.scene-save {
+  width: 660px;
+}
+.ss-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 14px;
+}
+.ss-thumb {
+  width: 220px;
+  min-height: 160px;
+  max-height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.ss-thumb img {
+  max-width: 100%;
+  max-height: 330px;
+  display: block;
+}
+.ss-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ss-form input[type='text'] {
+  width: 100%;
+}
+.camera-panel .row .grow {
+  flex: 1;
+}

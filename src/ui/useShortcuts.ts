@@ -13,7 +13,7 @@ function isTyping(e: KeyboardEvent): boolean {
 
 /**
  * 단축키(기획서 '단축키' 표). 기본 편집은 클립스튜디오, 시점은 스케치업, 나머지는 씬 돌 고유.
- * 2단계(`)는 자리만 둔다.
+ * `(백틱)은 씬 검색기 토글.
  */
 export function useShortcuts(engine: Engine): void {
   const clipboard = useRef<string | null>(null);
@@ -25,6 +25,22 @@ export function useShortcuts(engine: Engine): void {
       const key = e.key.toLowerCase();
       // 시작 화면(작품 관리)에서는 편집 단축키를 받지 않는다
       if (s.screen !== 'editor') return;
+
+      // `(백틱): 씬 검색기 토글. 자판 배열과 무관하게 물리 키(code)로 보되, code가 비는 환경은 글자로 본다. 입력란에서는 글자로 둔다
+      if ((e.code === 'Backquote' || e.key === '`') && !ctrl && !e.altKey && !isTyping(e)) {
+        e.preventDefault();
+        if (s.sceneBrowserOpen) s.setSceneBrowserOpen(false);
+        else if (!s.sceneSaveOpen) s.openSceneBrowser();
+        return;
+      }
+      // 씬 검색기·씬 저장이 열려 있으면 Esc만 받는다(아래 씬이 바뀌지 않게)
+      if (s.sceneBrowserOpen || s.sceneSaveOpen) {
+        if (e.key === 'Escape') {
+          s.setSceneBrowserOpen(false);
+          s.setSceneSaveOpen(false);
+        }
+        return;
+      }
 
       // 입력란에서도 Ctrl+Enter(컷 확정)·Ctrl+S(저장)는 받는다
       if (ctrl && e.key === 'Enter') {

@@ -1,6 +1,7 @@
 import { storage } from '../storage';
 import { useStore } from '../state/store';
 import { createCut, createEpisode, createWork } from '../model/defaults';
+import { useLibrary } from './library';
 
 let saving: Promise<boolean> | null = null;
 const LAST_KEY = 'scene-doll.last-opened';
@@ -90,9 +91,10 @@ export async function reloadCharacters(): Promise<void> {
   if (chars) useStore.getState().setCharacters(chars);
 }
 
-/** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장) */
+/** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장). 공용 라이브러리 캐시도 비운다 */
 async function afterStorageChange(): Promise<void> {
   syncStorageState();
+  useLibrary.getState().reset();
   const s = useStore.getState();
   if (s.screen !== 'editor') return;
   const result = await openDocument(s.work.code, s.episode.number, false);

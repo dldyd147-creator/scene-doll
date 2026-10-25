@@ -54,6 +54,12 @@ const PATHS: Record<string, string> = {
   upload: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16',
   edit: 'M4 20h4L18 10l-4-4L4 16zM13 7l4 4',
   package: 'M12 3l9 5v8l-9 5-9-5V8zM3 8l9 5 9-5M12 13v8',
+  // 씬·포즈 라이브러리
+  search: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5L21 21',
+  bookmarkPlus: 'M6 3h12v18l-6-4-6 4zM12 7v6M9 10h6',
+  pose: 'M12 2.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 6.5v6M8 9.5l4-3 4 3M12 12.5l-3.5 8M12 12.5l3.5 8',
+  swap: 'M4 7h13m0 0l-3-3m3 3l-3 3M20 17H7m0 0l3-3m-3 3l3 3',
+  tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01',
 };
 
 export interface IconProps {

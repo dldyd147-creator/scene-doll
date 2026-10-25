@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import type { Engine } from '../engine/Engine';
 import type { Character } from '../model/types';
 import { CHARACTER_COLORS, DOLL_ASSETS, mainReferenceOf } from '../model/defaults';
 import { useStore } from '../state/store';
 import { Icon } from './icons';
+import { PoseTab } from './PoseTab';
 import { useRefUrl } from './refImages';
 import { saveNow } from './save';
+import { SceneTab } from './SceneTab';
 
 type Tab = 'character' | 'doll' | 'prop' | 'pose' | 'scene';
 const TABS: Array<{ id: Tab; label: string }> = [
@@ -15,7 +18,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'scene', label: '씬' },
 ];
 
-export function AssetPanel() {
+export function AssetPanel({ engine }: { engine: Engine }) {
   const open = useStore((s) => s.assetPanelOpen);
   const setOpen = useStore((s) => s.setAssetPanelOpen);
   const [tab, setTab] = useState<Tab>('character');
@@ -49,8 +52,8 @@ export function AssetPanel() {
         {tab === 'character' && <CharacterTab />}
         {tab === 'doll' && <DollTab />}
         {tab === 'prop' && <div className="placeholder">소품은 3단계에서 제공합니다.</div>}
-        {tab === 'pose' && <div className="placeholder">포즈 라이브러리는 2단계 후반에 제공합니다.</div>}
-        {tab === 'scene' && <div className="placeholder">씬 라이브러리·씬 검색기는 2단계 후반에 제공합니다.</div>}
+        {tab === 'pose' && <PoseTab engine={engine} />}
+        {tab === 'scene' && <SceneTab />}
       </div>
     </aside>
   );

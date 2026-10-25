@@ -1,10 +1,19 @@
-import type { Character, Cut, Episode, Work } from '../model/types';
+import type { Character, Cut, Episode, Pose, SceneLibraryItem, Work } from '../model/types';
 import { createEpisode, normalizeCharacter } from '../model/defaults';
+import { normalizePose, normalizeScene } from '../model/library';
 import type { Document, Thumbnails } from '../state/store';
 import { pad3, type StorageBackend } from './backend';
 
 /** 기획서의 폴더 구조 */
 export const paths = {
+  // 작품끼리 공유하는 것(씬 라이브러리·포즈)
+  sharedDir: () => '공용',
+  sceneDir: () => '공용/씬',
+  scene: (id: string) => `공용/씬/${id}.json`,
+  sceneThumb: (id: string) => `공용/씬/${id}.png`,
+  poseDir: () => '공용/포즈',
+  pose: (id: string) => `공용/포즈/${id}.json`,
+  poseThumb: (id: string) => `공용/포즈/${id}.png`,
   worksDir: () => '작품',
   workDir: (code: string) => `작품/${code}`,
   work: (code: string) => `작품/${code}/작품.json`,
@@ -225,6 +234,74 @@ export class Repository {
 
   async deleteReference(code: string, chrId: string, file: string): Promise<void> {
     await this.backend.remove(paths.characterRef(code, chrId, file));
+  }
+
+  // ---------- 공용: 씬 라이브러리 ----------
+
+  /** 저장된 씬 전부(새것부터). 깨진 파일은 건너뛴다 */
+  async loadScenes(): Promise<SceneLibraryItem[]> {
+    const files = await this.backend.list(paths.sceneDir());
+    const out: SceneLibraryItem[] = [];
+    for (const f of files) {
+      if (f.kind !== 'file' || !f.name.endsWith('.json')) continue;
+      const t = await this.backend.readText(`${paths.sceneDir()}/${f.name}`);
+      if (!t) continue;
+      try {
+        out.push(normalizeScene(JSON.parse(t) as Partial<SceneLibraryItem>));
+      } catch {
+        /* 깨진 JSON */
+      }
+    }
+    return out.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  }
+
+  /** 씬 JSON + 썸네일 PNG 저장. 돌려주는 항목에는 썸네일 경로가 채워져 있다 */
+  async saveScene(item: SceneLibraryItem, thumbnailDataUrl: string | null): Promise<SceneLibraryItem> {
+    const stored: SceneLibraryItem = { ...item, thumbnail: thumbnailDataUrl ? paths.sceneThumb(item.id) : item.thumbnail };
+    await this.backend.writeText(paths.scene(item.id), json(stored));
+    if (thumbnailDataUrl) await this.backend.writeBinary(paths.sceneThumb(item.id), dataUrlToBlob(thumbnailDataUrl));
+    return stored;
+  }
+
+  async deleteScene(id: string): Promise<void> {
+    await this.backend.remove(paths.scene(id));
+    await this.backend.remove(paths.sceneThumb(id));
+  }
+
+  // ---------- 공용: 포즈 ----------
+
+  async loadPoses(): Promise<Pose[]> {
+    const files = await this.backend.list(paths.poseDir());
+    const out: Pose[] = [];
+    for (const f of files) {
+      if (f.kind !== 'file' || !f.name.endsWith('.json')) continue;
+      const t = await this.backend.readText(`${paths.poseDir()}/${f.name}`);
+      if (!t) continue;
+      try {
+        out.push(normalizePose(JSON.parse(t) as Partial<Pose>));
+      } catch {
+        /* 깨진 JSON */
+      }
+    }
+    return out.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
+  }
+
+  async savePose(pose: Pose, thumbnailDataUrl: string | null): Promise<Pose> {
+    const stored: Pose = { ...pose, thumbnail: thumbnailDataUrl ? paths.poseThumb(pose.id) : pose.thumbnail };
+    await this.backend.writeText(paths.pose(pose.id), json(stored));
+    if (thumbnailDataUrl) await this.backend.writeBinary(paths.poseThumb(pose.id), dataUrlToBlob(thumbnailDataUrl));
+    return stored;
+  }
+
+  async deletePose(id: string): Promise<void> {
+    await this.backend.remove(paths.pose(id));
+    await this.backend.remove(paths.poseThumb(id));
+  }
+
+  /** PNG 파일 → 데이터 URL(없으면 null). 씬·포즈 썸네일 읽기용 */
+  async readImage(path: string): Promise<string | null> {
+    const buf = await this.backend.readBinary(path);
+    return buf ? bufferToDataUrl(buf) : null;
   }
 
   // ---------- 문서(회차 전체) ----------

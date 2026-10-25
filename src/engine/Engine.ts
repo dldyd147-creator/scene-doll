@@ -18,7 +18,7 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import type { CameraState, Cut, DollAsset } from '../model/types';
+import type { CameraState, Cut, DollAsset, JointRotations } from '../model/types';
 import { dollAsset } from '../model/defaults';
 import type { Selection, ToolMode } from '../state/store';
 import { DEFAULT_SETTINGS, type Settings } from '../state/settings';
@@ -681,6 +681,44 @@ export class Engine {
     if (!rig) return;
     rig.mirror();
     this.commitDoll(rig.id);
+  }
+
+  /** 포즈 라이브러리의 관절값을 선택한 돌에 적용(돌 공간 회전이라 체형과 무관). 바닥 아래로 내려가면 올린다 */
+  applyPoseToSelected(joints: JointRotations): boolean {
+    const rig = this.selectedRig();
+    if (!rig) return false;
+    rig.setJoints(joints);
+    rig.root.updateMatrixWorld(true);
+    this.enforceFloor(rig);
+    this.commitDoll(rig.id);
+    return true;
+  }
+
+  /** 돌 하나만 보이게 해서 돌이 보는 방향의 앞쪽 반측면·약간 위에서 찍은 스냅샷(포즈 썸네일) */
+  renderDollSnapshot(id: string, width: number, height: number): HTMLCanvasElement | null {
+    const rig = this.dolls.get(id);
+    if (!rig) return null;
+    const hidden: DollRig[] = [];
+    for (const r of this.dolls.values()) {
+      if (r !== rig && r.root.visible) {
+        r.root.visible = false;
+        hidden.push(r);
+      }
+    }
+    try {
+      const box = rig.worldBounds();
+      const center = box.getCenter(new Vector3());
+      const radius = Math.max(0.3, box.getSize(new Vector3()).length() * 0.5);
+      const fov = 30;
+      const cam = new PerspectiveCamera(fov, width / height, 0.05, 100);
+      const dir = new Vector3(0.45, 0.3, 1).applyQuaternion(rig.root.quaternion).normalize();
+      cam.position.copy(center).addScaledVector(dir, (radius / Math.sin(MathUtils.degToRad(fov / 2))) * 1.05);
+      cam.lookAt(center);
+      cam.updateMatrixWorld(true);
+      return this.renderToCanvas(cam, width, height, { background: 'white' });
+    } finally {
+      for (const r of hidden) r.root.visible = true;
+    }
   }
 
   resetSelectedJoint(recursive: boolean): void {

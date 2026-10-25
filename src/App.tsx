@@ -14,6 +14,8 @@ import { HelpDialog } from './ui/HelpDialog';
 import { OutputGallery } from './ui/OutputGallery';
 import { StartScreen } from './ui/StartScreen';
 import { CharacterManager } from './ui/CharacterManager';
+import { SceneBrowser } from './ui/SceneBrowser';
+import { SceneSaveDialog } from './ui/SceneSaveDialog';
 import { useStore } from './state/store';
 
 export default function App() {
@@ -36,11 +38,13 @@ export default function App() {
             <CutList />
             <ManuscriptColumn engine={engine} />
             <WorkView engine={engine} />
-            <AssetPanel />
+            <AssetPanel engine={engine} />
           </div>
           <StatusBar />
           <ExportDialog engine={engine} />
           <OutputGallery />
+          <SceneBrowser />
+          <SceneSaveDialog engine={engine} />
         </div>
       )}
       <SettingsDialog />

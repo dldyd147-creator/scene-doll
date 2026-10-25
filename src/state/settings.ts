@@ -1,3 +1,5 @@
+import { DEFAULT_SITUATION_TAGS } from '../model/library';
+
 /** 조작감 관련 설정. 실제 작업으로 맞춰 가도록 모두 바꿀 수 있다 */
 export interface Settings {
   /** 시점 조작 방식: 스케치업(휠 드래그 회전, Shift+휠 팬) / 디자인돌(우클릭 회전, 휠 드래그 팬) */
@@ -31,6 +33,8 @@ export interface Settings {
   theme: 'light' | 'dark';
   /** 조작뷰 구석의 조작 안내 상자 */
   showHints: boolean;
+  /** 씬 저장 때 버튼으로 찍는 상황 태그 목록(씬 검색기 필터에도 쓰임) */
+  situationTags: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -53,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   manuscriptGrid: true,
   theme: 'light',
   showHints: false,
+  situationTags: [...DEFAULT_SITUATION_TAGS],
 };
 
 const KEY = 'scene-doll.settings.v1';

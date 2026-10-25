@@ -172,35 +172,60 @@ export interface DollAsset {
   eye?: Vec3;
 }
 
-/** 포즈(2단계) */
+/** 포즈(2단계). 관절 회전값만 담아 체형과 무관하게 어떤 돌에도 적용한다. 파일은 공용/포즈/{ID}.json */
 export interface Pose {
   id: string;
   name: string;
+  /** 분류(서기·앉기·동작 … 자유 입력) */
   category: string;
   tags: string[];
   joints: JointRotations;
+  /** 썸네일 PNG 경로(공용/포즈/{ID}.png). 없을 수 있다 */
+  thumbnail?: string;
+  createdAt?: string;
 }
 
 export type ShotSize = 'closeup' | 'bust' | 'waist' | 'full';
 export type AngleTag = 'high' | 'eye' | 'low';
 
-/** 씬 라이브러리 항목(2단계) */
+/** 씬 라이브러리의 돌 슬롯. 캐릭터는 담지 않고 불러올 때 슬롯→캐릭터를 지정한다 */
+export interface SceneSlot {
+  /** 1부터 */
+  slot: number;
+  dollId: string;
+  /** 저장 당시 키(cm). 슬롯을 비워 임시 캐릭터로 불러올 때 쓰고, 캐릭터를 지정하면 그 캐릭터의 키를 따른다 */
+  heightCm?: number;
+  position: Vec3;
+  rotation: Quat;
+  joints: JointRotations;
+}
+
+/** 씬 라이브러리 항목(2단계). 파일은 공용/씬/{ID}.json + {ID}.png */
 export interface SceneLibraryItem {
   id: string;
   name: string;
+  /** 저장 때 프로그램이 붙이는 태그(원고 카메라 투영으로 판정) */
   autoTags: {
+    /** 화면 안 돌 수 */
     count: number;
+    /** 화면 안에서 가장 크게 잡힌 돌의 샷 크기 */
     shot: ShotSize;
     angle: AngleTag;
     aspect: number;
+    /** 화면 안 돌마다 '왼쪽 앞' 식 배치 */
     placement: string[];
+    /** 화면 안 돌마다 샷 크기 */
+    shots?: ShotSize[];
   };
+  /** 사람이 버튼으로 찍는 상황 태그(대화·전투 …) */
   situationTags: string[];
-  slots: Array<{ slot: number; dollId: string; position: Vec3; rotation: Quat; joints: JointRotations }>;
+  slots: SceneSlot[];
   props: PropInstance[];
   camera: CameraState;
   aspect: number;
+  /** 썸네일 PNG 경로 */
   thumbnail: string;
+  createdAt?: string;
 }
 
 /** 소품(3단계) */
