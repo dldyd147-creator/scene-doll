@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
-    "ag-psd": "^33.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "three": "^0.186.1",

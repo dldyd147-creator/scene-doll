@@ -8,7 +8,6 @@ import { newId } from '../model/ids';
 import type { CameraState } from '../model/types';
 import { applyScriptToCuts, type ApplyPlan, type CutScript, type DialogueLine } from '../script/ntt';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
-import { normalizeAssembly, type Assembly } from '../assemble/model';
 
 export interface Selection {
   dollId: string | null;
@@ -165,8 +164,6 @@ export interface StoreState extends Document {
   // 5단계 이미지 생성
   setGenerateOpen: (open: boolean) => void;
   setAssembleOpen: (open: boolean) => void;
-  /** 6단계 원고 조립 설정을 바꾼다(회차 JSON에 저장. 보기 전용 회차는 무시) */
-  updateAssembly: (fn: (a: Assembly) => Assembly) => void;
   /** 생성 후보 경로를 컷에 더한다(첫 장이면 대표). 메모처럼 되돌리기 기록 없음 */
   addGeneratedImages: (cutNumber: number, paths: string[]) => void;
   /** 대표 후보 지정: generatedImages[0]으로 옮긴다 */
@@ -639,11 +636,6 @@ export const useStore = create<StoreState>()(
 
     setGenerateOpen: (open) => set({ generateOpen: open }),
     setAssembleOpen: (open) => set({ assembleOpen: open }),
-    updateAssembly: (fn) => {
-      const s = get();
-      if (s.readOnly) return;
-      set({ episode: { ...s.episode, assembly: normalizeAssembly(fn(normalizeAssembly(s.episode.assembly))), updatedAt: nowIso() }, dirty: true });
-    },
 
     addGeneratedImages: (cutNumber, paths) => {
       if (!paths.length) return;

@@ -1634,75 +1634,33 @@ code {
   min-width: 0;
 }
 
-/* 6단계 원고 조립 */
+
+/* 6단계 원고 내보내기(NTT용 컷 그림) */
 .modal.asm {
-  width: min(1100px, 96vw);
-  max-height: 94vh;
+  width: min(900px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
 }
-.asm-body {
+.asm-grid2 {
   display: grid;
-  grid-template-columns: minmax(300px, 1fr) 380px;
-  gap: 14px;
-  min-height: 0;
-  height: calc(88vh - 60px);
-}
-.asm-preview {
-  overflow: auto;
-  background: var(--panel-3);
-  border-radius: 6px;
-  padding: 12px;
-}
-.asm-strip {
-  max-width: 520px;
-  margin: 0 auto;
-  box-shadow: 0 0 0 1px var(--border);
-}
-.asm-cutwrap {
-  position: relative;
-}
-.asm-cut {
-  display: block;
-  width: 100%;
-  height: auto;
-  touch-action: none;
-  cursor: crosshair;
-}
-.asm-tag {
-  position: absolute;
-  left: 4px;
-  top: 4px;
-  z-index: 1;
-  background: #000a;
-  color: #fff;
-  font-size: 11px;
-  padding: 1px 6px;
-  border-radius: 8px;
-  pointer-events: none;
-}
-.asm-side {
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 8px;
-  padding-right: 4px;
 }
-.asm-side textarea {
-  width: 100%;
-  resize: vertical;
+.asm-card.off {
+  opacity: 0.45;
 }
-.asm-grid {
-  display: grid;
-  grid-template-columns: 130px 1fr;
+.asm-thumb {
+  height: 150px;
+  background: var(--panel-3);
+  border-radius: 4px;
+  display: flex;
   align-items: center;
-  gap: 6px 10px;
+  justify-content: center;
+  overflow: hidden;
 }
-.asm-grid input:not([type='checkbox']):not([type='color']) {
-  min-width: 0;
-}
-.asm-cuts {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 2px 8px;
+.asm-thumb img {
+  max-width: 100%;
+  max-height: 100%;
 }
 .asm-kind {
   margin-left: 6px;
@@ -1712,9 +1670,6 @@ code {
 .asm-kind.generated {
   color: var(--accent);
 }
-.asm-kind.out {
-  color: var(--danger);
-}
 .asm-warn {
   color: #b7791f;
 }
@@ -1722,11 +1677,4 @@ code {
   background: var(--panel-3);
   border-radius: 6px;
   padding: 6px 8px;
-}
-button.mini {
-  padding: 1px 6px;
-  font-size: 11px;
-}
-button.mini.active {
-  background: var(--btn-active-bg);
 }

@@ -1,4 +1,3 @@
-import type { Assembly } from '../assemble/model';
 // 씬 돌 데이터 구조.
 // 기획서 '데이터 구조와 폴더 구조'의 8종(작품·회차·컷·캐릭터·돌·포즈·씬 라이브러리·소품)을 모두 정의한다.
 // 1단계에서 쓰지 않는 필드도 자리를 먼저 만들어 2~5단계에서 데이터 이전이 생기지 않게 한다.
@@ -45,8 +44,6 @@ export interface Episode {
   cutOrder: number[];
   /** 가져온 글콘티 파일(NTT 엑셀) 정보 */
   scriptSource?: { fileName: string; importedAt: string };
-  /** 6단계 원고 조립 설정·말풍선 덮어쓰기(없으면 기본값. normalizeAssembly) */
-  assembly?: Assembly;
   updatedAt: string;
 }
 
