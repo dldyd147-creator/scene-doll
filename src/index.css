@@ -1054,12 +1054,19 @@ code {
 
 .modal.cm {
   width: 960px;
+  height: 88vh;
+  overflow: hidden;
+}
+.modal h2 .close-x {
+  margin-left: auto;
 }
 .cm-layout {
   display: grid;
   grid-template-columns: 200px minmax(0, 1fr);
   gap: 14px;
-  min-height: 460px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .cm-list {
   display: flex;
@@ -1067,6 +1074,8 @@ code {
   gap: 4px;
   border-right: 1px solid var(--border);
   padding-right: 12px;
+  overflow-y: auto;
+  min-height: 0;
 }
 .cm-item {
   display: flex;
@@ -1096,6 +1105,9 @@ code {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+  padding-right: 6px;
 }
 .field-row {
   display: grid;
@@ -1232,4 +1244,75 @@ code {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ---------- 시점 복사(아이콘만) · 출력물 아이콘 ---------- */
+
+.camera-panel button.big.icon-only {
+  padding: 6px 16px;
+}
+.topbar button.has-output {
+  color: var(--accent-2);
+  border-color: var(--btn-active-border);
+  background: var(--btn-active-bg);
+}
+
+/* ---------- 핸드 오퍼레이터 ---------- */
+
+.modal.hand-op {
+  width: 860px;
+}
+.hand-layout {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 16px;
+}
+.hand-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hand-view canvas {
+  width: 380px;
+  height: 380px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  cursor: grab;
+  display: block;
+  touch-action: none;
+}
+.hand-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.slider-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+}
+.slider-row label {
+  color: var(--muted);
+  font-size: 12px;
+}
+.slider-row input[type='range'] {
+  width: 100%;
+}
+.slider-row .val {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.hand-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hand-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }

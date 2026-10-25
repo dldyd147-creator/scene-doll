@@ -60,7 +60,7 @@ export class PropObject {
   /** inst가 바뀌어 자리를 다시 맞춰야 함 */
   dirty = true;
   private materials: MeshToonMaterial[] = [];
-  private outlineMat = outlineMaterial(0.004);
+  private outlineMat = outlineMaterial(0.002);
   private outlineMeshes: Mesh[] = [];
   private ownGeometries: BufferGeometry[] = [];
   private shading = true;

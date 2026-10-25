@@ -54,6 +54,11 @@ const PATHS: Record<string, string> = {
   upload: 'M12 16V4m0 0l-4 4m4-4l4 4M4 20h16',
   edit: 'M4 20h4L18 10l-4-4L4 16zM13 7l4 4',
   package: 'M12 3l9 5v8l-9 5-9-5V8zM3 8l9 5 9-5M12 13v8',
+  // 시점 복사(카메라 + 화살표)
+  camArrowRight: 'M2 8h3l1.5-2h4L12 8h2v9H2zM8 15.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM16 12.5h6m0 0l-2.5-2.5m2.5 2.5L19.5 15',
+  camArrowLeft: 'M10 8h2l1.5-2h4L19 8h3v9H10zM16 15.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM8 12.5H2m0 0l2.5-2.5M2 12.5L4.5 15',
+  // 핸드 오퍼레이터
+  fingers: 'M7 21v-5.5l-3-4 1.8-1.4 2.7 3.2V5h2v7h1V3h2v9h1V5h2v7h1V8h2v7a6 6 0 0 1-6 6z',
   // 씬·포즈 라이브러리
   search: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.5 15.5L21 21',
   bookmarkPlus: 'M6 3h12v18l-6-4-6 4zM12 7v6M9 10h6',

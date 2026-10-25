@@ -20,6 +20,7 @@ export function TopBar() {
   const setGalleryOpen = useStore((s) => s.setGalleryOpen);
   const setExportOpen = useStore((s) => s.setExportOpen);
   const setCharacterManagerFor = useStore((s) => s.setCharacterManagerFor);
+  const outputCount = useStore((s) => s.outputCount);
 
   const openCharacters = async () => {
     if (useStore.getState().dirty) await saveNow();
@@ -54,7 +55,7 @@ export function TopBar() {
       <button className="icon" onClick={() => setExportOpen(true)} title="회차 일괄 출력(PNG + 설명 텍스트 + AI 전달 패키지)">
         <Icon name="export" />
       </button>
-      <button className="icon" onClick={() => setGalleryOpen(true)} title="출력물 보기(출력 폴더의 PNG·설명 텍스트)">
+      <button className={`icon ${outputCount ? 'has-output' : ''}`} onClick={() => setGalleryOpen(true)} title={outputCount ? `출력물 보기: 이 회차에 출력된 컷 PNG ${outputCount}장` : '출력물 보기: 이 회차에는 아직 출력물이 없습니다'}>
         <Icon name="gallery" />
       </button>
       <div className="sep" />

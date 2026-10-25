@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Engine } from '../engine/Engine';
 import type { Character } from '../model/types';
-import { CHARACTER_COLORS, DOLL_ASSETS, mainReferenceOf } from '../model/defaults';
+import { CHARACTER_COLORS, DOLL_ASSETS, mainReferenceOf, sortCharacters } from '../model/defaults';
 import { useStore } from '../state/store';
 import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
@@ -61,9 +61,9 @@ export function AssetPanel({ engine }: { engine: Engine }) {
   );
 }
 
-/** 이 작품의 등록 캐릭터(임시 제외) */
+/** 이 작품의 등록 캐릭터(임시 제외), 역할 순(주인공 → 조연 → 엑스트라) */
 function useWorkCharacters(): Character[] {
-  return useStore((s) => s.characters).filter((c) => !c.temporary);
+  return sortCharacters(useStore((s) => s.characters).filter((c) => !c.temporary));
 }
 
 function openManager(): void {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Character, Gender, ReferenceImage, RefSlot } from '../model/types';
-import { CHARACTER_COLORS, createCharacter, DOLL_ASSETS, MAX_CUSTOM_REFS, nowIso, pickColor, REF_SLOTS, refLabel } from '../model/defaults';
+import { CHARACTER_COLORS, CHARACTER_ROLES, createCharacter, DOLL_ASSETS, MAX_CUSTOM_REFS, nowIso, pickColor, REF_SLOTS, refLabel, sortCharacters, type CharacterRole } from '../model/defaults';
 import { newId } from '../model/ids';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
@@ -32,6 +32,72 @@ function extOf(file: File): string {
   return t === 'jpeg' ? 'jpg' : t || 'png';
 }
 
+/** 숫자 칸: 치는 동안은 그대로 두고, 칸을 떠나거나 Enter를 칠 때 범위 안으로 맞춰 반영한다(치는 중에 50·250으로 튀지 않게) */
+function NumberField({ value, min, max, width, title, placeholder, allowEmpty, onCommit }: { value: number | undefined; min: number; max: number; width: number; title?: string; placeholder?: string; allowEmpty?: boolean; onCommit: (v: number | undefined) => void }) {
+  const [text, setText] = useState(value === undefined ? '' : String(value));
+  const latest = useRef(text);
+  latest.current = text;
+  useEffect(() => setText(value === undefined ? '' : String(value)), [value]);
+  const commit = () => {
+    const text = latest.current;
+    if (text.trim() === '') {
+      if (allowEmpty) onCommit(undefined);
+      else setText(value === undefined ? '' : String(value));
+      return;
+    }
+    const n = Number(text);
+    if (!Number.isFinite(n)) {
+      setText(value === undefined ? '' : String(value));
+      return;
+    }
+    const v = Math.max(min, Math.min(max, Math.round(n)));
+    setText(String(v));
+    if (v !== value) onCommit(v);
+  };
+  return (
+    <input
+      type="number"
+      min={min}
+      max={max}
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => {
+        latest.current = e.target.value;
+        setText(e.target.value);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+      }}
+      style={{ width }}
+      title={title}
+    />
+  );
+}
+
+const parseTags = (s: string): string[] => s.split(/[,\n]/).map((t) => t.trim()).filter(Boolean);
+
+/** 쉼표로 나누는 태그 칸: 친 글(쉼표·빈칸 포함)은 그대로 보여 주고, 태그 목록만 따로 반영한다 */
+function TagsField({ tags, placeholder, onCommit }: { tags: string[]; placeholder?: string; onCommit: (tags: string[]) => void }) {
+  const joined = tags.join(', ');
+  const [text, setText] = useState(joined);
+  useEffect(() => {
+    setText((cur) => (parseTags(cur).join(', ') === joined ? cur : joined));
+  }, [joined]);
+  return (
+    <input
+      type="text"
+      value={text}
+      placeholder={placeholder}
+      spellCheck={false}
+      onChange={(e) => {
+        setText(e.target.value);
+        onCommit(parseTags(e.target.value));
+      }}
+    />
+  );
+}
+
 export function CharacterManagerDialog({ workCode, onClose }: { workCode: string; onClose: () => void }) {
   const [list, setList] = useState<Character[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -45,7 +111,7 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
     try {
       const chars = (await storage.repository.loadCharacters(workCode)).filter((c) => !c.temporary);
       setList(chars);
-      setSelectedId((cur) => cur ?? chars[0]?.id ?? null);
+      setSelectedId((cur) => cur ?? sortCharacters(chars)[0]?.id ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -80,10 +146,22 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
     timer.current = window.setTimeout(() => void flush(), 400);
   };
 
-  const close = async () => {
+  const close = useCallback(async () => {
     await flush();
     onClose();
-  };
+  }, [flush, onClose]);
+
+  // Esc로 닫기
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        void close();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [close]);
 
   const add = async () => {
     const used = (list ?? []).map((c) => c.color);
@@ -184,13 +262,19 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
     update(chr.id, patch);
   };
 
+  const roleOf = (c: Character): CharacterRole => (CHARACTER_ROLES.includes(c.info.role as CharacterRole) ? (c.info.role as CharacterRole) : '조연');
+  const sorted = list ? sortCharacters(list) : null;
+
   return (
     <div className="modal-backdrop" onClick={() => void close()}>
       <div className="modal wide cm" onClick={(e) => e.stopPropagation()}>
         <h2>
           캐릭터 관리 <span className="muted small">작품 {workCode}</span>
+          <button className="icon ghost close-x" onClick={() => void close()} title="닫기 (Esc)">
+            <Icon name="close" size={16} />
+          </button>
         </h2>
-        <div className="muted small">캐릭터는 작품에 종속됩니다. 돌에 지정하면 성별 돌·키·고정색이 따라오고, AI 전달 패키지에 설명과 레퍼런스가 실립니다. 고치면 바로 저장됩니다.</div>
+        <div className="muted small">캐릭터는 작품에 종속됩니다. 돌에 지정하면 성별 돌·키·고정색이 따라오고, AI 전달 패키지에 설명과 레퍼런스가 실립니다. 고치면 바로 저장됩니다. 목록은 역할 순(주인공 → 조연 → 엑스트라)입니다.</div>
         {error && (
           <div className="small" style={{ color: 'var(--danger)' }}>
             {error}{' '}
@@ -203,11 +287,13 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
         <div className="cm-layout">
           <div className="cm-list">
             {!list && <div className="muted small">불러오는 중…</div>}
-            {list?.map((c) => (
+            {sorted?.map((c) => (
               <div key={c.id} className={`cm-item ${c.id === selectedId ? 'selected' : ''}`} onClick={() => setSelectedId(c.id)}>
                 <span className="swatch" style={{ background: c.color }} />
                 <span className="grow">{c.name || '(이름 없음)'}</span>
-                <span className="muted small">{c.references.length}장</span>
+                <span className="muted small" title="역할 · 레퍼런스 수">
+                  {roleOf(c)} · {c.references.length}
+                </span>
               </div>
             ))}
             {list && list.length === 0 && <div className="muted small">등록된 캐릭터가 없습니다.</div>}
@@ -221,7 +307,16 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
               <>
                 <div className="field-row">
                   <label>이름</label>
-                  <input type="text" value={selected.name} onChange={(e) => update(selected.id, { name: e.target.value })} spellCheck={false} />
+                  <div className="row-wrap">
+                    <input type="text" className="grow" value={selected.name} onChange={(e) => update(selected.id, { name: e.target.value })} spellCheck={false} />
+                    <select value={roleOf(selected)} onChange={(e) => update(selected.id, { info: { ...selected.info, role: e.target.value } })} title="역할: 에셋 목록 정렬 순서(주인공이 위, 조연, 엑스트라)">
+                      {CHARACTER_ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="field-row">
                   <label>고정색</label>
@@ -247,10 +342,9 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
                         </option>
                       ))}
                     </select>
-                    <input type="number" min={50} max={250} value={selected.heightCm} onChange={(e) => update(selected.id, { heightCm: Math.max(50, Math.min(250, Number(e.target.value) || 0)) })} style={{ width: 64 }} title="키(cm)" />
+                    <NumberField key={`h-${selected.id}`} value={selected.heightCm} min={50} max={250} width={64} title="키(cm): 입력 뒤 Enter 또는 칸을 벗어나면 반영" onCommit={(v) => v !== undefined && update(selected.id, { heightCm: v })} />
                     <span className="muted small">cm</span>
-                    <input type="number" min={0} max={200} value={selected.info.age ?? ''} placeholder="나이" onChange={(e) => update(selected.id, { info: { ...selected.info, age: e.target.value === '' ? undefined : Number(e.target.value) } })} style={{ width: 60 }} title="나이" />
-                    <input type="text" value={selected.info.role ?? ''} placeholder="역할(주인공·조연…)" onChange={(e) => update(selected.id, { info: { ...selected.info, role: e.target.value } })} className="grow" spellCheck={false} />
+                    <NumberField key={`a-${selected.id}`} value={selected.info.age} min={0} max={200} width={60} placeholder="나이" allowEmpty title="나이" onCommit={(v) => update(selected.id, { info: { ...selected.info, age: v } })} />
                   </div>
                 </div>
                 <div className="field-row">
@@ -259,7 +353,7 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
                 </div>
                 <div className="field-row">
                   <label>외형 태그</label>
-                  <input type="text" value={selected.appearanceTags.join(', ')} onChange={(e) => update(selected.id, { appearanceTags: e.target.value.split(',').map((t) => t.trim()).filter(Boolean) })} placeholder="쉼표로 구분: 검은 단발, 교복, 마른 체형" spellCheck={false} />
+                  <TagsField key={`t-${selected.id}`} tags={selected.appearanceTags} placeholder="쉼표로 구분: 검은 단발, 교복, 마른 체형" onCommit={(tags) => update(selected.id, { appearanceTags: tags })} />
                 </div>
                 <div className="field-row top">
                   <label>설명</label>
@@ -274,9 +368,7 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
                   })}
                 </div>
 
-                <h3>
-                  추가 자료(복장·무기 등, 최대 {MAX_CUSTOM_REFS}장) — 이름을 붙여 둡니다
-                </h3>
+                <h3>추가 자료(복장·무기 등, 최대 {MAX_CUSTOM_REFS}장) — 이름을 붙여 둡니다</h3>
                 <div className="refs-grid">
                   {selected.references
                     .filter((r) => !r.slot)
@@ -284,11 +376,16 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
                       <RefSlotBox key={r.id} workCode={workCode} chr={selected} label={refLabel(r)} refImage={r} editableName onRename={(name) => update(selected.id, { references: selected.references.map((x) => (x.id === r.id ? { ...x, name } : x)) })} onPick={() => pickFile({ kind: 'custom', refId: r.id })} onDrop={(f) => void upload(selected, f, { kind: 'custom', refId: r.id })} onRemove={() => void removeRef(selected, r)} onMain={() => update(selected.id, { mainReference: r.id })} />
                     ))}
                   {selected.references.filter((r) => !r.slot).length < MAX_CUSTOM_REFS && (
-                    <div className="ref-slot add" onClick={() => pickFile({ kind: 'custom' })} onDragOver={(e) => e.preventDefault()} onDrop={(e) => {
-                      e.preventDefault();
-                      const f = e.dataTransfer.files?.[0];
-                      if (f) void upload(selected, f, { kind: 'custom' });
-                    }}>
+                    <div
+                      className="ref-slot add"
+                      onClick={() => pickFile({ kind: 'custom' })}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const f = e.dataTransfer.files?.[0];
+                        if (f) void upload(selected, f, { kind: 'custom' });
+                      }}
+                    >
                       <Icon name="plus" size={20} />
                       <span className="small">추가 자료</span>
                     </div>

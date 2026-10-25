@@ -24,10 +24,10 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { CameraState, Cut, DollAsset, Hand, JointRotations, PropAsset, PropInstance, Vec3 } from '../model/types';
 import { dollAsset } from '../model/defaults';
 import { HAND_BONE } from '../model/props';
-import { fingerPreset } from '../model/fingers';
+import { fingerPreset, type Curl, type FingerName } from '../model/fingers';
 import { loadPropTemplate, PropObject, propTemplateIfLoaded } from './props';
 import { gripToWorld, worldToGrip } from './propMath';
-import { fingerJointsFor } from './fingers';
+import { estimateCurl, fingerJointsFor, fingerJointsForCurl, palmNormal } from './fingers';
 import { depthMaterial, depthRange, type RenderPass } from './passes';
 import { Mesh, MeshBasicMaterial } from 'three';
 import type { Selection, ToolMode } from '../state/store';
@@ -48,6 +48,8 @@ export interface EngineCallbacks {
   commit: (mutate: (cut: Cut) => void) => void;
   select: (sel: Selection) => void;
   hint: (text: string) => void;
+  /** 다른 컷(번호)의 카메라를 기록 없이 바꾼다: 컷을 옮긴 뒤에 끝난 원고뷰 휠 조작을 원래 컷에 쓰기 위해 */
+  setCutCamera?: (cutNumber: number, camera: CameraState) => void;
   /** GLB 소품의 파일 바이트(저장소에서). 없으면 null */
   propModel?: (asset: PropAsset) => Promise<ArrayBuffer | null>;
 }
@@ -105,7 +107,10 @@ export class Engine {
   private loadingTemplates = new Set<string>();
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
-  private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | 'prop' | null = null;
+  private gizmoTarget: 'bone' | 'root' | 'rootRotate' | 'ik' | 'camera' | 'prop' | null = null;
+  /** 돌 전체 회전 기즈모의 대리 객체(골반 위치). 회전 변화를 루트에 골반 기준으로 옮긴다 */
+  private readonly rotateProxy = new Object3D();
+  private rootRotateStart: { quat: Quaternion; pos: Vector3; pivot: Vector3; proxyQuat: Quaternion } | null = null;
   private disposed = false;
 
   constructor(readonly callbacks: EngineCallbacks) {
@@ -125,6 +130,7 @@ export class Engine {
     this.scene.add(this.keyLight);
     this.scene.add(this.manu.camera);
     this.scene.add(this.ikProxy);
+    this.scene.add(this.rotateProxy);
   }
 
   private makeGrid(theme: 'light' | 'dark'): GridHelper {
@@ -335,7 +341,10 @@ export class Engine {
   // ---------- 스토어 → 씬 ----------
 
   applyCut(cut: Cut): void {
+    const prevNumber = this.cut?.number;
     this.cut = cut;
+    // 컷이 바뀌었으면 원고뷰에서 아직 기록 안 된 카메라 조작을 원래 컷에 먼저 쓴다
+    if (prevNumber !== undefined && prevNumber !== cut.number) this.manuControls?.flush();
     const seen = new Set<string>();
     for (const inst of cut.dolls) {
       seen.add(inst.id);
@@ -719,9 +728,14 @@ export class Engine {
         g.attach(bone);
         this.gizmoTarget = 'bone';
       } else {
+        // 돌 전체 회전은 골반(몸통 제어점)을 축으로. 대리 객체를 골반에 두고 그 회전 변화를 루트에 옮긴다
+        const pivot = rig.worldPos(rig.skel.order[0]);
+        this.rotateProxy.position.copy(pivot);
+        this.rotateProxy.quaternion.copy(rig.root.quaternion);
+        this.rotateProxy.updateMatrixWorld(true);
         g.setSpace('world');
-        g.attach(rig.root);
-        this.gizmoTarget = 'root';
+        g.attach(this.rotateProxy);
+        this.gizmoTarget = 'rootRotate';
       }
       return;
     }
@@ -765,6 +779,10 @@ export class Engine {
       const prop = this.selectedProp();
       if (prop) prop.live = true;
     }
+    const rig = this.selectedRig();
+    if (this.gizmoTarget === 'rootRotate' && rig) {
+      this.rootRotateStart = { quat: rig.root.quaternion.clone(), pos: rig.root.position.clone(), pivot: this.rotateProxy.position.clone(), proxyQuat: this.rotateProxy.quaternion.clone() };
+    }
   }
 
   private onGizmoChange(): void {
@@ -772,6 +790,14 @@ export class Engine {
     const rig = this.selectedRig();
     if (this.gizmoTarget === 'ik') {
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
+    } else if (this.gizmoTarget === 'rootRotate' && rig && this.rootRotateStart) {
+      const st = this.rootRotateStart;
+      const dq = this.rotateProxy.quaternion.clone().multiply(st.proxyQuat.clone().invert());
+      rig.root.quaternion.copy(dq).multiply(st.quat);
+      rig.root.position.copy(st.pivot).add(st.pos.clone().sub(st.pivot).applyQuaternion(dq));
+      rig.root.updateMatrixWorld(true);
+      this.enforceFloor(rig);
+      this.rotateProxy.position.copy(st.pivot);
     } else if (this.gizmoTarget === 'root' && rig) {
       // 돌 전체 이동·회전은 자세를 건드리지 않는다. 바닥 아래로만 안 내려가게
       this.enforceFloor(rig);
@@ -795,6 +821,7 @@ export class Engine {
     }
     const rig = this.selectedRig();
     if (!rig) return;
+    this.rootRotateStart = null;
     this.commitDoll(rig.id);
     if (this.gizmoTarget === 'ik' && this.selection.bone) rig.worldPos(this.selection.bone, this.ikProxy.position);
   }
@@ -989,6 +1016,71 @@ export class Engine {
     return true;
   }
 
+  /** 손가락별 굽힘각을 한 손에 적용(핸드 오퍼레이터). commit이 아니면 기록하지 않는다(슬라이더 드래그 중) */
+  applyFingerCurl(hand: Hand, curl: Record<FingerName, Curl>, opts: { dollId?: string; commit?: boolean } = {}): boolean {
+    const rig = opts.dollId ? (this.dolls.get(opts.dollId) ?? null) : this.selectedRig();
+    if (!rig) return false;
+    const joints = fingerJointsForCurl(rig, hand, curl);
+    if (!joints) return false;
+    rig.setJoints({ ...rig.getJoints(), ...joints });
+    if (opts.commit) this.commitDoll(rig.id);
+    return true;
+  }
+
+  /** 지금 손가락 자세에서 손가락별 굽힘각을 추정한다(핸드 오퍼레이터 슬라이더 초기값) */
+  estimateFingerCurl(hand: Hand, dollId?: string): Record<FingerName, Curl> | null {
+    const rig = dollId ? (this.dolls.get(dollId) ?? null) : this.selectedRig();
+    return rig ? estimateCurl(rig, hand) : null;
+  }
+
+  /**
+   * 손 확대 보기(핸드 오퍼레이터): 손바닥 법선 쪽에서 손을 본다. yaw·pitch(라디안)는 그 기준에서 돌려 보는 각.
+   * 다른 돌은 숨기고 그 돌만 그린다
+   */
+  renderHandView(dollId: string, hand: Hand, yaw: number, pitch: number, width: number, height: number): HTMLCanvasElement | null {
+    const rig = this.dolls.get(dollId);
+    if (!rig) return null;
+    const side = hand === 'right' ? 'Right' : 'Left';
+    const handBone = `${side}Hand`;
+    if (!rig.skel.bones.has(handBone)) return null;
+    rig.root.updateMatrixWorld(true);
+    const wrist = rig.worldPos(handBone);
+    const midName = `${side}HandMiddle1`;
+    const tipName = `${side}HandMiddle3`;
+    const knuckle = rig.skel.bones.has(midName) ? rig.worldPos(midName) : wrist.clone().add(rig.boneWorldDirection(handBone, rig.skel.rest.get(handBone)!.dir).multiplyScalar(0.09 * rig.root.scale.x));
+    const tip = rig.skel.bones.has(tipName) ? rig.worldPos(tipName) : knuckle;
+    const center = wrist.clone().lerp(tip, 0.5);
+    const span = Math.max(0.14, wrist.distanceTo(tip) * 1.9);
+    const indexDir = rig.skel.rest.get(`${side}HandIndex1`)?.dir ?? new Vector3(side === 'Right' ? -1 : 1, 0, 0);
+    const thumbDir = rig.skel.rest.get(`${side}HandThumb1`)?.dir ?? new Vector3(0, 0, 1);
+    const normalW = rig.boneWorldDirection(handBone, palmNormal(side, indexDir, thumbDir)).normalize();
+    const fingerDir = knuckle.clone().sub(wrist).normalize();
+    const right = new Vector3().crossVectors(fingerDir, normalW);
+    if (right.lengthSq() < 1e-6) right.set(1, 0, 0);
+    right.normalize();
+    const upV = new Vector3().crossVectors(normalW, right).normalize();
+    const dir = normalW.clone().applyAxisAngle(upV, yaw).applyAxisAngle(right, pitch).normalize();
+    const fov = 26;
+    const cam = new PerspectiveCamera(fov, width / height, 0.01, 50);
+    const dist = (span / 2 / Math.tan(MathUtils.degToRad(fov / 2))) * 1.1;
+    cam.position.copy(center).addScaledVector(dir, dist);
+    cam.up.copy(upV);
+    cam.lookAt(center);
+    cam.updateMatrixWorld(true);
+    const hidden: DollRig[] = [];
+    for (const r of this.dolls.values()) {
+      if (r !== rig && r.root.visible) {
+        r.root.visible = false;
+        hidden.push(r);
+      }
+    }
+    try {
+      return this.renderToCanvas(cam, width, height, { background: 'white' });
+    } finally {
+      for (const r of hidden) r.root.visible = true;
+    }
+  }
+
   /**
    * 출력 묶음 패스: 선화(흰 돌 + 외곽선 + 십자선), 깊이(가까울수록 밝게, 배경 검정), 색 마스크(캐릭터 고정색·소품색 평면, 배경 투명).
    * 돌과 소품의 표시 상태를 잠시 바꾼 뒤 되돌린다
@@ -1112,6 +1204,32 @@ export class Engine {
     this.callbacks.commit((c) => {
       c.camera = { ...state, position: [...state.position] as [number, number, number] };
     });
+  }
+
+  /** 컷 번호를 지정해 기록. 지금 컷이면 되돌리기 기록을 남기고, 다른 컷(이미 옮겨 간 뒤)이면 그 컷에 조용히 쓴다 */
+  commitCameraStateFor(cutNumber: number, state: CameraState): void {
+    if (!this.cut || this.cut.number === cutNumber || !this.callbacks.setCutCamera) {
+      this.commitCameraState(state);
+      return;
+    }
+    this.callbacks.setCutCamera(cutNumber, { ...state, position: [...state.position] as [number, number, number] });
+  }
+
+  /** 원고뷰에서 아직 기록 안 된 카메라 조작(휠 뒤 대기)을 지금 기록한다 */
+  flushCameraEdits(): void {
+    this.manuControls?.flush();
+  }
+
+  /** 원고뷰에 보이는 카메라와 컷 데이터가 다르면 컷에 기록한다(썸네일과 원고뷰가 항상 같게). 바뀐 게 있으면 true */
+  syncCameraToCut(): boolean {
+    if (!this.cut) return false;
+    const c = this.cut.camera;
+    const live = this.manu.read(c.focalLength);
+    const moved = Math.hypot(live.position[0] - c.position[0], live.position[1] - c.position[1], live.position[2] - c.position[2]) > 1e-4;
+    const turned = Math.abs(live.yaw - c.yaw) > 0.05 || Math.abs(live.pitch - c.pitch) > 0.05 || Math.abs(live.roll - c.roll) > 0.05;
+    if (!moved && !turned) return false;
+    this.commitCameraState(live);
+    return true;
   }
 
   /** 원고 카메라를 수치로 바꿀 때(카메라 패널·드래그 중) 즉시 반영용. 컷 데이터는 바꾸지 않는다 */

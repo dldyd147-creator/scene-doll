@@ -4,6 +4,7 @@ import { normalizePose, normalizeScene } from '../model/library';
 import { normalizeProp } from '../model/props';
 import type { Document, Thumbnails } from '../state/store';
 import { pad3, type StorageBackend } from './backend';
+import { normalizeHandPose, type HandPose } from '../model/fingers';
 
 /** 기획서의 폴더 구조 */
 export const paths = {
@@ -15,6 +16,8 @@ export const paths = {
   poseDir: () => '공용/포즈',
   pose: (id: string) => `공용/포즈/${id}.json`,
   poseThumb: (id: string) => `공용/포즈/${id}.png`,
+  handPoseDir: () => '공용/손포즈',
+  handPose: (id: string) => `공용/손포즈/${id}.json`,
   propDir: () => '공용/소품',
   prop: (id: string) => `공용/소품/${id}.json`,
   propModel: (id: string) => `공용/소품/${id}.glb`,
@@ -301,6 +304,32 @@ export class Repository {
   async deletePose(id: string): Promise<void> {
     await this.backend.remove(paths.pose(id));
     await this.backend.remove(paths.poseThumb(id));
+  }
+
+  // ---------- 공용: 손 모양(핸드 오퍼레이터 프리셋) ----------
+
+  async loadHandPoses(): Promise<HandPose[]> {
+    const files = await this.backend.list(paths.handPoseDir());
+    const out: HandPose[] = [];
+    for (const f of files) {
+      if (f.kind !== 'file' || !f.name.endsWith('.json')) continue;
+      const t = await this.backend.readText(`${paths.handPoseDir()}/${f.name}`);
+      if (!t) continue;
+      try {
+        out.push(normalizeHandPose(JSON.parse(t) as Partial<HandPose>));
+      } catch {
+        /* 깨진 JSON */
+      }
+    }
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async saveHandPose(pose: HandPose): Promise<void> {
+    await this.backend.writeText(paths.handPose(pose.id), json(pose));
+  }
+
+  async deleteHandPose(id: string): Promise<void> {
+    await this.backend.remove(paths.handPose(id));
   }
 
   // ---------- 공용: 소품 ----------

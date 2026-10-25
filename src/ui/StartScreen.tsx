@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createWork, mainReferenceOf, nowIso } from '../model/defaults';
+import { createWork, mainReferenceOf, nowIso, sortCharacters } from '../model/defaults';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
 import type { WorkInfo } from '../storage/repository';
@@ -213,7 +213,7 @@ export function StartScreen() {
                 </button>
               </h3>
               <div className="chr-grid">
-                {info.characters.map((c) => (
+                {sortCharacters(info.characters).map((c) => (
                   <CharacterCard key={c.id} workCode={info.work.code} chr={c} onClick={() => setCharacterManagerFor(info.work.code)} />
                 ))}
                 {info.characters.length === 0 && <div className="muted small">등록된 캐릭터가 없습니다. 캐릭터 관리에서 이름·설명·레퍼런스를 등록하면 돌에 지정할 수 있습니다.</div>}

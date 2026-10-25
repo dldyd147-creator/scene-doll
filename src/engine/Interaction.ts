@@ -41,6 +41,8 @@ interface ModalState {
   startQuat: Quaternion;
   /** 이동용: 시작 시 바닥 평면 위의 포인터 점 */
   startHit: Vector3 | null;
+  /** 회전 축점(돌은 골반). null이면 제 원점 */
+  pivot: Vector3 | null;
 }
 
 const DRAG_THRESHOLD_PX = 3;
@@ -277,6 +279,8 @@ export class Interaction {
         }
         // 관절점을 끌면 그 위 뼈를 돌려 관절이 커서를 따라간다
         const parent = p.rig.skel.parents.get(p.bone) ?? p.bone;
+        // 허리 점의 위 뼈는 골반(루트)이라 몸 전체가 돌아간다: 잡아 돌리지 않고 선택만. 몸 전체 회전은 R 키(골반 기준)
+        if (parent === p.rig.skel.order[0]) break;
         this.state = { kind: 'pending', rig: p.rig, bone: parent, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       }
@@ -481,6 +485,7 @@ export class Interaction {
       startPos: obj.position.clone(),
       startQuat: obj.quaternion.clone(),
       startHit,
+      pivot: rig ? rig.worldPos(rig.skel.order[0]) : null,
     };
     if (this.engine.orbit) this.engine.orbit.enabled = false;
     window.addEventListener('pointermove', this.onModalMove);
@@ -587,9 +592,11 @@ export class Interaction {
     } else {
       const angle = -dx * 0.01;
       const axis = AXES[m.axis ?? 'y'];
-      obj.quaternion.copy(m.startQuat);
-      obj.updateMatrixWorld(true);
-      obj.rotateOnWorldAxis(axis, angle);
+      const dq = new Quaternion().setFromAxisAngle(axis, angle);
+      obj.quaternion.copy(dq).multiply(m.startQuat);
+      // 돌은 골반(몸통 제어점)을 축으로 돈다. 카메라·소품은 제 원점
+      if (m.pivot) obj.position.copy(m.pivot).add(m.startPos.clone().sub(m.pivot).applyQuaternion(dq));
+      else obj.position.copy(m.startPos);
       obj.updateMatrixWorld(true);
     }
     // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다
@@ -658,10 +665,12 @@ export class Interaction {
         this.el.style.cursor = 'grab';
         hint(`${boneLabel(IK_CHAINS[p.effector].end)} IK 핸들 · 끌면 팔·다리가 따라옵니다`);
         return;
-      case 'joint':
-        this.el.style.cursor = isRoot(p) ? 'move' : 'grab';
-        hint(isRoot(p) ? '골반 · 끌면 발을 바닥에 둔 채 몸통이 움직입니다(아래로 끌면 앉음) · 회전은 R' : `${boneLabel(p.bone)} 관절 · 끌면 관절이 커서를 따라갑니다 · E: 회전 링`);
+      case 'joint': {
+        const waist = !isRoot(p) && p.rig.skel.parents.get(p.bone) === p.rig.skel.order[0];
+        this.el.style.cursor = isRoot(p) ? 'move' : waist ? 'default' : 'grab';
+        hint(isRoot(p) ? '골반 · 끌면 발을 바닥에 둔 채 몸통이 움직입니다(아래로 끌면 앉음) · 회전은 R' : waist ? '허리 · 몸 전체 회전은 R 키(골반을 축으로) 또는 회전 기즈모(E)' : `${boneLabel(p.bone)} 관절 · 끌면 관절이 커서를 따라갑니다 · E: 회전 링`);
         return;
+      }
       case 'camera':
         this.el.style.cursor = 'move';
         hint('원고 카메라 · 끌어서 이동 · G: 이동 · R: 회전 · W/E: 기즈모');

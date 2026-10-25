@@ -5,6 +5,7 @@ import { createCut, createEpisode, createTemporaryCharacter, createWork, dollAss
 import { dollsFromScene, type SlotAssignments } from '../model/library';
 import { createPropInstance } from '../model/props';
 import { newId } from '../model/ids';
+import type { CameraState } from '../model/types';
 import { applyScriptToCuts, type ApplyPlan, type CutScript, type DialogueLine } from '../script/ntt';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
 
@@ -65,6 +66,11 @@ export interface StoreState extends Document {
   screen: 'start' | 'editor';
   /** 캐릭터 관리 대화상자가 열린 작품코드(null이면 닫힘) */
   characterManagerFor: string | null;
+  /** 이 회차 출력 폴더의 PNG 수(출력물 보기 아이콘 색) */
+  outputCount: number;
+  /** 핸드 오퍼레이터(손가락 모양) 대화상자 */
+  handOperatorOpen: boolean;
+  handOperatorHand: Hand;
   /** 씬 검색기(` 키) 열림. 열 때 미리 고를 씬 ID */
   sceneBrowserOpen: boolean;
   sceneBrowserSelectId: string | null;
@@ -116,6 +122,10 @@ export interface StoreState extends Document {
   /** 돌에 캐릭터 지정. null이면 임시 캐릭터로 되돌린다 */
   assignCharacter: (dollId: string, characterId: string | null) => void;
   setEpisodeTitle: (title: string) => void;
+  /** 번호로 고른 컷의 카메라를 기록 없이 바꾼다(컷을 옮긴 뒤 늦게 끝난 원고뷰 조작용) */
+  setCutCamera: (cutNumber: number, camera: CameraState) => void;
+  setOutputCount: (n: number) => void;
+  setHandOperator: (open: boolean, hand?: Hand) => void;
 
   // 소품(3단계)
   /** 등록 소품을 현재 컷에 자유 배치. position이 없으면 앞쪽에 비켜 놓는다 */
@@ -207,6 +217,9 @@ export const useStore = create<StoreState>()(
     thumbnailsRenumbered: false,
     screen: 'start',
     characterManagerFor: null,
+    outputCount: 0,
+    handOperatorOpen: false,
+    handOperatorHand: 'right',
     sceneBrowserOpen: false,
     sceneBrowserSelectId: null,
     sceneSaveOpen: false,
@@ -482,6 +495,21 @@ export const useStore = create<StoreState>()(
     },
 
     setEpisodeTitle: (title) => set({ episode: { ...get().episode, title, updatedAt: nowIso() }, dirty: true }),
+
+    setCutCamera: (cutNumber, camera) => {
+      const s = get();
+      const i = s.cuts.findIndex((c) => c.number === cutNumber);
+      if (i < 0) return;
+      const cuts = s.cuts.slice();
+      cuts[i] = { ...cuts[i], camera: { ...camera, position: [...camera.position] as [number, number, number] }, updatedAt: nowIso() };
+      set({ cuts, dirty: true });
+    },
+
+    setOutputCount: (n) => {
+      if (get().outputCount !== n) set({ outputCount: n });
+    },
+
+    setHandOperator: (open, hand) => set({ handOperatorOpen: open, handOperatorHand: hand ?? get().handOperatorHand }),
 
     // ---------- 소품 ----------
 

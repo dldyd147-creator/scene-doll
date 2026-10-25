@@ -69,6 +69,20 @@ export function refLabel(r: ReferenceImage): string {
   return r.name.trim() || '추가 자료';
 }
 
+/** 역할. 에셋 목록은 이 순서로 정렬한다(주인공 → 조연 → 엑스트라) */
+export const CHARACTER_ROLES = ['주인공', '조연', '엑스트라'] as const;
+export type CharacterRole = (typeof CHARACTER_ROLES)[number];
+
+export function roleRank(role?: string): number {
+  const i = CHARACTER_ROLES.indexOf(role as CharacterRole);
+  return i < 0 ? 1 : i;
+}
+
+/** 역할 순(주인공 → 조연 → 엑스트라), 같은 역할은 만든 순 */
+export function sortCharacters<T extends Character>(list: T[]): T[] {
+  return [...list].sort((a, b) => roleRank(a.info.role) - roleRank(b.info.role) || a.createdAt.localeCompare(b.createdAt));
+}
+
 /** 대표 레퍼런스(지정이 없으면 첫 장) */
 export function mainReferenceOf(chr: Character): ReferenceImage | null {
   return chr.references.find((r) => r.id === chr.mainReference) ?? chr.references[0] ?? null;
@@ -123,7 +137,7 @@ export function createCharacter(workCode: string, name: string, gender: Gender |
     workCode,
     name,
     color,
-    info: { gender },
+    info: { gender, role: '조연' },
     description: '',
     appearanceTags: [],
     heightCm: doll.baseHeightCm,

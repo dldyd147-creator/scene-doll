@@ -182,11 +182,11 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
           </button>
         </div>
         <div className="row copy-row">
-          <button className="big" onClick={() => engine.moveWorkViewToManuscript()} title="원고 카메라 → 조작뷰: 왼쪽(원고) 시점을 오른쪽(조작뷰)으로 가져옴">
-            <Icon name="toWork" size={18} /> 원고→조작뷰
+          <button className="big icon-only" onClick={() => engine.moveWorkViewToManuscript()} title="원고 카메라 → 조작뷰: 왼쪽(원고) 시점을 오른쪽(조작뷰)으로 가져옴">
+            <Icon name="camArrowRight" size={24} />
           </button>
-          <button className="big" onClick={() => engine.copyWorkViewToManuscript()} title="조작뷰 시점 → 원고 카메라: 오른쪽(조작뷰) 시점을 왼쪽(원고 카메라)으로 복사">
-            조작뷰→원고 <Icon name="toManu" size={18} />
+          <button className="big icon-only" onClick={() => engine.copyWorkViewToManuscript()} title="조작뷰 시점 → 원고 카메라: 오른쪽(조작뷰) 시점을 왼쪽(원고 카메라)으로 복사">
+            <Icon name="camArrowLeft" size={24} />
           </button>
         </div>
       </div>

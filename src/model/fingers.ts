@@ -29,3 +29,47 @@ export function fingerPreset(id: string): FingerPreset | undefined {
 export function fingerBoneName(side: 'Left' | 'Right', finger: FingerName, joint: 1 | 2 | 3 | 4): string {
   return `${side}Hand${finger}${joint}`;
 }
+
+export const FINGER_LABEL: Record<FingerName, string> = { Thumb: '엄지', Index: '검지', Middle: '중지', Ring: '약지', Pinky: '새끼' };
+
+/** 손가락별 최대 굽힘(주먹) 프로필. 핸드 오퍼레이터 슬라이더 100%가 이 값 */
+export const CURL_MAX: Record<FingerName, Curl> = { Thumb: [40, 45, 20], Index: [85, 95, 65], Middle: [85, 95, 65], Ring: [85, 95, 65], Pinky: [85, 95, 65] };
+
+/** 손가락별 굽힘 정도 0~1 */
+export type FingerAmounts = Record<FingerName, number>;
+
+export const OPEN_AMOUNTS: FingerAmounts = { Thumb: 0, Index: 0, Middle: 0, Ring: 0, Pinky: 0 };
+
+const sum3 = (c: Curl) => c[0] + c[1] + c[2];
+
+export function curlFromAmounts(a: FingerAmounts): Record<FingerName, Curl> {
+  const out = {} as Record<FingerName, Curl>;
+  for (const f of FINGERS) {
+    const k = Math.max(0, Math.min(1.3, a[f]));
+    out[f] = [CURL_MAX[f][0] * k, CURL_MAX[f][1] * k, CURL_MAX[f][2] * k];
+  }
+  return out;
+}
+
+export function amountsFromCurl(c: Record<FingerName, Curl>): FingerAmounts {
+  const out = {} as FingerAmounts;
+  for (const f of FINGERS) out[f] = Math.max(0, Math.min(1, sum3(c[f]) / sum3(CURL_MAX[f])));
+  return out;
+}
+
+/** 저장한 손 모양(공용/손포즈). 손가락별 마디 굽힘각 */
+export interface HandPose {
+  id: string;
+  name: string;
+  curl: Record<FingerName, Curl>;
+  createdAt: string;
+}
+
+export function normalizeHandPose(raw: Partial<HandPose>): HandPose {
+  const curl = {} as Record<FingerName, Curl>;
+  for (const f of FINGERS) {
+    const c = raw.curl?.[f];
+    curl[f] = Array.isArray(c) && c.length === 3 ? [Number(c[0]) || 0, Number(c[1]) || 0, Number(c[2]) || 0] : [0, 0, 0];
+  }
+  return { id: raw.id ?? `hpose_${Math.random().toString(36).slice(2, 10)}`, name: raw.name ?? '손 모양', curl, createdAt: raw.createdAt ?? new Date().toISOString() };
+}

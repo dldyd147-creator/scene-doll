@@ -48,6 +48,8 @@ export class ManuscriptControls {
   private pointerId: number | null = null;
   private last = { x: 0, y: 0 };
   private state: CameraState | null = null;
+  /** state가 속한 컷 번호. 기록이 늦어져 컷이 바뀐 뒤 끝나도 원래 컷에 쓴다 */
+  private cutNumber = 0;
   private pivot = new Vector3();
   private dist = 3;
   private wheelTimer = 0;
@@ -86,9 +88,22 @@ export class ManuscriptControls {
     return null;
   }
 
+  /** 아직 기록 안 된 조작(휠 뒤 대기 중)을 지금 기록한다. 컷을 옮기거나 확정하기 전에 부른다 */
+  flush(): void {
+    window.clearTimeout(this.wheelTimer);
+    if (this.state && !this.mode) this.commitPending();
+  }
+
+  private commitPending(): void {
+    if (!this.state) return;
+    this.engine.commitCameraStateFor(this.cutNumber, this.state);
+    this.state = null;
+  }
+
   private begin(): void {
     const cut = this.engine.cut;
     if (!cut) return;
+    this.cutNumber = cut.number;
     this.state = { ...cut.camera, position: [...cut.camera.position] as [number, number, number] };
     const pos = new Vector3(...this.state.position);
     const subject = this.engine.subjectCenter();
@@ -156,8 +171,7 @@ export class ManuscriptControls {
       }
       this.pointerId = null;
     }
-    if (this.state) this.engine.commitCameraState(this.state);
-    this.state = null;
+    this.commitPending();
   };
 
   private onWheel = (e: WheelEvent): void => {
@@ -184,10 +198,7 @@ export class ManuscriptControls {
     // 휠이 멈추면 한 번만 기록
     window.clearTimeout(this.wheelTimer);
     this.wheelTimer = window.setTimeout(() => {
-      if (this.state && !this.mode) {
-        this.engine.commitCameraState(this.state);
-        this.state = null;
-      }
+      if (this.state && !this.mode) this.commitPending();
     }, 250);
   };
 }

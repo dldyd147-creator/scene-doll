@@ -34,7 +34,7 @@ export class MannequinRig extends DollRig {
   readonly parts: DollPart[] = [];
   readonly partsByBone = new Map<string, DollPart[]>();
   readonly proportions: Proportions;
-  private outlineMat = outlineMaterial(0.0032);
+  private outlineMat = outlineMaterial(0.0016);
   /** 부위별 재질(십자선 부위는 뼈 휴식 행렬이 다른 전용 재질) */
   private partMats = new Map<string, { base: MeshToonMaterial; hi: MeshToonMaterial }>();
 

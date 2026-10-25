@@ -17,12 +17,15 @@ import { CharacterManager } from './ui/CharacterManager';
 import { SceneBrowser } from './ui/SceneBrowser';
 import { SceneSaveDialog } from './ui/SceneSaveDialog';
 import { ScriptImportDialog } from './ui/ScriptImportDialog';
+import { HandOperator } from './ui/HandOperator';
+import { useThumbnailSync } from './ui/cuts';
 import { useStore } from './state/store';
 
 export default function App() {
   const engine = useEngine();
   useShortcuts(engine);
   useAutosave();
+  useThumbnailSync(engine);
   const theme = useStore((s) => s.settings.theme);
   const screen = useStore((s) => s.screen);
   useEffect(() => {
@@ -47,6 +50,7 @@ export default function App() {
           <SceneBrowser />
           <SceneSaveDialog engine={engine} />
           <ScriptImportDialog />
+          <HandOperator engine={engine} />
         </div>
       )}
       <SettingsDialog />

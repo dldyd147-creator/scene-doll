@@ -69,6 +69,7 @@ export async function openDocument(code: string, episodeNo: number, create: bool
     useStore.getState().loadDocument(doc, thumbs);
     useStore.getState().setScreen('editor');
     rememberOpened(code, episodeNo);
+  void refreshOutputCount();
     return 'loaded';
   }
   if (!create) return 'missing';
@@ -76,6 +77,7 @@ export async function openDocument(code: string, episodeNo: number, create: bool
   useStore.getState().loadDocument({ work, episode: createEpisode(code, episodeNo), cuts: [createCut(1)], characters: await storage.repository.loadCharacters(code).catch(() => []) });
   useStore.getState().setScreen('editor');
   rememberOpened(code, episodeNo);
+  void refreshOutputCount();
   return 'created';
 }
 
@@ -84,6 +86,13 @@ export async function goToStart(): Promise<void> {
   if (useStore.getState().dirty) await saveNow();
   useStore.getState().select({ dollId: null, bone: null });
   useStore.getState().setScreen('start');
+}
+
+/** 이 회차 출력 폴더의 PNG 수를 세어 둔다(출력물 보기 아이콘 색) */
+export async function refreshOutputCount(): Promise<void> {
+  const s = useStore.getState();
+  const files = await storage.backend.list(storage.repository.outputFolder(s.work.code, s.episode.number)).catch(() => []);
+  useStore.getState().setOutputCount(files.filter((f) => f.kind === 'file' && f.name.endsWith('.png')).length);
 }
 
 /** 캐릭터 관리에서 고친 뒤 편집 중인 문서의 캐릭터를 저장소에서 다시 읽는다 */

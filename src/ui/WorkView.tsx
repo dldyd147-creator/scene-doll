@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import type { Engine } from '../engine/Engine';
 import { propRestHeight } from '../engine/props';
 import { IK_CHAINS } from '../engine/skeleton';
-import { FINGER_PRESETS } from '../model/fingers';
-import { gripFor, HAND_LABEL } from '../model/props';
-import type { Hand, Vec3 } from '../model/types';
+import { gripFor } from '../model/props';
+import type { Vec3 } from '../model/types';
 import { useStore } from '../state/store';
 import { dragPayload, endDrag, isSceneDollDrag } from './dragdrop';
 import { DragNumber } from './DragNumber';
@@ -29,7 +28,7 @@ export function WorkView({ engine }: { engine: Engine }) {
   const duplicateDoll = useStore((s) => s.duplicateDoll);
   const removeProp = useStore((s) => s.removeProp);
   const duplicateProp = useStore((s) => s.duplicateProp);
-  const setStatusHint = useStore((s) => s.setStatusHint);
+  const setHandOperator = useStore((s) => s.setHandOperator);
   const hasDoll = !!selection.dollId;
   const hasProp = !!selection.propId;
   const duplicateSelected = () => (selection.propId ? duplicateProp(selection.propId) : selection.dollId ? duplicateDoll(selection.dollId) : null);
@@ -61,11 +60,6 @@ export function WorkView({ engine }: { engine: Engine }) {
     swivelPreview(v);
     engine.commitSelectedDoll();
   };
-  const applyFingers = (hand: Hand, presetId: string) => {
-    const preset = FINGER_PRESETS.find((p) => p.id === presetId);
-    if (preset && engine.applyFingerPreset(hand, presetId)) setStatusHint(`${HAND_LABEL[hand]} 손가락: ${preset.label}`);
-  };
-
   const surfaceRef = useCallback(
     (el: HTMLDivElement | null) => {
       engine.setViewElement('work', el);
@@ -165,6 +159,9 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedDoll('all')} title="돌 전체 초기화: 위치 원점·회전 정면·자세 T포즈 (Alt+G: 위치만, Alt+R: 회전만)">
             <Icon name="resetAll" />
           </button>
+          <button className="icon" disabled={!hasDoll} onClick={() => setHandOperator(true)} title="핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양(손 확대 보기·손가락별 슬라이더·프리셋 저장/불러오기)">
+            <Icon name="fingers" />
+          </button>
           <button className="icon" disabled={!hasDoll} onClick={() => engine.fixJoints()} title="관절을 사람 관절 한계 안으로 교정">
             <Icon name="fix" />
           </button>
@@ -189,26 +186,6 @@ export function WorkView({ engine }: { engine: Engine }) {
               title={`${limbKind === 'arm' ? '팔꿈치' : '무릎'} 방향: 끌면 손(발)은 그대로 두고 ${limbKind === 'arm' ? '팔꿈치' : '무릎'}가 어깨(고관절)→손(발) 축 둘레로 돕니다`}
             />
           )}
-        </div>
-        <div className="group" title="손가락 쥐기 프리셋(선택한 돌의 손). 소품을 쥐어 주면 '쥐기'가 자동으로 들어갑니다">
-          {(['right', 'left'] as Hand[]).map((h) => (
-            <select
-              key={h}
-              value=""
-              disabled={!hasDoll}
-              onChange={(e) => {
-                if (e.target.value) applyFingers(h, e.target.value);
-              }}
-              title={`${HAND_LABEL[h]} 손가락 프리셋: 펴기·자연스럽게·쥐기·주먹·가리키기·엄지 척`}
-            >
-              <option value="">{HAND_LABEL[h]}</option>
-              {FINGER_PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          ))}
         </div>
         <div className="group" title="시점">
           <button className="icon" onClick={() => engine.fitAll()} title="전체 보기 (Shift+Z)">

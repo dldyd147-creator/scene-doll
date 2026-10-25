@@ -1,4 +1,4 @@
-import { Box3, Color, DoubleSide, Group, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection } from 'three';
+import { Box3, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, Line, LineBasicMaterial, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection } from 'three';
 import type { DollInstance, Gender, JointRotations, Quat } from '../model/types';
 import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkeleton } from './skeleton';
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
@@ -37,6 +37,8 @@ const JOINT_DOT_BONES = [
 
 /** 몸통 제어점: 몸에 가려져도 항상 보이고 잡힌다(팔다리 점은 가려지면 숨는다) */
 export const TORSO_DOT_BONES = new Set(['Head', 'Neck', 'Spine2', 'Spine1', 'Spine', 'Hips']);
+/** 몸통 흐름선: 골반에서 정수리까지 제어점을 잇는다 */
+const TORSO_CHAIN = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End'];
 
 /** 관절이 몸 안에 있으므로 제어점을 카메라 쪽으로 당길 거리(키 175cm 기준 m). 몸 두께의 절반 정도 */
 const MARKER_PULL: Record<string, number> = {
@@ -101,6 +103,8 @@ export abstract class DollRig {
   private ikMarkers: MarkerPoints;
   private jointMarkers: MarkerPoints;
   private torsoMarkers: MarkerPoints;
+  private torsoLine: Line;
+  private readonly torsoLineBones: string[];
   private selectedMarker: MarkerPoints;
   private markerScale = 1;
 
@@ -155,6 +159,17 @@ export abstract class DollRig {
     this.torsoMarkers.points.visible = false;
     this.selectedMarker.points.visible = false;
     this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.selectedMarker.points);
+
+    // 몸통 흐름선(선택한 돌만, 몸에 가려져도 보임)
+    this.torsoLineBones = TORSO_CHAIN.filter((n) => skel.bones.has(n));
+    const lineGeom = new BufferGeometry();
+    lineGeom.setAttribute('position', new BufferAttribute(new Float32Array(Math.max(2, this.torsoLineBones.length) * 3), 3));
+    this.torsoLine = new Line(lineGeom, new LineBasicMaterial({ color: JOINT_COLOR, transparent: true, opacity: 0.85, depthTest: false, depthWrite: false }));
+    this.torsoLine.layers.set(LAYER_HELPERS);
+    this.torsoLine.renderOrder = 20;
+    this.torsoLine.frustumCulled = false;
+    this.torsoLine.visible = false;
+    this.helpers.add(this.torsoLine);
 
     this.groundRing = new Mesh(
       new RingGeometry(0.24, 0.27, 48),
@@ -236,6 +251,7 @@ export abstract class DollRig {
     this.groundRing.visible = on;
     this.jointMarkers.points.visible = on;
     this.torsoMarkers.points.visible = on;
+    this.torsoLine.visible = on && this.torsoLineBones.length >= 2;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
 
@@ -553,6 +569,12 @@ export abstract class DollRig {
     if (this.selected) {
       this.limbDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
       this.torsoDotBones.forEach((name, i) => place(this.torsoMarkers, i, name));
+      const attr = this.torsoLine.geometry.getAttribute('position') as BufferAttribute;
+      this.torsoLineBones.forEach((name, i) => {
+        this.worldPos(name, _v);
+        attr.setXYZ(i, _v.x, _v.y, _v.z);
+      });
+      attr.needsUpdate = true;
     }
     if (this.highlighted && this.skel.bones.has(this.highlighted)) place(this.selectedMarker, 0, this.highlighted);
     this.groundRing.position.set(this.root.position.x, 0.003, this.root.position.z);
@@ -596,6 +618,8 @@ export abstract class DollRig {
     this.ikMarkers.dispose();
     this.jointMarkers.dispose();
     this.torsoMarkers.dispose();
+    this.torsoLine.geometry.dispose();
+    (this.torsoLine.material as LineBasicMaterial).dispose();
     this.selectedMarker.dispose();
     this.groundRing.geometry.dispose();
     (this.groundRing.material as MeshBasicMaterial).dispose();

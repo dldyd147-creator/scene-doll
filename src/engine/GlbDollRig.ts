@@ -94,7 +94,7 @@ function lineParamsFor(m: BodyMeasure): LineParams {
 export class GlbDollRig extends DollRig {
   readonly pickTargets: Object3D[];
   private readonly mesh: SkinnedMesh;
-  private outlineMat = outlineMaterial(0.0055);
+  private outlineMat = outlineMaterial(0.0028);
 
   constructor(id: string, asset: DollAsset, template: DollTemplate, color: string, heightCm: number) {
     const clone = SkeletonUtils.clone(template.scene);
@@ -148,7 +148,10 @@ export class GlbDollRig extends DollRig {
       }
     }
     const bone = mesh.skeleton.bones[best];
-    return bone && this.skel.bones.has(bone.name) ? bone.name : null;
+    if (!bone || !this.skel.bones.has(bone.name)) return null;
+    // 손가락은 조작뷰에서 따로 잡지 않는다(손목까지만). 손가락 모양은 핸드 오퍼레이터에서
+    const finger = /^(Left|Right)Hand(Thumb|Index|Middle|Ring|Pinky)\d$/.exec(bone.name);
+    return finger ? `${finger[1]}Hand` : bone.name;
   }
 
   override prepareForPick(): void {

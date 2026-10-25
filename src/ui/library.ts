@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import type { Pose, PropAsset, SceneLibraryItem } from '../model/types';
+import type { HandPose } from '../model/fingers';
 import { storage } from '../storage';
 
 /**
@@ -12,6 +13,8 @@ interface LibraryState {
   scenes: SceneLibraryItem[] | null;
   poses: Pose[] | null;
   props: PropAsset[] | null;
+  /** 저장한 손 모양(핸드 오퍼레이터) */
+  handPoses: HandPose[] | null;
   /** 썸네일 경로 → 데이터 URL. ''는 파일이 없음 */
   thumbs: Record<string, string>;
   error: string | null;
@@ -25,6 +28,9 @@ interface LibraryState {
   loadProps: (force?: boolean) => Promise<void>;
   saveProp: (asset: PropAsset, thumbDataUrl: string | null) => Promise<PropAsset>;
   deleteProp: (id: string) => Promise<void>;
+  loadHandPoses: (force?: boolean) => Promise<void>;
+  saveHandPose: (pose: HandPose) => Promise<void>;
+  deleteHandPose: (id: string) => Promise<void>;
   /** 저장소가 바뀌면 전부 다시 읽도록 비운다 */
   reset: () => void;
 }
@@ -39,8 +45,27 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   scenes: null,
   poses: null,
   props: null,
+  handPoses: null,
   thumbs: {},
   error: null,
+
+  loadHandPoses: (force = false) => {
+    if (!force && get().handPoses) return Promise.resolve();
+    return storage.repository
+      .loadHandPoses()
+      .then((handPoses) => set({ handPoses }))
+      .catch((e: unknown) => set({ handPoses: get().handPoses ?? [], error: `손 모양 목록을 읽지 못했습니다: ${message(e)}` }));
+  },
+
+  saveHandPose: async (pose) => {
+    await storage.repository.saveHandPose(pose);
+    set((s) => ({ handPoses: s.handPoses ? [pose, ...s.handPoses.filter((x) => x.id !== pose.id)] : null }));
+  },
+
+  deleteHandPose: async (id) => {
+    await storage.repository.deleteHandPose(id);
+    set((s) => ({ handPoses: s.handPoses ? s.handPoses.filter((x) => x.id !== id) : null }));
+  },
 
   loadScenes: (force = false) => {
     if (!force && get().scenes) return Promise.resolve();
@@ -136,7 +161,7 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
 
   reset: () => {
     pendingThumbs.clear();
-    set({ scenes: null, poses: null, props: null, thumbs: {}, error: null });
+    set({ scenes: null, poses: null, props: null, handPoses: null, thumbs: {}, error: null });
   },
 }));
 

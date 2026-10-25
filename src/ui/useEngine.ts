@@ -12,6 +12,7 @@ export function useEngine(): Engine {
       commit: (mutate) => useStore.getState().commitCut(mutate),
       select: (sel) => useStore.getState().select(sel),
       hint: (text) => useStore.getState().setStatusHint(text),
+      setCutCamera: (n, camera) => useStore.getState().setCutCamera(n, camera),
       propModel: (asset) => storage.repository.readPropModel(asset.id),
     });
   }
