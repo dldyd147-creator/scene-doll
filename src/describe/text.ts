@@ -17,6 +17,11 @@ export function mdName(code: string, episodeNo: number): string {
   return `${code}_${pad3(episodeNo)}.md`;
 }
 
+/** 출력 묶음 파일 이름: 선화 _line, 깊이 _depth, 색 마스크 _mask */
+export function passName(code: string, episodeNo: number, cutNo: number, pass: 'line' | 'depth' | 'mask'): string {
+  return `${code}_${pad3(episodeNo)}_${pad3(cutNo)}_${pass}.png`;
+}
+
 function pitchLabel(pitch: number): string {
   const p = Math.round(Math.abs(pitch));
   if (p < 3) return '수평';

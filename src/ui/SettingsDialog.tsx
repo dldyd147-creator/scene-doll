@@ -101,6 +101,7 @@ export function SettingsDialog() {
         <h3>포징</h3>
         <Toggle label="관절 한계(자동 교정)" k="jointLimits" />
         <Toggle label="바닥 뚫기 금지(발·몸이 바닥 아래로 안 감)" k="floorLock" />
+        <Toggle label="몸통 따라가기(손을 멀리 끌면 상체가 기움)" k="torsoFollow" />
         <Toggle label="어깨 연동(손 끌 때 쇄골 따라옴)" k="shoulderLink" />
         <Range label="어깨 연동 비율" k="shoulderLinkRatio" min={0} max={0.6} step={0.05} fmt={(v) => v.toFixed(2)} />
         <Toggle label="손·발 방향 고정(IK 때)" k="lockEndOrientation" />

@@ -62,6 +62,9 @@ const PATHS: Record<string, string> = {
   tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01',
   // 글콘티
   script: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
+  // 4단계
+  torso: 'M9 3h6l2 8H7zM8 11h8v10H8zM4 10l3-4M20 10l-3-4',
+  layers: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5',
 };
 
 export interface IconProps {

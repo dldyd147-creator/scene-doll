@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { cutBlock } from './text';
+import { cutBlock, passName } from './text';
+
+describe('출력 묶음 파일 이름', () => {
+  it('선화·깊이·색 마스크', () => {
+    expect(passName('ACS', 12, 45, 'line')).toBe('ACS_012_045_line.png');
+    expect(passName('ACS', 1, 3, 'depth')).toBe('ACS_001_003_depth.png');
+    expect(passName('ACS', 1, 3, 'mask')).toBe('ACS_001_003_mask.png');
+  });
+});
 import type { CutAnalysis } from './analyze';
 import { createCut } from '../model/defaults';
 import { createPrimitiveProp } from '../model/props';

@@ -24,8 +24,12 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { CameraState, Cut, DollAsset, Hand, JointRotations, PropAsset, PropInstance, Vec3 } from '../model/types';
 import { dollAsset } from '../model/defaults';
 import { HAND_BONE } from '../model/props';
+import { fingerPreset } from '../model/fingers';
 import { loadPropTemplate, PropObject, propTemplateIfLoaded } from './props';
 import { gripToWorld, worldToGrip } from './propMath';
+import { fingerJointsFor } from './fingers';
+import { depthMaterial, depthRange, type RenderPass } from './passes';
+import { Mesh, MeshBasicMaterial } from 'three';
 import type { Selection, ToolMode } from '../state/store';
 import { DEFAULT_SETTINGS, type Settings } from '../state/settings';
 import type { DollRig } from './DollRig';
@@ -824,6 +828,9 @@ export class Engine {
       if (target.y < floor) target = new Vector3(target.x, floor, target.z);
     }
 
+    // 몸통 따라가기: 손 목표가 팔 길이 밖이면 척추(Spine·Spine1·Spine2)를 목표 쪽으로 기울인다(발 고정 풀이에서는 안 함)
+    if (opts.shoulder !== false && this.settings.torsoFollow && chain.clavicle) this.torsoFollow(rig, chain, target);
+
     const useShoulder = opts.shoulder ?? this.settings.shoulderLink;
     if (useShoulder && chain.clavicle && this.settings.shoulderLinkRatio > 0) {
       const clav = rig.skel.bones.get(chain.clavicle);
@@ -895,6 +902,185 @@ export class Engine {
   }
 
   /** 돌 전체를 바닥 수직축으로 돌린다 */
+  /** 팔 길이 밖의 목표를 향해 상체를 기울인다. 한 번에 최대 12°, 누적 45°까지. 관절 한계로도 묶인다 */
+  private torsoFollow(rig: DollRig, chain: { upper: string; lower: string; end: string }, target: Vector3): void {
+    const spine = ['Spine', 'Spine1', 'Spine2'].filter((b) => rig.skel.bones.has(b));
+    if (!spine.length) return;
+    const a = rig.worldPos(chain.upper);
+    const reach = (rig.worldPos(chain.lower).distanceTo(a) + rig.worldPos(chain.end).distanceTo(rig.worldPos(chain.lower))) * 0.97;
+    const need = target.distanceTo(a) - reach;
+    if (need <= 0) return;
+    const top = spine[spine.length - 1];
+    const lean = 2 * Math.acos(Math.min(1, Math.abs(rig.jointDelta(top).w)));
+    if (lean > MathUtils.degToRad(45)) return;
+    const pivot = rig.worldPos(spine[0]);
+    const v1 = a.clone().sub(pivot);
+    const v2 = target.clone().sub(pivot);
+    if (v1.lengthSq() < 1e-6 || v2.lengthSq() < 1e-6) return;
+    const axis = new Vector3().crossVectors(v1, v2);
+    if (axis.lengthSq() < 1e-8) return;
+    axis.normalize();
+    const angle = Math.min(MathUtils.degToRad(12), v1.angleTo(v2), need / Math.max(0.2, v1.length()));
+    if (angle < 1e-4) return;
+    const step = new Quaternion().setFromAxisAngle(axis, angle / spine.length);
+    for (const name of spine) rotateObjectWorld(rig.skel.bones.get(name)!, step);
+    rig.root.updateMatrixWorld(true);
+    this.clampAfterChange(rig, spine);
+  }
+
+  /** 선택한 뼈가 속한 IK 사슬(팔·다리). 없으면 null */
+  limbChainOfSelection(): { key: string; kind: 'arm' | 'leg' } | null {
+    const bone = this.selection.bone;
+    if (!bone) return null;
+    for (const key of Object.keys(IK_CHAINS)) {
+      const c = IK_CHAINS[key];
+      if (c.upper === bone || c.lower === bone || c.end === bone) return { key, kind: key.endsWith('Hand') ? 'arm' : 'leg' };
+    }
+    return null;
+  }
+
+  /**
+   * 팔꿈치·무릎 방향: 위 뼈를 '어깨(고관절)→손(발)' 축 둘레로 돌려 끝은 그대로 두고 가운데 관절만 돌린다.
+   * 끝 방향 잠금이 켜져 있으면 손·발 방향도 유지한다. 기록은 하지 않는다(드래그 끝에 commitSelectedDoll)
+   */
+  swivelSelectedLimb(deltaRad: number): boolean {
+    const rig = this.selectedRig();
+    const limb = this.limbChainOfSelection();
+    if (!rig || !limb) return false;
+    const chain = IK_CHAINS[limb.key];
+    const upper = rig.skel.bones.get(chain.upper);
+    const end = rig.skel.bones.get(chain.end);
+    if (!upper || !end) return false;
+    rig.root.updateMatrixWorld(true);
+    const axis = rig.worldPos(chain.end).sub(rig.worldPos(chain.upper));
+    if (axis.lengthSq() < 1e-8) return false;
+    axis.normalize();
+    const endQ = new Quaternion();
+    const keepEnd = this.settings.lockEndOrientation;
+    if (keepEnd) end.getWorldQuaternion(endQ);
+    rotateObjectWorld(upper, new Quaternion().setFromAxisAngle(axis, deltaRad));
+    upper.updateWorldMatrix(true, true);
+    if (keepEnd) {
+      end.getWorldQuaternion(_q);
+      rotateObjectWorld(end, endQ.multiply(_q.invert()));
+    }
+    this.clampAfterChange(rig, [chain.upper, chain.lower]);
+    this.enforceFloor(rig);
+    return true;
+  }
+
+  commitSelectedDoll(): void {
+    const rig = this.selectedRig();
+    if (rig) this.commitDoll(rig.id);
+  }
+
+  /** 손가락 쥐기 프리셋을 선택한 돌(또는 dollId)의 한 손에 적용. 손가락 뼈가 없으면 false */
+  applyFingerPreset(hand: Hand, presetId: string, dollId?: string): boolean {
+    const rig = dollId ? (this.dolls.get(dollId) ?? null) : this.selectedRig();
+    const preset = fingerPreset(presetId);
+    if (!rig || !preset) return false;
+    const joints = fingerJointsFor(rig, hand, preset);
+    if (!joints) {
+      this.callbacks.hint('이 돌에는 손가락 뼈가 없습니다(기본 돌 남·여를 쓰세요)');
+      return false;
+    }
+    rig.setJoints({ ...rig.getJoints(), ...joints });
+    this.commitDoll(rig.id);
+    return true;
+  }
+
+  /**
+   * 출력 묶음 패스: 선화(흰 돌 + 외곽선 + 십자선), 깊이(가까울수록 밝게, 배경 검정), 색 마스크(캐릭터 고정색·소품색 평면, 배경 투명).
+   * 돌과 소품의 표시 상태를 잠시 바꾼 뒤 되돌린다
+   */
+  renderPass(camera: PerspectiveCamera, width: number, height: number, pass: RenderPass): HTMLCanvasElement {
+    const restores: Array<() => void> = [];
+    try {
+      if (pass === 'line') {
+        for (const rig of this.dolls.values()) {
+          const color = rig.color;
+          const shading = rig.shading;
+          const outline = rig.outline;
+          rig.setColor('#ffffff');
+          rig.setShading(false);
+          rig.setOutline(true);
+          restores.push(() => {
+            rig.setColor(color);
+            rig.setShading(shading);
+            rig.setOutline(outline);
+          });
+        }
+        for (const p of this.props.values()) {
+          p.setColorOverride('#ffffff');
+          p.setShading(false);
+          p.setOutline(true);
+          restores.push(() => {
+            p.setColorOverride(null);
+            p.setShading(this.cut?.light.shading ?? true);
+            p.setOutline(this.cut?.outline ?? true);
+          });
+        }
+        return this.renderToCanvas(camera, width, height, { background: 'white' });
+      }
+      if (pass === 'depth') {
+        const boxes = [...this.dolls.values()].map((r) => r.worldBounds()).concat([...this.props.values()].map((p) => p.worldBounds()));
+        const range = depthRange(camera, boxes);
+        const mat = depthMaterial(range.near, range.far);
+        for (const rig of this.dolls.values()) {
+          const outline = rig.outline;
+          rig.setOutline(false);
+          restores.push(() => rig.setOutline(outline));
+        }
+        for (const p of this.props.values()) {
+          p.setOutline(false);
+          restores.push(() => p.setOutline(this.cut?.outline ?? true));
+        }
+        this.scene.overrideMaterial = mat;
+        restores.push(() => {
+          this.scene.overrideMaterial = null;
+          mat.dispose();
+        });
+        // 배경은 검정(가장 멀리)
+        const depth = this.renderToCanvas(camera, width, height, { background: 'transparent' });
+        const out = document.createElement('canvas');
+        out.width = depth.width;
+        out.height = depth.height;
+        const ctx = out.getContext('2d')!;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, out.width, out.height);
+        ctx.drawImage(depth, 0, 0);
+        return out;
+      }
+      // 색 마스크
+      const mats: MeshBasicMaterial[] = [];
+      for (const rig of this.dolls.values()) {
+        const mat = new MeshBasicMaterial({ color: rig.color });
+        mats.push(mat);
+        const saved = rig.pickTargets.map((o) => [o as Mesh, (o as Mesh).material] as const);
+        for (const [m] of saved) m.material = mat;
+        const outline = rig.outline;
+        rig.setOutline(false);
+        restores.push(() => {
+          for (const [m, orig] of saved) m.material = orig;
+          rig.setOutline(outline);
+        });
+      }
+      for (const p of this.props.values()) {
+        const mat = new MeshBasicMaterial({ color: p.baseColor });
+        mats.push(mat);
+        restores.push(p.swapMaterials(mat));
+        p.setOutline(false);
+        restores.push(() => p.setOutline(this.cut?.outline ?? true));
+      }
+      restores.push(() => {
+        for (const m of mats) m.dispose();
+      });
+      return this.renderToCanvas(camera, width, height, { background: 'transparent' });
+    } finally {
+      for (const r of restores.reverse()) r();
+    }
+  }
+
   rotateRootYaw(rig: DollRig, angle: number): void {
     rig.root.rotateOnWorldAxis(Y_AXIS, angle);
     rig.root.updateMatrixWorld(true);

@@ -47,6 +47,8 @@ export interface CutPackage {
   episode: number;
   cut: number;
   image: string;
+  /** 출력 묶음(선화·깊이·색 마스크) 파일 이름. 묶음을 뽑았을 때만 */
+  images?: { line: string; depth: string; mask: string };
   frame: { aspect: string; width: number; height: number; shot: string; angle: string; count: number };
   camera: { height: number; focal: number; pitch: number; yaw: number; roll: number; distance: number };
   scene: { description: string; memo: string; dialogue: NonNullable<Cut['dialogue']>; scriptNote: string };

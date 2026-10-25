@@ -1,6 +1,6 @@
 import type { Engine } from '../engine/Engine';
 import { analyzeCut } from '../describe/analyze';
-import { cutBlock, episodeMarkdown, mdName, pngName } from '../describe/text';
+import { cutBlock, episodeMarkdown, mdName, passName, pngName } from '../describe/text';
 import type { Cut } from '../model/types';
 import { pad3 } from '../storage/backend';
 import { storage } from '../storage';
@@ -27,6 +27,8 @@ export interface ExportResult {
 export interface ExportOptions {
   /** 출력과 함께 AI 전달 패키지(패키지/{작품}/{회차}/)도 추출 */
   withPackage: boolean;
+  /** 컷별 출력 묶음(선화·깊이·색 마스크)도 함께 쓴다(출력 폴더 + 패키지 컷 폴더) */
+  withBundle?: boolean;
 }
 
 function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
@@ -87,8 +89,22 @@ export async function exportEpisode(engine: Engine, onProgress: (p: ExportProgre
         blocks.push(block);
         await repo.writeOutput(work.code, episode.number, pngName(work.code, episode.number, cut.number), blob);
         await repo.writeOutput(work.code, episode.number, `${work.code}_${pad3(episode.number)}_${pad3(cut.number)}.json`, JSON.stringify({ ...cut, desc: block }, null, 2));
+        // 출력 묶음: 선화·깊이·색 마스크(같은 카메라·크기)
+        const images: Partial<Record<'line' | 'depth' | 'mask', string>> = {};
+        if (opts.withBundle) {
+          for (const pass of ['line', 'depth', 'mask'] as const) {
+            onProgress({ done: i, total: confirmed.length, current: `${pngName(work.code, episode.number, cut.number)} · ${pass}` });
+            const passCanvas = engine.renderPass(engine.manu.camera, width, width * cut.aspect, pass);
+            const passBlob = await canvasToBlob(passCanvas);
+            const name = passName(work.code, episode.number, cut.number, pass);
+            await repo.writeOutput(work.code, episode.number, name, passBlob);
+            if (opts.withPackage) await repo.writePackage(work.code, episode.number, `${pad3(cut.number)}/${name}`, passBlob);
+            images[pass] = name;
+          }
+        }
         if (opts.withPackage) {
           const pkg = buildCutPackage(work, episode, cut, analysis, characters, folders, width, block);
+          if (opts.withBundle) pkg.images = { line: images.line!, depth: images.depth!, mask: images.mask! };
           await writeCutPackage(pkg, blob);
           packages.push(pkg);
         }

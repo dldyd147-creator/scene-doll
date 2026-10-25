@@ -121,6 +121,32 @@ export class PropObject {
     for (const m of this.materials) m.emissive.copy(on ? SELECT_EMISSIVE : NO_EMISSIVE);
   }
 
+  /** 출력 패스용: 색을 잠시 바꾼다(null이면 원래 색으로) */
+  setColorOverride(hex: string | null): void {
+    for (const m of this.materials) {
+      if (hex) {
+        if (!m.userData.baseColor) m.userData.baseColor = m.color.getHex();
+        m.color.set(hex);
+      } else if (m.userData.baseColor !== undefined) {
+        m.color.setHex(m.userData.baseColor as number);
+        delete m.userData.baseColor;
+      }
+    }
+  }
+
+  /** 출력 패스용: 메시 재질을 잠시 바꾼다. 돌려준 함수로 되돌린다 */
+  swapMaterials(material: Mesh['material']): () => void {
+    const saved = this.pickTargets.map((o) => [o as Mesh, (o as Mesh).material] as const);
+    for (const [m] of saved) m.material = material;
+    return () => {
+      for (const [m, mat] of saved) m.material = mat;
+    };
+  }
+
+  get baseColor(): string {
+    return this.asset.color ?? DEFAULT_PROP_COLOR;
+  }
+
   setShading(on: boolean): void {
     if (this.shading === on) return;
     this.shading = on;

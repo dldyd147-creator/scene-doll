@@ -15,6 +15,7 @@ export function ExportDialog({ engine }: { engine: Engine }) {
   const [result, setResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [withPackage, setWithPackage] = useState(true);
+  const [withBundle, setWithBundle] = useState(true);
   const signal = useRef({ cancelled: false });
   if (!open) return null;
   const confirmed = cuts.filter((c) => c.confirmed).length;
@@ -26,7 +27,7 @@ export function ExportDialog({ engine }: { engine: Engine }) {
     signal.current = { cancelled: false };
     setProgress({ done: 0, total: confirmed, current: '' });
     try {
-      const r = await exportEpisode(engine, setProgress, signal.current, { withPackage });
+      const r = await exportEpisode(engine, setProgress, signal.current, { withPackage, withBundle });
       setResult(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -61,6 +62,15 @@ export function ExportDialog({ engine }: { engine: Engine }) {
           <span>
             <button className={withPackage ? 'active' : ''} onClick={() => setWithPackage(!withPackage)} title="패키지/{작품}/{회차}/ 에 컷 폴더(PNG·패키지 JSON·프롬프트)·캐릭터 시트(설명·레퍼런스)·회차 요약을 함께 씁니다. 5단계 이미지 생성의 입력">
               {withPackage ? '함께 추출' : '추출 안 함'}
+            </button>
+          </span>
+          <span />
+        </div>
+        <div className="setting">
+          <span>선화·깊이·색 마스크 묶음</span>
+          <span>
+            <button className={withBundle ? 'active' : ''} onClick={() => setWithBundle(!withBundle)} title="컷마다 _line(흰 돌 + 외곽선·십자선), _depth(가까울수록 밝음), _mask(캐릭터 고정색 평면, 배경 투명) PNG를 출력 폴더와 패키지 컷 폴더에 함께 씁니다. 이미지 생성의 컨트롤 입력용">
+              {withBundle ? '함께 출력' : '출력 안 함'}
             </button>
           </span>
           <span />

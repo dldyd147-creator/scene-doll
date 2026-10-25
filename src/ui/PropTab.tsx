@@ -70,6 +70,8 @@ export function PropTab({ engine }: { engine: Engine }) {
     }
     const id = addProp(p.id);
     attachProp(id, dollId, hand, gripFor(p, hand));
+    // 손가락도 쥐기 프리셋으로(손가락 뼈가 있는 돌만)
+    engine.applyFingerPreset(hand, 'grip', dollId);
     setStatusHint(`${p.name}을(를) ${HAND_LABEL[hand]}에 쥐어 주었습니다 · 소품을 끌거나 G/R로 쥐는 위치·각도를 맞추고 [쥐기 저장]`);
   };
   const shoot = async (p: PropAsset) => {
@@ -335,6 +337,7 @@ function SceneProps({ engine }: { engine: Engine }) {
                   }
                   const [dollId, hand] = v.split(':') as [string, Hand];
                   attachProp(p.id, dollId, hand, gripFor(asset, hand));
+                  engine.applyFingerPreset(hand, 'grip', dollId);
                 }}
                 title="어느 손에 쥐는지. 자유 배치로 바꾸면 지금 자리에 그대로 놓입니다"
               >

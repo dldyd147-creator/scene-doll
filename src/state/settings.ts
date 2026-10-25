@@ -23,6 +23,8 @@ export interface Settings {
   jointLimits: boolean;
   /** 바닥 뚫기 금지: 발(몸)이 바닥 아래로 내려가지 않게 */
   floorLock: boolean;
+  /** 몸통 따라가기: 손을 팔 길이 밖으로 끌면 상체가 그쪽으로 기운다 */
+  torsoFollow: boolean;
   undoLimit: number;
   autosaveSeconds: number;
   /** 조작뷰에 원고 카메라 화각 범위 표시 */
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lockEndOrientation: false,
   jointLimits: true,
   floorLock: true,
+  torsoFollow: true,
   undoLimit: 200,
   autosaveSeconds: 60,
   showFrustum: true,
