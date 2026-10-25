@@ -41,7 +41,17 @@ export const paths = {
   packageDir: (code: string, n: number) => `패키지/${code}/${pad3(n)}`,
   packageCutDir: (code: string, n: number, cutNo: number) => `패키지/${code}/${pad3(n)}/${pad3(cutNo)}`,
   packageCharDir: (code: string, n: number) => `패키지/${code}/${pad3(n)}/캐릭터`,
+  // 5단계 생성 결과(컷별 후보 PNG)
+  generatedDir: (code: string, n: number) => `생성/${code}/${pad3(n)}`,
+  generatedCutDir: (code: string, n: number, cutNo: number) => `생성/${code}/${pad3(n)}/${pad3(cutNo)}`,
+  generated: (code: string, n: number, cutNo: number, k: number) => `생성/${code}/${pad3(n)}/${pad3(cutNo)}/cand_${k}.png`,
 };
+
+/** 생성 후보 파일 이름 cand_{k}.png → k (아니면 null) */
+export function candidateIndex(name: string): number | null {
+  const m = /^cand_(\d+)\.png$/.exec(name);
+  return m ? parseInt(m[1], 10) : null;
+}
 
 const json = (v: unknown): string => JSON.stringify(v, null, 2);
 
@@ -138,6 +148,33 @@ export class Repository {
 
   packageFolder(code: string, episodeNo: number): string {
     return paths.packageDir(code, episodeNo);
+  }
+
+  // ---------- 5단계 생성 결과 ----------
+
+  generatedFolder(code: string, episodeNo: number): string {
+    return paths.generatedDir(code, episodeNo);
+  }
+
+  /** 컷 폴더에 있는 후보 파일 경로(cand_{k}.png, k 순) */
+  async listGenerated(code: string, episodeNo: number, cutNo: number): Promise<string[]> {
+    const dir = paths.generatedCutDir(code, episodeNo, cutNo);
+    const files = await this.backend.list(dir);
+    return files
+      .filter((f) => f.kind === 'file' && candidateIndex(f.name) !== null)
+      .sort((a, b) => candidateIndex(a.name)! - candidateIndex(b.name)!)
+      .map((f) => `${dir}/${f.name}`);
+  }
+
+  /** 후보 PNG 저장 → 저장소 경로(cut.generatedImages에 적는 값) */
+  async writeGenerated(code: string, episodeNo: number, cutNo: number, k: number, data: Blob | ArrayBuffer): Promise<string> {
+    const path = paths.generated(code, episodeNo, cutNo, k);
+    await this.backend.writeBinary(path, data);
+    return path;
+  }
+
+  async deleteGenerated(path: string): Promise<void> {
+    await this.backend.remove(path);
   }
 
   // ---------- 작품 ----------

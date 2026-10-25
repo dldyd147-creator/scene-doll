@@ -80,6 +80,8 @@ export interface StoreState extends Document {
   scriptImportOpen: boolean;
   /** 글콘티 없이도 원고뷰 위아래의 대사·지문 칸을 보이게(이 세션만) */
   scriptBlocksForced: boolean;
+  /** 5단계 이미지 생성 대화상자 */
+  generateOpen: boolean;
 
   currentCut: () => Cut;
   /** 현재 컷을 바꾸고 되돌리기 기록을 남긴다 */
@@ -155,6 +157,16 @@ export interface StoreState extends Document {
   /** 현재 컷의 대사·지문을 고친다(메모처럼 되돌리기 기록 없음) */
   setCutScript: (partial: { dialogue?: DialogueLine[]; scriptNote?: string }) => void;
 
+  // 5단계 이미지 생성
+  setGenerateOpen: (open: boolean) => void;
+  /** 생성 후보 경로를 컷에 더한다(첫 장이면 대표). 메모처럼 되돌리기 기록 없음 */
+  addGeneratedImages: (cutNumber: number, paths: string[]) => void;
+  /** 대표 후보 지정: generatedImages[0]으로 옮긴다 */
+  setGeneratedMain: (cutNumber: number, path: string) => void;
+  removeGeneratedImage: (cutNumber: number, path: string) => void;
+  /** 컷의 묶음 태그(5단계 묶음 생성 단위) */
+  setCutGroupTags: (cutNumber: number, tags: string[]) => void;
+
   // 컷 확정·목록
   /** 현재 컷을 확정(설명 텍스트 기록)하고 다음 컷으로. 다음 컷이 없으면 현재 씬을 복사해 만든다 */
   confirmCut: (desc: string) => void;
@@ -225,6 +237,7 @@ export const useStore = create<StoreState>()(
     sceneSaveOpen: false,
     scriptImportOpen: false,
     scriptBlocksForced: false,
+    generateOpen: false,
 
     currentCut: () => get().cuts[get().currentCutIndex],
 
@@ -607,6 +620,50 @@ export const useStore = create<StoreState>()(
       const s = get();
       const cuts = s.cuts.slice();
       cuts[s.currentCutIndex] = { ...cuts[s.currentCutIndex], ...partial, updatedAt: nowIso() };
+      set({ cuts, dirty: true });
+    },
+
+    // ---------- 5단계 이미지 생성 ----------
+
+    setGenerateOpen: (open) => set({ generateOpen: open }),
+
+    addGeneratedImages: (cutNumber, paths) => {
+      if (!paths.length) return;
+      const s = get();
+      const i = s.cuts.findIndex((c) => c.number === cutNumber);
+      if (i < 0) return;
+      const cuts = s.cuts.slice();
+      const prev = cuts[i].generatedImages ?? [];
+      cuts[i] = { ...cuts[i], generatedImages: [...prev, ...paths.filter((p) => !prev.includes(p))], updatedAt: nowIso() };
+      set({ cuts, dirty: true });
+    },
+
+    setGeneratedMain: (cutNumber, path) => {
+      const s = get();
+      const i = s.cuts.findIndex((c) => c.number === cutNumber);
+      if (i < 0) return;
+      const list = s.cuts[i].generatedImages ?? [];
+      if (!list.includes(path) || list[0] === path) return;
+      const cuts = s.cuts.slice();
+      cuts[i] = { ...cuts[i], generatedImages: [path, ...list.filter((p) => p !== path)], updatedAt: nowIso() };
+      set({ cuts, dirty: true });
+    },
+
+    removeGeneratedImage: (cutNumber, path) => {
+      const s = get();
+      const i = s.cuts.findIndex((c) => c.number === cutNumber);
+      if (i < 0) return;
+      const cuts = s.cuts.slice();
+      cuts[i] = { ...cuts[i], generatedImages: (cuts[i].generatedImages ?? []).filter((p) => p !== path), updatedAt: nowIso() };
+      set({ cuts, dirty: true });
+    },
+
+    setCutGroupTags: (cutNumber, tags) => {
+      const s = get();
+      const i = s.cuts.findIndex((c) => c.number === cutNumber);
+      if (i < 0) return;
+      const cuts = s.cuts.slice();
+      cuts[i] = { ...cuts[i], groupTags: tags, updatedAt: nowIso() };
       set({ cuts, dirty: true });
     },
 

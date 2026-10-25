@@ -18,6 +18,7 @@ import { SceneBrowser } from './ui/SceneBrowser';
 import { SceneSaveDialog } from './ui/SceneSaveDialog';
 import { ScriptImportDialog } from './ui/ScriptImportDialog';
 import { HandOperator } from './ui/HandOperator';
+import { GenerateDialog } from './ui/GenerateDialog';
 import { useThumbnailSync } from './ui/cuts';
 import { useStore } from './state/store';
 
@@ -51,6 +52,7 @@ export default function App() {
           <SceneSaveDialog engine={engine} />
           <ScriptImportDialog />
           <HandOperator engine={engine} />
+          <GenerateDialog engine={engine} />
         </div>
       )}
       <SettingsDialog />

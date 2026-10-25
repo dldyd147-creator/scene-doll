@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PRESET_ORDER, PRESETS } from '../generate/batch';
 import { DEFAULT_SITUATION_TAGS, parseTagList } from '../model/library';
 import { useStore } from '../state/store';
 import type { Settings } from '../state/settings';
@@ -47,6 +48,63 @@ function SituationTagsSetting() {
       <input type="text" value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} onKeyDown={(e) => e.key === 'Enter' && commit()} spellCheck={false} title="씬 저장 대화상자와 씬 검색기 필터에 나오는 상황 태그 버튼. 비우면 기본 10개" />
       <span />
     </div>
+  );
+}
+
+/** 문자열·숫자 선택지 한 줄 */
+function Seg<T extends string | number>({ label, value, options, labels, onChange, title }: { label: string; value: T; options: readonly T[]; labels?: Partial<Record<string, string>>; onChange: (v: T) => void; title?: string }) {
+  return (
+    <div className="setting" title={title}>
+      <span>{label}</span>
+      <span className="segmented">
+        {options.map((o) => (
+          <button key={String(o)} className={o === value ? 'active' : ''} onClick={() => onChange(o)}>
+            {labels?.[String(o)] ?? String(o)}
+          </button>
+        ))}
+      </span>
+      <span />
+    </div>
+  );
+}
+
+function TextSetting({ label, k, placeholder, type = 'text', title }: { label: string; k: 'genEndpoint' | 'genToken' | 'genStyle'; placeholder?: string; type?: 'text' | 'password'; title?: string }) {
+  const value = useStore((s) => s.settings[k]);
+  const update = useStore((s) => s.updateSettings);
+  return (
+    <div className="setting">
+      <span>{label}</span>
+      <input type={type} value={value} placeholder={placeholder} spellCheck={false} autoComplete="off" title={title} onChange={(e) => update({ [k]: e.target.value } as Partial<Settings>)} />
+      <span />
+    </div>
+  );
+}
+
+/** 5단계 이미지 생성 설정. API 키는 여기 없다(서버리스 함수의 환경 변수) */
+function GenerateSettings() {
+  const s = useStore((st) => st.settings);
+  const update = useStore((st) => st.updateSettings);
+  return (
+    <>
+      <Seg label="엔진" value={s.genEngine} options={['mock', 'remote'] as const} labels={{ mock: '모의', remote: '원격(함수)' }} onChange={(v) => update({ genEngine: v })} title="모의: 네트워크 없이 돌 격자에 MOCK 표시를 얹어 돌려줌(흐름 확인용). 원격: 아래 주소의 서버리스 함수가 OpenAI Images API를 호출" />
+      {s.genEngine === 'remote' && (
+        <>
+          <TextSetting label="함수 주소(엔드포인트)" k="genEndpoint" placeholder="https://scene-doll-image.<계정>.workers.dev/" title="serverless/openai-image 를 배포한 URL" />
+          <TextSetting label="함수 접근 토큰" k="genToken" type="password" placeholder="함수 배포 때 정한 ACCESS_TOKEN" title="함수의 ACCESS_TOKEN 비밀값과 같은 문자열. OpenAI 키가 아님" />
+        </>
+      )}
+      <div className="small muted">OpenAI API 키는 브라우저에 두지 않습니다. 키는 서버리스 함수(저장소의 serverless/openai-image, Cloudflare Worker 또는 Vercel)의 환경 변수에만 넣고, 여기에는 그 함수의 주소와 접근 토큰만 넣습니다(이 브라우저의 설정에 저장됨).</div>
+      <Seg label="묶음 상한" value={s.genMaxPerBatch} options={[4, 6, 8] as const} labels={{ 4: '4컷', 6: '6컷', 8: '8컷' }} onChange={(v) => update({ genMaxPerBatch: v })} title="한 번에 격자로 묶어 보내는 컷 수. 같은 묶음 태그끼리 묶이고 넘치면 균등 분할" />
+      <Seg label="기본 강도 프리셋" value={s.genPreset} options={PRESET_ORDER} labels={{ doll: PRESETS.doll.label, balanced: PRESETS.balanced.label, prompt: PRESETS.prompt.label }} onChange={(v) => update({ genPreset: v })} title={PRESET_ORDER.map((p) => `${PRESETS[p].label}: ${PRESETS[p].short}`).join('\n')} />
+      <Seg label="출력 크기" value={s.genSizeMode} options={['custom', 'fixed', 'auto'] as const} labels={{ custom: '격자 비율', fixed: '고정 3종', auto: '자동' }} onChange={(v) => update({ genSizeMode: v })} title="격자 비율: 격자 크기 그대로 16의 배수·픽셀 상한 안으로(gpt-image-2 계열). 고정 3종: 1024×1024·1024×1536·1536×1024 중 가까운 것(gpt-image-1.5). 자동: API가 정함" />
+      <Seg label="칸(컷) 가로 px" value={s.genCellPx} options={[512, 768, 1024] as const} onChange={(v) => update({ genCellPx: v })} title="격자 한 칸(컷 하나)의 가로 픽셀. 클수록 비용·시간이 늘고 선명해짐" />
+      <Seg label="품질" value={s.genQuality} options={['auto', 'low', 'medium', 'high'] as const} onChange={(v) => update({ genQuality: v })} title="API quality. 토큰(비용)은 품질·크기에 비례" />
+      <Range label="후보 장수(묶음마다)" k="genCandidates" min={1} max={4} step={1} />
+      <Range label="캐릭터당 레퍼런스 장수" k="genRefsPerCharacter" min={1} max={3} step={1} />
+      <Toggle label="선화 격자 첨부" k="genAttachLine" />
+      <Toggle label="색 마스크 격자 첨부" k="genAttachMask" />
+      <TextSetting label="화풍 문구(프롬프트 끝)" k="genStyle" placeholder="예: 흑백 웹툰 선화, 깔끔한 펜선, 스크린톤" />
+    </>
   );
 }
 
@@ -111,6 +169,9 @@ export function SettingsDialog() {
 
         <h3>씬 라이브러리</h3>
         <SituationTagsSetting />
+
+        <h3>이미지 생성(5단계)</h3>
+        <GenerateSettings />
 
         <h3>저장</h3>
         <Range label="되돌리기 최대 단계" k="undoLimit" min={100} max={1000} step={50} />

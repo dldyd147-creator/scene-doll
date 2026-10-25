@@ -1,5 +1,13 @@
 import { DEFAULT_SITUATION_TAGS } from '../model/library';
 
+/** 5단계 이미지 생성 엔진: 모의(네트워크 없음, 파이프라인 확인용) / 원격(사용자가 배포한 서버리스 함수) */
+export type GenEngineKind = 'mock' | 'remote';
+/** 강도 프리셋: 돌 우선 / 균형 / 프롬프트 우선 */
+export type GenPreset = 'doll' | 'balanced' | 'prompt';
+/** 출력 크기: 격자 비율대로(gpt-image-2 계열) / 고정 3종 중 가까운 것(gpt-image-1.5) / API 자동 */
+export type GenSizeMode = 'custom' | 'fixed' | 'auto';
+export type GenQuality = 'auto' | 'low' | 'medium' | 'high';
+
 /** 조작감 관련 설정. 실제 작업으로 맞춰 가도록 모두 바꿀 수 있다 */
 export interface Settings {
   /** 시점 조작 방식: 스케치업(휠 드래그 회전, Shift+휠 팬) / 디자인돌(우클릭 회전, 휠 드래그 팬) */
@@ -37,6 +45,30 @@ export interface Settings {
   showHints: boolean;
   /** 씬 저장 때 버튼으로 찍는 상황 태그 목록(씬 검색기 필터에도 쓰임) */
   situationTags: string[];
+
+  // ---------- 5단계 이미지 생성 ----------
+  genEngine: GenEngineKind;
+  /** 서버리스 함수 주소(원격 엔진). OpenAI 키가 아니라 함수 URL */
+  genEndpoint: string;
+  /** 함수 접근 토큰(함수 배포 때 정한 값). OpenAI API 키는 절대 여기 넣지 않는다 */
+  genToken: string;
+  /** 묶음 상한(4·6·8컷) */
+  genMaxPerBatch: number;
+  genPreset: GenPreset;
+  genSizeMode: GenSizeMode;
+  /** 격자 한 칸(컷 하나)의 목표 가로 px */
+  genCellPx: number;
+  /** 묶음마다 받을 후보 장수(n) */
+  genCandidates: number;
+  genQuality: GenQuality;
+  /** 돌 격자와 함께 선화 격자 첨부 */
+  genAttachLine: boolean;
+  /** 돌 격자와 함께 색 마스크 격자 첨부 */
+  genAttachMask: boolean;
+  /** 캐릭터당 첨부할 레퍼런스 장수(대표부터) */
+  genRefsPerCharacter: number;
+  /** 모든 묶음 프롬프트 끝에 붙는 화풍 문구(선택) */
+  genStyle: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -61,6 +93,19 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'light',
   showHints: false,
   situationTags: [...DEFAULT_SITUATION_TAGS],
+  genEngine: 'mock',
+  genEndpoint: '',
+  genToken: '',
+  genMaxPerBatch: 4,
+  genPreset: 'balanced',
+  genSizeMode: 'custom',
+  genCellPx: 1024,
+  genCandidates: 1,
+  genQuality: 'auto',
+  genAttachLine: false,
+  genAttachMask: false,
+  genRefsPerCharacter: 1,
+  genStyle: '',
 };
 
 const KEY = 'scene-doll.settings.v1';

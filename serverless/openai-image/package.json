@@ -1,0 +1,19 @@
+{
+  "name": "scene-doll-image-function",
+  "private": true,
+  "type": "module",
+  "description": "씬 돌 5단계 이미지 생성용 서버리스 함수(OpenAI Images API 중계, 키 보관)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "secret:key": "wrangler secret put OPENAI_API_KEY",
+    "secret:token": "wrangler secret put ACCESS_TOKEN",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250101.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.0.0"
+  }
+}

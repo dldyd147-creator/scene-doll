@@ -7,3 +7,6 @@ doll-src/makehuman/downloads
 doll-src/makehuman/**/*.blend1
 
 *.tsbuildinfo
+
+# Cloudflare wrangler 로컬 상태
+.wrangler

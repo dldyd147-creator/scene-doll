@@ -39,6 +39,11 @@ export function CutList() {
             {thumbnails[c.number] ? <img src={thumbnails[c.number]} alt="" draggable={false} /> : <span className="small muted">{c.confirmed ? '확정' : '작업 중'}</span>}
             <span className="num">{String(c.number).padStart(3, '0')}</span>
             {c.confirmed && <span className="check">✓</span>}
+            {(c.generatedImages?.length ?? 0) > 0 && (
+              <span className="ai" title={`생성 후보 ${c.generatedImages.length}장`}>
+                AI
+              </span>
+            )}
           </div>
         ))}
       </div>

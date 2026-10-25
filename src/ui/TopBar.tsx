@@ -21,6 +21,8 @@ export function TopBar() {
   const setExportOpen = useStore((s) => s.setExportOpen);
   const setCharacterManagerFor = useStore((s) => s.setCharacterManagerFor);
   const outputCount = useStore((s) => s.outputCount);
+  const setGenerateOpen = useStore((s) => s.setGenerateOpen);
+  const candidateCount = useStore((s) => s.cuts.reduce((n, c) => n + (c.generatedImages?.length ?? 0), 0));
 
   const openCharacters = async () => {
     if (useStore.getState().dirty) await saveNow();
@@ -57,6 +59,9 @@ export function TopBar() {
       </button>
       <button className={`icon ${outputCount ? 'has-output' : ''}`} onClick={() => setGalleryOpen(true)} title={outputCount ? `출력물 보기: 이 회차에 출력된 컷 PNG ${outputCount}장` : '출력물 보기: 이 회차에는 아직 출력물이 없습니다'}>
         <Icon name="gallery" />
+      </button>
+      <button className={`icon ${candidateCount ? 'has-output' : ''}`} onClick={() => setGenerateOpen(true)} title={candidateCount ? `이미지 생성(5단계): 생성 후보 ${candidateCount}장. 묶음 생성·후보 비교` : '이미지 생성(5단계): 확정 컷을 묶어 AI 이미지 후보를 만들고 고름'}>
+        <Icon name="sparkles" />
       </button>
       <div className="sep" />
       <button className="icon" onClick={() => setSettingsOpen(true)} title="설정">

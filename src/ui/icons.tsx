@@ -70,6 +70,8 @@ const PATHS: Record<string, string> = {
   // 4단계
   torso: 'M9 3h6l2 8H7zM8 11h8v10H8zM4 10l3-4M20 10l-3-4',
   layers: 'M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5',
+  // 5단계 이미지 생성(반짝)
+  sparkles: 'M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1-2.1-.9 2.1-.9zM5 15l.7 1.6 1.6.7-1.6.7L5 19.6l-.7-1.6-1.6-.7 1.6-.7z',
 };
 
 export interface IconProps {

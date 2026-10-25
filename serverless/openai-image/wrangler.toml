@@ -1,0 +1,18 @@
+name = "scene-doll-image"
+main = "worker.ts"
+compatibility_date = "2025-10-01"
+
+# 공개 설정값. 비밀값(OPENAI_API_KEY, ACCESS_TOKEN)은 여기 적지 말고 아래 명령으로 넣는다:
+#   npx wrangler secret put OPENAI_API_KEY
+#   npx wrangler secret put ACCESS_TOKEN
+[vars]
+# CORS 허용 출처: '*' 또는 쉼표 목록. 배포 페이지만 허용하려면
+# "https://dldyd147-creator.github.io,http://localhost:5173"
+ALLOWED_ORIGIN = "*"
+# 요청에 model이 없을 때 쓰는 모델. gpt-image-1은 2026-10-23에 종료됨
+OPENAI_IMAGE_MODEL = "gpt-image-2.5-sunburst"
+MAX_IMAGES = "16"
+MAX_N = "4"
+
+[observability]
+enabled = true
