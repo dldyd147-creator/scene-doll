@@ -31,7 +31,9 @@ export function saveNow(): Promise<boolean> {
 
 function syncStorageState(): void {
   const st = storage.status;
-  useStore.getState().setStorage(st.kind, st.kind === 'folder' ? st.label : null);
+  // 공유 저장소에 로그인한 동안에도 상단 칩은 로컬(작업 폴더/브라우저) 쪽을 보여 준다. 공유 상태는 공유 칸이 따로 보여 준다
+  const kind = st.kind === 'remote' ? st.localKind : st.kind;
+  useStore.getState().setStorage(kind, kind === 'folder' ? st.localLabel : null);
 }
 
 /** 앱 시작: 저장소 연결. 문서는 열지 않고 시작 화면(작품 관리)을 보여 준다 */
