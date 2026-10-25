@@ -3,6 +3,7 @@ import type { Engine } from '../engine/Engine';
 import type { Character } from '../model/types';
 import { CHARACTER_COLORS, DOLL_ASSETS, mainReferenceOf } from '../model/defaults';
 import { useStore } from '../state/store';
+import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
 import { PoseTab } from './PoseTab';
 import { useRefUrl } from './refImages';
@@ -98,7 +99,7 @@ function CharacterRow({ chr }: { chr: Character }) {
   const url = useRefUrl(workCode, chr.id, main?.file);
   const doll = DOLL_ASSETS.find((d) => d.id === chr.dollId);
   return (
-    <div className="card chr-row-card" title={chr.info.oneLine || chr.description || chr.name}>
+    <div className="card chr-row-card" title={`${chr.info.oneLine || chr.description || chr.name}\n조작뷰로 끌어다 놓으면 그 자리에 섭니다`} draggable onDragStart={(e) => startDrag(e, { kind: 'character', id: chr.id })} onDragEnd={endDrag}>
       <div className="row">
         <span className="mini-thumb" style={{ borderColor: chr.color }}>
           {url ? <img src={url} alt="" draggable={false} /> : <span className="swatch" style={{ background: chr.color }} />}
@@ -147,7 +148,9 @@ function DollTab() {
         DOLL_ASSETS.filter((d) => !d.hidden).map((d) => (
           <div key={d.id} className="card" title={d.glbPath ? '실제 인체 메시(MakeHuman, CC0). 같은 뼈대라 포즈가 호환됩니다' : '코드로 만든 단순 캡슐 돌(테스트용)'}>
             <div className="row">
-              <b className="grow">{d.name}</b>
+              <b className="grow drag-handle" draggable onDragStart={(e) => startDrag(e, { kind: 'doll', dollId: d.id, heightCm: Math.max(50, Math.min(250, heights[d.id] || d.baseHeightCm)) })} onDragEnd={endDrag} title="끌어서 조작뷰에 놓으면 그 자리에 섭니다(임시 캐릭터)">
+                {d.name}
+              </b>
               <input className="h" type="number" min={50} max={250} value={heights[d.id]} onChange={(e) => setHeights({ ...heights, [d.id]: Number(e.target.value) })} title="키(cm)" />
               <span className="sub">cm</span>
               <button className="primary icon" onClick={() => addDoll(d.id, Math.max(50, Math.min(250, heights[d.id] || d.baseHeightCm)))} title="조작뷰에 추가(임시 캐릭터)">

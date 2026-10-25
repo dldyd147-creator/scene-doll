@@ -60,6 +60,8 @@ const PATHS: Record<string, string> = {
   pose: 'M12 2.5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 6.5v6M8 9.5l4-3 4 3M12 12.5l-3.5 8M12 12.5l3.5 8',
   swap: 'M4 7h13m0 0l-3-3m3 3l-3 3M20 17H7m0 0l3-3m-3 3l3 3',
   tag: 'M3 3h8l10 10-8 8L3 11zM7.5 7.5h.01',
+  // 글콘티
+  script: 'M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6',
 };
 
 export interface IconProps {

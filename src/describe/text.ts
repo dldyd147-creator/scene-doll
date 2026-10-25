@@ -33,6 +33,13 @@ export function cutBlock(a: CutAnalysis, cut: Cut, code: string, episodeNo: numb
   }
   const c = a.camera;
   lines.push(`카메라: 높이 ${c.height.toFixed(1)}m · ${c.focal}mm · ${pitchLabel(c.pitch)} · 거리 ${c.distance.toFixed(1)}m`);
+  // 글콘티(NTT) 대사·지문: 대사는 줄마다, 지문은 한 줄로
+  for (const d of cut.dialogue ?? []) {
+    const text = d.text.trim();
+    if (!text) continue;
+    lines.push(d.speaker.trim() ? `대사(${d.speaker.trim()}): ${text}` : `대사: ${text}`);
+  }
+  if (cut.scriptNote?.trim()) lines.push(`지문: ${cut.scriptNote.trim().replace(/\s*\n+\s*/g, ' / ')}`);
   if (cut.memo.trim()) lines.push(`메모: ${cut.memo.trim()}`);
   return lines.join('\n');
 }

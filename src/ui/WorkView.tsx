@@ -1,9 +1,15 @@
-import { useCallback } from 'react';
+import { useCallback, useState, type DragEvent } from 'react';
 import type { Engine } from '../engine/Engine';
+import type { Vec3 } from '../model/types';
 import { useStore } from '../state/store';
+import { dragPayload, endDrag, isSceneDollDrag } from './dragdrop';
 import { Icon } from './icons';
+import { useLibrary } from './library';
+
+const clampFloor = (v: number): number => Math.max(-50, Math.min(50, Math.round(v * 100) / 100));
 
 export function WorkView({ engine }: { engine: Engine }) {
+  const [dropHover, setDropHover] = useState(false);
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
   const selection = useStore((s) => s.selection);
@@ -32,9 +38,47 @@ export function WorkView({ engine }: { engine: Engine }) {
       else c[key] = !c[key];
     });
 
+  // 에셋 패널에서 끌어다 놓기: 캐릭터·기본 돌은 놓은 자리(바닥)에 세우고, 포즈는 놓은 돌(없으면 선택한 돌)에 적용
+  const onDragOver = (e: DragEvent) => {
+    if (!isSceneDollDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!dropHover) setDropHover(true);
+  };
+  const onDrop = (e: DragEvent) => {
+    const payload = dragPayload(e);
+    setDropHover(false);
+    if (!payload) return;
+    e.preventDefault();
+    endDrag();
+    const s = useStore.getState();
+    const { rig, floor } = engine.pickAt(e.clientX, e.clientY);
+    const at: Vec3 | undefined = floor ? [clampFloor(floor.x), 0, clampFloor(floor.z)] : undefined;
+    if (payload.kind === 'character') {
+      const chr = s.characters.find((c) => c.id === payload.id);
+      if (s.addCharacterDoll(payload.id, at)) s.setStatusHint(`${chr?.name ?? '캐릭터'}의 돌을 놓았습니다`);
+      return;
+    }
+    if (payload.kind === 'doll') {
+      s.addDoll(payload.dollId, payload.heightCm, at);
+      s.setStatusHint('기본 돌을 놓았습니다(임시 캐릭터)');
+      return;
+    }
+    const pose = useLibrary.getState().poses?.find((p) => p.id === payload.id);
+    if (!pose) return;
+    const target = rig ?? engine.selectedRig();
+    if (!target) {
+      s.setStatusHint('포즈는 돌 위에 놓거나, 돌을 먼저 선택한 뒤 놓으세요');
+      return;
+    }
+    if (rig) s.select({ dollId: rig.id, bone: null });
+    engine.applyPoseToDoll(target.id, pose.joints);
+    s.setStatusHint(`포즈 '${pose.name}' 적용 (Ctrl+Z로 되돌림)`);
+  };
+
   return (
-    <section className="view work-view">
-      <div className="view-surface" ref={surfaceRef} />
+    <section className={`view work-view ${dropHover ? 'drop-hover' : ''}`}>
+      <div className="view-surface" ref={surfaceRef} onDragOver={onDragOver} onDragLeave={() => setDropHover(false)} onDrop={onDrop} />
       {dollCount === 0 && (
         <div className="work-empty">
           <div>

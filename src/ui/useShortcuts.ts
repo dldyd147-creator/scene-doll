@@ -30,14 +30,15 @@ export function useShortcuts(engine: Engine): void {
       if ((e.code === 'Backquote' || e.key === '`') && !ctrl && !e.altKey && !isTyping(e)) {
         e.preventDefault();
         if (s.sceneBrowserOpen) s.setSceneBrowserOpen(false);
-        else if (!s.sceneSaveOpen) s.openSceneBrowser();
+        else if (!s.sceneSaveOpen && !s.scriptImportOpen) s.openSceneBrowser();
         return;
       }
-      // 씬 검색기·씬 저장이 열려 있으면 Esc만 받는다(아래 씬이 바뀌지 않게)
-      if (s.sceneBrowserOpen || s.sceneSaveOpen) {
+      // 씬 검색기·씬 저장·글콘티 가져오기가 열려 있으면 Esc만 받는다(아래 씬이 바뀌지 않게)
+      if (s.sceneBrowserOpen || s.sceneSaveOpen || s.scriptImportOpen) {
         if (e.key === 'Escape') {
           s.setSceneBrowserOpen(false);
           s.setSceneSaveOpen(false);
+          s.setScriptImportOpen(false);
         }
         return;
       }

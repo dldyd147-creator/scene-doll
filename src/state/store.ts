@@ -4,6 +4,7 @@ import type { Character, Cut, DollInstance, Episode, SceneLibraryItem, Vec3, Wor
 import { createCut, createEpisode, createTemporaryCharacter, createWork, dollAsset, nowIso, pickColor } from '../model/defaults';
 import { dollsFromScene, type SlotAssignments } from '../model/library';
 import { newId } from '../model/ids';
+import { applyScriptToCuts, type ApplyPlan, type CutScript, type DialogueLine } from '../script/ntt';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
 
 export interface Selection {
@@ -59,6 +60,10 @@ export interface StoreState extends Document {
   sceneBrowserSelectId: string | null;
   /** 씬 저장 대화상자 */
   sceneSaveOpen: boolean;
+  /** 글콘티(NTT 엑셀) 가져오기 대화상자 */
+  scriptImportOpen: boolean;
+  /** 글콘티 없이도 원고뷰 위아래의 대사·지문 칸을 보이게(이 세션만) */
+  scriptBlocksForced: boolean;
 
   currentCut: () => Cut;
   /** 현재 컷을 바꾸고 되돌리기 기록을 남긴다 */
@@ -67,8 +72,8 @@ export interface StoreState extends Document {
   redo: () => void;
   select: (sel: Selection) => void;
   setMode: (mode: ToolMode) => void;
-  /** 내장 돌(dollId)을 현재 컷에 추가하고 임시 캐릭터를 등록한다 */
-  addDoll: (dollId: string, heightCm: number) => string;
+  /** 내장 돌(dollId)을 현재 컷에 추가하고 임시 캐릭터를 등록한다. position을 주면 그 자리(드래그앤드롭) */
+  addDoll: (dollId: string, heightCm: number, position?: Vec3) => string;
   removeDoll: (id: string) => void;
   /** 돌 복제. offsetX=0이면 같은 자리에 붙여넣기 */
   duplicateDoll: (id: string, offsetX?: number) => string | null;
@@ -96,8 +101,8 @@ export interface StoreState extends Document {
   setCharacterManagerFor: (code: string | null) => void;
   /** 저장소에서 다시 읽은 캐릭터로 바꾼다. 아직 저장 안 된 임시 캐릭터는 남긴다 */
   setCharacters: (chars: Character[]) => void;
-  /** 등록 캐릭터의 돌(성별 돌·키·고정색)을 현재 컷에 추가 */
-  addCharacterDoll: (characterId: string) => string | null;
+  /** 등록 캐릭터의 돌(성별 돌·키·고정색)을 현재 컷에 추가. position을 주면 그 자리(드래그앤드롭) */
+  addCharacterDoll: (characterId: string, position?: Vec3) => string | null;
   /** 돌에 캐릭터 지정. null이면 임시 캐릭터로 되돌린다 */
   assignCharacter: (dollId: string, characterId: string | null) => void;
   setEpisodeTitle: (title: string) => void;
@@ -111,6 +116,14 @@ export interface StoreState extends Document {
    * 슬롯마다 지정한 캐릭터의 돌(성별 돌·키·고정색)로 들어오고, 비운 슬롯은 임시 캐릭터가 된다.
    */
   applyLibraryScene: (item: SceneLibraryItem, assignments: SlotAssignments, mode: 'replace' | 'add') => void;
+
+  // 글콘티(NTT)
+  setScriptImportOpen: (open: boolean) => void;
+  setScriptBlocksForced: (on: boolean) => void;
+  /** 글콘티(컷별 대사·지문·비고)를 회차 컷에 반영. 모자란 컷은 마지막 컷을 복사해 만들고 글콘티에 없는 컷은 그대로 둔다 */
+  applyScript: (scripts: CutScript[], source: { fileName: string; importedAt: string }) => ApplyPlan;
+  /** 현재 컷의 대사·지문을 고친다(메모처럼 되돌리기 기록 없음) */
+  setCutScript: (partial: { dialogue?: DialogueLine[]; scriptNote?: string }) => void;
 
   // 컷 확정·목록
   /** 현재 컷을 확정(설명 텍스트 기록)하고 다음 컷으로. 다음 컷이 없으면 현재 씬을 복사해 만든다 */
@@ -177,6 +190,8 @@ export const useStore = create<StoreState>()(
     sceneBrowserOpen: false,
     sceneBrowserSelectId: null,
     sceneSaveOpen: false,
+    scriptImportOpen: false,
+    scriptBlocksForced: false,
 
     currentCut: () => get().cuts[get().currentCutIndex],
 
@@ -225,7 +240,7 @@ export const useStore = create<StoreState>()(
 
     setMode: (mode) => set({ mode }),
 
-    addDoll: (dollId, heightCm) => {
+    addDoll: (dollId, heightCm, position) => {
       const s = get();
       const cut = s.currentCut();
       const used = s.characters.map((c) => c.color);
@@ -233,7 +248,7 @@ export const useStore = create<StoreState>()(
       const asset = dollAsset(dollId);
       const character = createTemporaryCharacter(s.work.code, asset.id, heightCm, color, s.characters.length + 1);
       const id = newId('doll');
-      // 새 돌은 기존 돌과 겹치지 않게 옆으로 비켜 놓는다
+      // 새 돌은 기존 돌과 겹치지 않게 옆으로 비켜 놓는다(끌어다 놓은 자리가 있으면 거기)
       const offsetX = cut.dolls.length === 0 ? 0 : (cut.dolls.length % 2 === 1 ? 1 : -1) * Math.ceil(cut.dolls.length / 2) * 0.7;
       const inst: DollInstance = {
         id,
@@ -241,7 +256,7 @@ export const useStore = create<StoreState>()(
         dollId: asset.id,
         heightCm,
         color,
-        position: [offsetX, 0, 0],
+        position: position ? [position[0], 0, position[2]] : [offsetX, 0, 0],
         rotation: [0, 0, 0, 1],
         joints: {},
       };
@@ -386,7 +401,7 @@ export const useStore = create<StoreState>()(
       set({ characters: [...chars, ...kept] });
     },
 
-    addCharacterDoll: (characterId) => {
+    addCharacterDoll: (characterId, position) => {
       const s = get();
       const chr = s.characters.find((c) => c.id === characterId);
       if (!chr) return null;
@@ -399,7 +414,7 @@ export const useStore = create<StoreState>()(
         dollId: dollAsset(chr.dollId).id,
         heightCm: chr.heightCm,
         color: chr.color,
-        position: [offsetX, 0, 0],
+        position: position ? [position[0], 0, position[2]] : [offsetX, 0, 0],
         rotation: [0, 0, 0, 1],
         joints: {},
       };
@@ -462,6 +477,26 @@ export const useStore = create<StoreState>()(
         }
       });
       set({ selection: mode === 'add' && dolls.length ? { dollId: dolls[0].id, bone: null } : NO_SELECTION, sceneBrowserOpen: false, sceneBrowserSelectId: null });
+    },
+
+    // ---------- 글콘티(NTT) ----------
+
+    setScriptImportOpen: (open) => set({ scriptImportOpen: open }),
+    setScriptBlocksForced: (on) => set({ scriptBlocksForced: on }),
+
+    applyScript: (scripts, source) => {
+      const s = get();
+      const now = nowIso();
+      const { cuts, plan } = applyScriptToCuts(s.cuts, scripts, now);
+      set({ cuts, episode: { ...s.episode, scriptSource: source, cutOrder: cuts.map((c) => c.number), updatedAt: now }, past: [], future: [], dirty: true });
+      return plan;
+    },
+
+    setCutScript: (partial) => {
+      const s = get();
+      const cuts = s.cuts.slice();
+      cuts[s.currentCutIndex] = { ...cuts[s.currentCutIndex], ...partial, updatedAt: nowIso() };
+      set({ cuts, dirty: true });
     },
 
     // ---------- 컷 ----------

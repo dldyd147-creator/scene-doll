@@ -16,6 +16,7 @@ import { StartScreen } from './ui/StartScreen';
 import { CharacterManager } from './ui/CharacterManager';
 import { SceneBrowser } from './ui/SceneBrowser';
 import { SceneSaveDialog } from './ui/SceneSaveDialog';
+import { ScriptImportDialog } from './ui/ScriptImportDialog';
 import { useStore } from './state/store';
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
           <OutputGallery />
           <SceneBrowser />
           <SceneSaveDialog engine={engine} />
+          <ScriptImportDialog />
         </div>
       )}
       <SettingsDialog />

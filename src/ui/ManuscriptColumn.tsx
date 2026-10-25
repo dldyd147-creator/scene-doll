@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import type { Engine } from '../engine/Engine';
-import type { CameraState } from '../model/types';
+import type { CameraState, Cut } from '../model/types';
+import { dialogueToText, textToDialogue } from '../script/ntt';
 import { useStore } from '../state/store';
 import { DragNumber } from './DragNumber';
 import { Icon } from './icons';
@@ -9,7 +10,10 @@ import { confirmCurrentCut } from './cuts';
 const FOCALS = [24, 28, 35, 50, 85, 135];
 const pad3 = (n: number) => String(n).padStart(3, '0');
 
-/** 원고뷰 + 카메라 패널. 돌 조작은 못 하고 보기·카메라·컷 확정만 한다 */
+/**
+ * 원고뷰 + 카메라 패널. 돌 조작은 못 하고 보기·카메라·컷 확정만 한다.
+ * 글콘티(NTT)가 있으면 원고뷰 위에 그 컷의 대사, 아래에 지문과 확정 때 만든 장면 설명이 들어간다.
+ */
 export function ManuscriptColumn({ engine }: { engine: Engine }) {
   const cut = useStore((s) => s.cuts[s.currentCutIndex]);
   const cutCount = useStore((s) => s.cuts.length);
@@ -18,25 +22,36 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
   const hasSelection = useStore((s) => !!s.selection.dollId);
   const openSceneBrowser = useStore((s) => s.openSceneBrowser);
   const setSceneSaveOpen = useStore((s) => s.setSceneSaveOpen);
+  const setScriptImportOpen = useStore((s) => s.setScriptImportOpen);
+  const scriptSource = useStore((s) => s.episode.scriptSource);
+  const scriptForced = useStore((s) => s.scriptBlocksForced);
   const [liveAspect, setLiveAspect] = useState(cut.aspect);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const wrapRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const showScript = scriptForced || !!scriptSource || (cut.dialogue?.length ?? 0) > 0 || !!cut.scriptNote?.trim();
 
   useEffect(() => setLiveAspect(cut.aspect), [cut.aspect]);
 
-  // 열 너비·높이에 맞춰 원고뷰 크기를 정한다(가로 고정, 세로는 화면비. 넘치면 가로를 줄인다)
+  // 열 너비·높이에 맞춰 원고뷰 크기를 정한다(가로 고정, 세로는 화면비. 넘치면 가로를 줄인다). 대사·지문 칸의 높이는 뺀다
   useEffect(() => {
     const el = wrapRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => {
+    const measure = () => {
+      const extra = (topRef.current?.offsetHeight ?? 0) + (bottomRef.current?.offsetHeight ?? 0) + (showScript ? 12 : 0);
       const availW = el.clientWidth - 20;
-      const availH = el.clientHeight - 20;
+      const availH = Math.max(60, el.clientHeight - 20 - extra);
       const w = Math.max(40, Math.min(availW, availH / liveAspect));
       setSize({ w, h: w * liveAspect });
-    });
+    };
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
+    if (topRef.current) ro.observe(topRef.current);
+    if (bottomRef.current) ro.observe(bottomRef.current);
+    measure();
     return () => ro.disconnect();
-  }, [liveAspect]);
+  }, [liveAspect, showScript]);
 
   const viewRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -68,19 +83,29 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
     p[i] = Math.round(cmValue) / 100;
     return p;
   };
-
   return (
     <section className="manu-col">
       <div className="panel-title">
         <span title="현재 컷 / 전체 컷">
           {pad3(cut.number)}/{pad3(cutCount)}
         </span>
-        <span className="muted">1 : {liveAspect.toFixed(2)}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <span className="muted">1 : {liveAspect.toFixed(2)}</span>
+          <button
+            className={`icon ghost ${scriptSource ? 'active' : ''}`}
+            onClick={() => setScriptImportOpen(true)}
+            title={scriptSource ? `글콘티: ${scriptSource.fileName} · 다시 가져오기` : '글콘티(NTT 엑셀·CSV) 가져오기: 회차 컷에 대사·지문을 한 번에. 엑셀 없이 대사·지문 칸만 켤 수도 있음'}
+          >
+            <Icon name="script" size={14} />
+          </button>
+        </span>
       </div>
       <div className="manu-wrap" ref={wrapRef}>
+        {showScript && <DialogueBlock ref={topRef} cut={cut} />}
         <div className="manu-view view" ref={viewRef} style={{ width: size.w, height: size.h }} title="드래그: 카메라 궤도 회전 · Shift+드래그: 팬 · 휠: 거리 · Ctrl+휠: 화각">
           <span className="no-edit">보기 전용 · 드래그로 카메라 회전 · 휠로 거리</span>
         </div>
+        {showScript && <NoteBlock ref={bottomRef} cut={cut} />}
       </div>
       <div className="camera-panel">
         <div className="row">
@@ -166,5 +191,50 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** 원고뷰 위: 대사. 한 줄에 하나, '화자: 대사'. 글은 바로 컷에 들어간다(되돌리기 기록 없음) */
+function DialogueBlock({ cut, ref }: { cut: Cut; ref: RefObject<HTMLDivElement | null> }) {
+  const setCutScript = useStore((s) => s.setCutScript);
+  const storeText = dialogueToText(cut.dialogue);
+  const [text, setText] = useState(storeText);
+  // 컷을 옮기거나 글콘티를 새로 가져오면(= 칸의 글과 컷의 대사가 다르면) 칸의 글을 다시 맞춘다
+  useEffect(() => {
+    setText((cur) => (dialogueToText(textToDialogue(cur)) === storeText ? cur : storeText));
+  }, [storeText, cut.number]);
+  const rows = Math.min(5, Math.max(1, text.split('\n').length));
+  return (
+    <div className="script-block top" ref={ref}>
+      <textarea
+        rows={rows}
+        value={text}
+        spellCheck={false}
+        placeholder="대사 · 한 줄에 하나(화자: 대사)"
+        title="원고뷰 위의 대사. 한 줄에 하나, '화자: 대사'. 출력 .md와 AI 전달 패키지에 들어갑니다"
+        onChange={(e) => {
+          setText(e.target.value);
+          setCutScript({ dialogue: textToDialogue(e.target.value) });
+        }}
+      />
+    </div>
+  );
+}
+
+/** 원고뷰 아래: 지문(사람이 씀) + 확정 때 자동 생성된 장면 설명(읽기만) */
+function NoteBlock({ cut, ref }: { cut: Cut; ref: RefObject<HTMLDivElement | null> }) {
+  const setCutScript = useStore((s) => s.setCutScript);
+  const note = cut.scriptNote ?? '';
+  const rows = Math.min(4, Math.max(1, note.split('\n').length));
+  const desc = cut.confirmed && cut.desc ? cut.desc.split('\n').slice(1).join('\n') : '';
+  return (
+    <div className="script-block bottom" ref={ref}>
+      <textarea rows={rows} value={note} spellCheck={false} placeholder="지문(장면 설명)" title="원고뷰 아래의 지문. 출력 .md와 AI 전달 패키지에 들어갑니다" onChange={(e) => setCutScript({ scriptNote: e.target.value })} />
+      {desc && (
+        <div className="desc" title="확정 때 자동 생성된 장면 설명(컷 확정마다 다시 만들어짐)">
+          {desc}
+        </div>
+      )}
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import type { Engine } from '../engine/Engine';
 import type { Pose } from '../model/types';
 import { DEFAULT_POSE_CATEGORIES, parseTagList } from '../model/library';
 import { useStore } from '../state/store';
+import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
 import { useLibrary, useThumb } from './library';
 import { applyPose, savePoseFromSelected } from './scenes';
@@ -116,7 +117,14 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
 function PoseCard({ pose, disabled, onApply, onDelete }: { pose: Pose; disabled: boolean; onApply: () => void; onDelete: () => void }) {
   const url = useThumb(pose.thumbnail);
   return (
-    <div className={`pose-card ${disabled ? 'disabled' : ''}`} onClick={() => !disabled && onApply()} title={`${pose.name} · ${pose.category}${pose.tags.length ? `\n${pose.tags.join(', ')}` : ''}\n${disabled ? '돌을 선택하면 클릭해 적용' : '클릭: 선택한 돌에 적용'}`}>
+    <div
+      className={`pose-card ${disabled ? 'disabled' : ''}`}
+      onClick={() => !disabled && onApply()}
+      draggable
+      onDragStart={(e) => startDrag(e, { kind: 'pose', id: pose.id })}
+      onDragEnd={endDrag}
+      title={`${pose.name} · ${pose.category}${pose.tags.length ? `\n${pose.tags.join(', ')}` : ''}\n${disabled ? '돌을 선택하면 클릭해 적용' : '클릭: 선택한 돌에 적용'} · 끌어서 돌 위에 놓아도 적용`}
+    >
       <div className="img">{url ? <img src={url} alt="" draggable={false} /> : <Icon name="pose" size={28} className="muted" />}</div>
       <div className="cap">
         <b>{pose.name}</b> <span className="muted">{pose.category}</span>

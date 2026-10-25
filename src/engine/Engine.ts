@@ -8,10 +8,13 @@ import {
   MOUSE,
   Object3D,
   PerspectiveCamera,
+  Plane,
   Quaternion,
+  Raycaster,
   Scene,
   Sphere,
   SRGBColorSpace,
+  Vector2,
   Vector3,
   WebGLRenderer,
   WebGLRenderTarget,
@@ -686,12 +689,43 @@ export class Engine {
   /** 포즈 라이브러리의 관절값을 선택한 돌에 적용(돌 공간 회전이라 체형과 무관). 바닥 아래로 내려가면 올린다 */
   applyPoseToSelected(joints: JointRotations): boolean {
     const rig = this.selectedRig();
+    return !!rig && this.applyPoseToDoll(rig.id, joints);
+  }
+
+  applyPoseToDoll(id: string, joints: JointRotations): boolean {
+    const rig = this.dolls.get(id);
     if (!rig) return false;
     rig.setJoints(joints);
     rig.root.updateMatrixWorld(true);
     this.enforceFloor(rig);
     this.commitDoll(rig.id);
     return true;
+  }
+
+  /** 조작뷰의 화면 좌표 아래에 있는 돌과 바닥 점(드래그앤드롭 놓을 자리). 조작뷰가 없으면 둘 다 null */
+  pickAt(clientX: number, clientY: number): { rig: DollRig | null; floor: Vector3 | null } {
+    const el = this.views.work;
+    if (!el) return { rig: null, floor: null };
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { rig: null, floor: null };
+    const ray = new Raycaster();
+    ray.setFromCamera(new Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1), this.workCamera);
+    const targets: Object3D[] = [];
+    for (const r of this.dolls.values()) {
+      r.prepareForPick();
+      targets.push(...r.pickTargets);
+    }
+    let rig: DollRig | null = null;
+    for (const hit of ray.intersectObjects(targets, false)) {
+      const id = (hit.object.userData as { dollId?: string }).dollId;
+      const r = id ? this.dolls.get(id) : undefined;
+      if (r) {
+        rig = r;
+        break;
+      }
+    }
+    const floor = ray.ray.intersectPlane(new Plane(new Vector3(0, 1, 0), 0), new Vector3());
+    return { rig, floor };
   }
 
   /** 돌 하나만 보이게 해서 돌이 보는 방향의 앞쪽 반측면·약간 위에서 찍은 스냅샷(포즈 썸네일) */
