@@ -1,6 +1,7 @@
 import { Plane, Quaternion, Raycaster, Vector2, Vector3, type Intersection, type Object3D } from 'three';
 import type { Engine } from './Engine';
 import type { DollRig } from './DollRig';
+import type { PropObject } from './props';
 import { boneLabel, IK_CHAINS } from './skeleton';
 import { rotateObjectWorld } from './three-utils';
 
@@ -11,12 +12,14 @@ type DragState =
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
   | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; moved: boolean }
   | { kind: 'hipmove'; rig: DollRig; plane: Plane; startHit: Vector3; startPos: Vector3; feet: Map<string, Vector3>; joints: ReturnType<DollRig['getJoints']>; moved: boolean }
-  | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
+  | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean }
+  | { kind: 'propmove'; prop: PropObject; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
 
 type Pick =
   | { kind: 'ik'; rig: DollRig; effector: string; pos: Vector3 }
   | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
   | { kind: 'camera'; point: Vector3 }
+  | { kind: 'prop'; prop: PropObject; point: Vector3 }
   | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
   | null;
 
@@ -30,7 +33,7 @@ const AXIS_LABEL: Record<Exclude<Axis, null>, string> = { x: 'X축(좌우)', y: 
 /** 블렌더식 모달 변형(G 이동 / R 회전). 마우스를 움직이면 바로 따라오고 클릭·Enter로 확정, Esc·우클릭으로 취소 */
 interface ModalState {
   kind: 'move' | 'rotate';
-  target: { rig: DollRig } | { camera: true };
+  target: { rig: DollRig } | { camera: true } | { prop: PropObject };
   axis: Axis;
   startPointer: { x: number; y: number };
   lastPointer: { x: number; y: number };
@@ -181,15 +184,26 @@ export class Interaction {
       if (hits.length) return { kind: 'camera', point: hits[0].point.clone() };
     }
 
-    // 4) 몸 부위
+    // 4) 소품(손에 쥔 것은 몸과 겹치므로 더 가까운 쪽)
+    const propTargets: Object3D[] = [];
+    for (const p of this.engine.props.values()) propTargets.push(...p.pickTargets);
+    const propHit = propTargets.length ? _ray.intersectObjects(propTargets, false)[0] : undefined;
+
+    // 5) 몸 부위
     const hits: Intersection[] = _ray.intersectObjects(targets, false);
     for (const hit of hits) {
+      if (propHit && propHit.distance <= hit.distance) break;
       const dollId = (hit.object.userData as { dollId?: string }).dollId;
       const rig = dollId ? this.engine.dolls.get(dollId) : undefined;
       if (!rig) continue;
       const bone = rig.boneFromHit(hit);
       if (!bone) continue;
       return { kind: 'part', rig, bone, point: hit.point.clone() };
+    }
+    if (propHit) {
+      const propId = (propHit.object.userData as { propId?: string }).propId;
+      const prop = propId ? this.engine.props.get(propId) : undefined;
+      if (prop) return { kind: 'prop', prop, point: propHit.point.clone() };
     }
     return null;
   }
@@ -269,6 +283,12 @@ export class Interaction {
       case 'camera': {
         sel({ dollId: null, bone: null, camera: true });
         this.state = { kind: 'camera', plane: this.viewPlaneAt(p.point), startHit: p.point, startPos: this.engine.manu.camera.position.clone(), moved: false };
+        break;
+      }
+      case 'prop': {
+        sel({ dollId: null, bone: null, propId: p.prop.id });
+        p.prop.live = true;
+        this.state = { kind: 'propmove', prop: p.prop, plane: this.viewPlaneAt(p.point), startHit: p.point, startPos: p.prop.root.position.clone(), moved: false };
         break;
       }
       case 'part': {
@@ -385,6 +405,14 @@ export class Interaction {
         s.moved = true;
         return;
       }
+      case 'propmove': {
+        const hit = this.rayOnPlane(e, s.plane);
+        if (!hit) return;
+        s.prop.root.position.copy(s.startPos).add(hit.sub(s.startHit));
+        s.prop.root.updateMatrixWorld(true);
+        s.moved = true;
+        return;
+      }
     }
   };
 
@@ -404,6 +432,10 @@ export class Interaction {
     const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'hipmove';
     if (commit && dollDrag && s.moved) this.engine.commitDoll(s.rig.id);
     if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
+    if (s.kind === 'propmove') {
+      if (commit && s.moved) this.engine.commitProp(s.prop.id);
+      else this.engine.cancelPropLive(s.prop.id);
+    }
     this.state = { kind: 'idle' };
     this.el.style.cursor = '';
     if (this.pointerId !== null) {
@@ -427,20 +459,22 @@ export class Interaction {
 
   // ---------- 모달 변형(G/R) ----------
 
-  /** G(이동)·R(회전) 시작. 선택한 돌 또는 원고 카메라가 대상 */
+  /** G(이동)·R(회전) 시작. 선택한 돌·소품 또는 원고 카메라가 대상 */
   startModal(kind: 'move' | 'rotate'): boolean {
     if (this.modal || this.dragging) return false;
     const rig = this.engine.selectedRig();
+    const prop = this.engine.selectedProp();
     const cameraSel = !!this.engine.selection.camera;
-    if (!rig && !cameraSel) return false;
-    const obj = rig ? rig.root : this.engine.manu.camera;
+    if (!rig && !prop && !cameraSel) return false;
+    const obj = rig ? rig.root : prop ? prop.root : this.engine.manu.camera;
+    if (prop) prop.live = true;
     // 포인터가 조작뷰 밖이면(또는 아직 안 움직였으면) 첫 움직임에서 기준점을 잡는다
     const rect = this.el.getBoundingClientRect();
     const inside = this.lastPointer.x >= rect.left && this.lastPointer.x <= rect.right && this.lastPointer.y >= rect.top && this.lastPointer.y <= rect.bottom;
     const startHit = inside ? this.rayOnPlaneAt(this.lastPointer.x, this.lastPointer.y, new Plane(new Vector3(0, 1, 0), -obj.position.y)) : null;
     this.modal = {
       kind,
-      target: rig ? { rig } : { camera: true },
+      target: rig ? { rig } : prop ? { prop } : { camera: true },
       axis: null,
       startPointer: { ...this.lastPointer },
       lastPointer: { ...this.lastPointer },
@@ -459,7 +493,7 @@ export class Interaction {
   private modalHint(): void {
     const m = this.modal;
     if (!m) return;
-    const what = 'camera' in m.target ? '원고 카메라' : '돌';
+    const what = 'camera' in m.target ? '원고 카메라' : 'prop' in m.target ? '소품' : '돌';
     const axis = m.axis ? `${AXIS_LABEL[m.axis]} 고정` : m.kind === 'move' ? '바닥 평면' : 'Z축(위아래) 둘레';
     this.engine.callbacks.hint(`${what} ${m.kind === 'move' ? '이동' : '회전'} · ${axis} · X/Y/Z: 축 고정(Z가 위아래) · 클릭/Enter: 확정 · Esc/우클릭: 취소`);
   }
@@ -511,7 +545,9 @@ export class Interaction {
 
   private modalObject(): Object3D {
     const m = this.modal!;
-    return 'camera' in m.target ? this.engine.manu.camera : m.target.rig.root;
+    if ('camera' in m.target) return this.engine.manu.camera;
+    if ('prop' in m.target) return m.target.prop.root;
+    return m.target.rig.root;
   }
 
   private restoreModalStart(): void {
@@ -557,7 +593,7 @@ export class Interaction {
       obj.updateMatrixWorld(true);
     }
     // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다
-    if (!('camera' in m.target)) this.engine.enforceFloor(m.target.rig);
+    if ('rig' in m.target) this.engine.enforceFloor(m.target.rig);
   }
 
   private endModal(): void {
@@ -577,6 +613,7 @@ export class Interaction {
     const target = m.target;
     this.endModal();
     if ('camera' in target) this.engine.commitCamera();
+    else if ('prop' in target) this.engine.commitProp(target.prop.id);
     else this.engine.commitDoll(target.rig.id);
   }
 
@@ -587,7 +624,9 @@ export class Interaction {
     obj.position.copy(m.startPos);
     obj.quaternion.copy(m.startQuat);
     obj.updateMatrixWorld(true);
+    const target = m.target;
     this.endModal();
+    if ('prop' in target) this.engine.cancelPropLive(target.prop.id);
   }
 
   // ---------- 호버 ----------
@@ -626,6 +665,10 @@ export class Interaction {
       case 'camera':
         this.el.style.cursor = 'move';
         hint('원고 카메라 · 끌어서 이동 · G: 이동 · R: 회전 · W/E: 기즈모');
+        return;
+      case 'prop':
+        this.el.style.cursor = 'move';
+        hint(`소품 ${p.prop.asset.name} · 끌어서 이동 · G: 이동 · R: 회전 · W/E: 기즈모 · Delete: 삭제${p.prop.inst.attachedTo ? ' · 손에 쥔 채 옮기면 쥐기 오프셋이 바뀜' : ''}`);
         return;
       case 'part':
         this.el.style.cursor = isRoot(p) ? 'move' : 'grab';

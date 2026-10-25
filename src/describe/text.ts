@@ -1,5 +1,6 @@
-import type { Character, Cut, Episode, Work } from '../model/types';
+import type { Character, Cut, Episode, PropAsset, Work } from '../model/types';
 import { colorName, mainReferenceOf } from '../model/defaults';
+import { HAND_LABEL } from '../model/props';
 import { pad3 } from '../storage/backend';
 import { ANGLE_LABEL, SHOT_LABEL, type CutAnalysis } from './analyze';
 
@@ -22,15 +23,30 @@ function pitchLabel(pitch: number): string {
   return pitch > 0 ? `올려봄 ${p}°` : `내려봄 ${p}°`;
 }
 
-/** 컷 하나의 설명 블록(제목 줄 + 인물 줄 + 카메라 줄 + 메모 줄) */
-export function cutBlock(a: CutAnalysis, cut: Cut, code: string, episodeNo: number): string {
+/** 돌이 손에 쥔 소품: '오른손에 검' */
+export function heldPropPhrases(cut: Cut, dollId: string, props: PropAsset[]): string[] {
+  const out: string[] = [];
+  for (const p of cut.props) {
+    if (p.attachedTo?.dollInstanceId !== dollId) continue;
+    const name = props.find((a) => a.id === p.propId)?.name ?? '소품';
+    out.push(`${HAND_LABEL[p.attachedTo.hand]}에 ${name}`);
+  }
+  return out;
+}
+
+/** 컷 하나의 설명 블록(제목 줄 + 인물 줄 + 소품 줄 + 카메라 줄 + 대사·지문 + 메모 줄) */
+export function cutBlock(a: CutAnalysis, cut: Cut, code: string, episodeNo: number, props: PropAsset[] = []): string {
   const lines: string[] = [];
   lines.push(`## ${pad3(cut.number)} · ${pngName(code, episodeNo, cut.number)} · ${formatAspect(cut.aspect)} · ${ANGLE_LABEL[a.angle]} · ${SHOT_LABEL[a.shot]} · ${a.count}인`);
   for (const d of a.dolls) {
     const place = d.depthZone ? `${d.xZone} ${d.depthZone}` : d.xZone;
     const pose = d.phrases.length ? `${d.stanceConj} ${d.phrases.join(', ')}` : d.stance;
-    lines.push(`${d.colorName} ${d.name}: ${place} · ${d.facing} · ${pose}`);
+    const held = heldPropPhrases(cut, d.id, props);
+    lines.push(`${d.colorName} ${d.name}: ${place} · ${d.facing} · ${pose}${held.length ? ` · ${held.join(', ')}` : ''}`);
   }
+  // 손에 쥐지 않은 소품(자유 배치)
+  const loose = cut.props.filter((p) => !p.attachedTo).map((p) => props.find((x) => x.id === p.propId)?.name ?? '소품');
+  if (loose.length) lines.push(`소품: ${loose.join(', ')}`);
   const c = a.camera;
   lines.push(`카메라: 높이 ${c.height.toFixed(1)}m · ${c.focal}mm · ${pitchLabel(c.pitch)} · 거리 ${c.distance.toFixed(1)}m`);
   // 글콘티(NTT) 대사·지문: 대사는 줄마다, 지문은 한 줄로

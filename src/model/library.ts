@@ -1,7 +1,7 @@
 // 씬 라이브러리·포즈 라이브러리의 순수 로직(엔진·저장소와 무관).
 // 기획서 '씬 검색기(` 키)'·'씬 태그: 자동 + 상황 버튼'·'데이터 구조'(포즈·씬 라이브러리) 절.
 
-import type { AngleTag, Character, Cut, DollInstance, JointRotations, Pose, Quat, SceneLibraryItem, SceneSlot, ShotSize, Vec3 } from './types';
+import type { AngleTag, Character, Cut, DollInstance, JointRotations, Pose, PropInstance, Quat, SceneLibraryItem, SceneSlot, ShotSize, Vec3 } from './types';
 import type { CutAnalysis } from '../describe/analyze';
 import { ANGLE_LABEL, SHOT_LABEL } from '../describe/analyze';
 import { createCamera, createTemporaryCharacter, dollAsset, nowIso, pickColor } from './defaults';
@@ -107,12 +107,39 @@ export function sceneFromCut(cut: Cut, analysis: Pick<CutAnalysis, 'count' | 'sh
       rotation: [...d.rotation] as Quat,
       joints: structuredClone(d.joints),
     })),
-    props: structuredClone(cut.props),
+    props: propsToSlots(cut),
     camera: { ...cut.camera, position: [...cut.camera.position] as Vec3 },
     aspect: cut.aspect,
     thumbnail: opts.thumbnail ?? '',
     createdAt: opts.now ?? nowIso(),
   };
+}
+
+/** 씬 저장용 소품: 손에 쥔 소품의 돌 ID를 '슬롯 번호'로 바꿔 둔다(불러올 때 새 돌 ID로 되돌림). 돌이 없으면 쥐기를 푼다 */
+export function propsToSlots(cut: Cut): PropInstance[] {
+  return cut.props.map((p) => {
+    const copy = structuredClone(p);
+    if (!copy.attachedTo) return copy;
+    const idx = cut.dolls.findIndex((d) => d.id === copy.attachedTo?.dollInstanceId);
+    if (idx < 0) delete copy.attachedTo;
+    else copy.attachedTo.dollInstanceId = `slot:${idx + 1}`;
+    return copy;
+  });
+}
+
+/** 씬의 소품 → 컷의 소품(새 ID, 슬롯 번호 → 새 돌 ID). 슬롯에 돌이 없으면 쥐기를 푼다 */
+export function propsFromScene(item: SceneLibraryItem, dollIdBySlot: Map<number, string>): PropInstance[] {
+  return item.props.map((p) => {
+    const copy: PropInstance = { ...structuredClone(p), id: newId('pi') };
+    const ref = copy.attachedTo?.dollInstanceId;
+    if (ref) {
+      const m = /^slot:(\d+)$/.exec(ref);
+      const target = m ? dollIdBySlot.get(parseInt(m[1], 10)) : undefined;
+      if (target && copy.attachedTo) copy.attachedTo.dollInstanceId = target;
+      else delete copy.attachedTo;
+    }
+    return copy;
+  });
 }
 
 /** 슬롯 번호 → 지정한 캐릭터 ID(null·없음이면 임시 캐릭터) */
@@ -123,15 +150,17 @@ export type SlotAssignments = Record<number, string | null | undefined>;
  * 지정한 캐릭터가 있으면 그 캐릭터의 돌(성별 돌·키·고정색)로, 비운 슬롯은 저장 당시 돌·키로 임시 캐릭터를 새로 만든다.
  * 임시 캐릭터의 색은 지금 쓰는 색과 겹치지 않게 고른다.
  */
-export function dollsFromScene(item: SceneLibraryItem, assignments: SlotAssignments, characters: Character[], workCode: string): { dolls: DollInstance[]; newCharacters: Character[] } {
+export function dollsFromScene(item: SceneLibraryItem, assignments: SlotAssignments, characters: Character[], workCode: string): { dolls: DollInstance[]; newCharacters: Character[]; props: PropInstance[] } {
   const used = characters.map((c) => c.color);
   const newCharacters: Character[] = [];
   const dolls: DollInstance[] = [];
+  const dollIdBySlot = new Map<number, string>();
   let tempIndex = characters.length + 1;
   for (const slot of item.slots) {
     const chrId = assignments[slot.slot] ?? null;
     const chr = chrId ? characters.find((c) => c.id === chrId) : undefined;
     const base = { id: newId('doll'), position: [...slot.position] as Vec3, rotation: [...slot.rotation] as Quat, joints: structuredClone(slot.joints) };
+    dollIdBySlot.set(slot.slot, base.id);
     if (chr) {
       dolls.push({ ...base, characterId: chr.id, dollId: dollAsset(chr.dollId).id, heightCm: chr.heightCm, color: chr.color });
       continue;
@@ -143,7 +172,7 @@ export function dollsFromScene(item: SceneLibraryItem, assignments: SlotAssignme
     newCharacters.push(temp);
     dolls.push({ ...base, characterId: temp.id, dollId: asset.id, heightCm: temp.heightCm, color });
   }
-  return { dolls, newCharacters };
+  return { dolls, newCharacters, props: propsFromScene(item, dollIdBySlot) };
 }
 
 /** 저장소에서 읽은 씬을 현재 구조로 맞춘다(필드가 빠진 옛 파일 대비) */

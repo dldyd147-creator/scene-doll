@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { Character, Cut, DollInstance, Episode, SceneLibraryItem, Vec3, Work } from '../model/types';
+import type { Character, Cut, DollInstance, Episode, GripTransform, Hand, PropInstance, Quat, SceneLibraryItem, Vec3, Work } from '../model/types';
 import { createCut, createEpisode, createTemporaryCharacter, createWork, dollAsset, nowIso, pickColor } from '../model/defaults';
 import { dollsFromScene, type SlotAssignments } from '../model/library';
+import { createPropInstance } from '../model/props';
 import { newId } from '../model/ids';
 import { applyScriptToCuts, type ApplyPlan, type CutScript, type DialogueLine } from '../script/ntt';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from './settings';
@@ -12,6 +13,15 @@ export interface Selection {
   bone: string | null;
   /** 원고 카메라가 선택됨(조작뷰의 카메라 아이콘) */
   camera?: boolean;
+  /** 선택한 소품(컷의 소품 인스턴스 ID) */
+  propId?: string | null;
+}
+
+/** 컷에 없는 돌·소품을 가리키는 선택은 푼다 */
+function validSelection(sel: Selection, cut: Cut): Selection {
+  if (sel.dollId && !cut.dolls.some((d) => d.id === sel.dollId)) return { dollId: null, bone: null };
+  if (sel.propId && !cut.props.some((p) => p.id === sel.propId)) return { dollId: null, bone: null };
+  return sel;
 }
 
 export const NO_SELECTION: Selection = { dollId: null, bone: null };
@@ -106,6 +116,16 @@ export interface StoreState extends Document {
   /** 돌에 캐릭터 지정. null이면 임시 캐릭터로 되돌린다 */
   assignCharacter: (dollId: string, characterId: string | null) => void;
   setEpisodeTitle: (title: string) => void;
+
+  // 소품(3단계)
+  /** 등록 소품을 현재 컷에 자유 배치. position이 없으면 앞쪽에 비켜 놓는다 */
+  addProp: (propId: string, position?: Vec3) => string;
+  removeProp: (id: string) => void;
+  /** 소품 복제(자유 배치는 옆으로 비켜, 손에 쥔 것은 같은 손에 같은 오프셋) */
+  duplicateProp: (id: string) => string | null;
+  /** 손에 쥐어 주기: 쥐기 오프셋(손 뼈 로컬)으로 바꿔 적는다 */
+  attachProp: (id: string, dollId: string, hand: Hand, grip: GripTransform) => void;
+  updateProp: (id: string, patch: Partial<Omit<PropInstance, 'id'>>) => void;
 
   // 씬 라이브러리
   openSceneBrowser: (selectId?: string | null) => void;
@@ -217,8 +237,7 @@ export const useStore = create<StoreState>()(
       const cuts = s.cuts.slice();
       const current = cuts[s.currentCutIndex];
       cuts[s.currentCutIndex] = prev;
-      const sel = s.selection.dollId && !prev.dolls.some((d) => d.id === s.selection.dollId) ? { dollId: null, bone: null } : s.selection;
-      set({ cuts, past, future: [current, ...s.future], dirty: true, selection: sel });
+      set({ cuts, past, future: [current, ...s.future], dirty: true, selection: validSelection(s.selection, prev) });
     },
 
     redo: () => {
@@ -228,13 +247,12 @@ export const useStore = create<StoreState>()(
       const cuts = s.cuts.slice();
       const current = cuts[s.currentCutIndex];
       cuts[s.currentCutIndex] = next;
-      const sel = s.selection.dollId && !next.dolls.some((d) => d.id === s.selection.dollId) ? { dollId: null, bone: null } : s.selection;
-      set({ cuts, past: [...s.past, current], future, dirty: true, selection: sel });
+      set({ cuts, past: [...s.past, current], future, dirty: true, selection: validSelection(s.selection, next) });
     },
 
     select: (sel) => {
       const cur = get().selection;
-      if (cur.dollId === sel.dollId && cur.bone === sel.bone && !!cur.camera === !!sel.camera) return;
+      if (cur.dollId === sel.dollId && cur.bone === sel.bone && !!cur.camera === !!sel.camera && (cur.propId ?? null) === (sel.propId ?? null)) return;
       set({ selection: sel });
     },
 
@@ -270,7 +288,16 @@ export const useStore = create<StoreState>()(
 
     removeDoll: (id) => {
       get().commitCut((c) => {
+        const doll = c.dolls.find((d) => d.id === id);
         c.dolls = c.dolls.filter((d) => d.id !== id);
+        // 그 돌이 쥐고 있던 소품은 돌이 있던 자리에 내려놓는다
+        for (const p of c.props) {
+          if (p.attachedTo?.dollInstanceId === id) {
+            delete p.attachedTo;
+            p.position = doll ? [doll.position[0], 0.8, doll.position[2]] : [0, 0.8, 0];
+            p.rotation = [0, 0, 0, 1];
+          }
+        }
       });
       const sel = get().selection;
       if (sel.dollId === id) set({ selection: { dollId: null, bone: null } });
@@ -456,6 +483,61 @@ export const useStore = create<StoreState>()(
 
     setEpisodeTitle: (title) => set({ episode: { ...get().episode, title, updatedAt: nowIso() }, dirty: true }),
 
+    // ---------- 소품 ----------
+
+    addProp: (propId, position) => {
+      const cut = get().currentCut();
+      const n = cut.props.length;
+      // 자리를 안 주면 돌 앞쪽(+Z)에 가로로 비켜 놓는다
+      const inst = createPropInstance(propId, position ?? [((n % 3) - 1) * 0.4, position?.[1] ?? 0, 0.6]);
+      get().commitCut((c) => {
+        c.props.push(inst);
+      });
+      set({ selection: { dollId: null, bone: null, propId: inst.id } });
+      return inst.id;
+    },
+
+    removeProp: (id) => {
+      get().commitCut((c) => {
+        c.props = c.props.filter((p) => p.id !== id);
+      });
+      if (get().selection.propId === id) set({ selection: { dollId: null, bone: null } });
+    },
+
+    duplicateProp: (id) => {
+      const src = get().currentCut().props.find((p) => p.id === id);
+      if (!src) return null;
+      const copy: PropInstance = { ...structuredClone(src), id: newId('pi') };
+      if (!copy.attachedTo) copy.position = [src.position[0] + 0.3, src.position[1], src.position[2]];
+      get().commitCut((c) => {
+        c.props.push(copy);
+      });
+      set({ selection: { dollId: null, bone: null, propId: copy.id } });
+      return copy.id;
+    },
+
+    attachProp: (id, dollId, hand, grip) => {
+      const s = get();
+      if (!s.currentCut().dolls.some((d) => d.id === dollId)) return;
+      get().commitCut((c) => {
+        const p = c.props.find((x) => x.id === id);
+        if (!p) return;
+        p.attachedTo = { dollInstanceId: dollId, hand };
+        p.position = [...grip.position] as Vec3;
+        p.rotation = [...grip.rotation] as Quat;
+      });
+    },
+
+    updateProp: (id, patch) => {
+      get().commitCut((c) => {
+        const i = c.props.findIndex((x) => x.id === id);
+        if (i < 0) return;
+        const next: PropInstance = { ...c.props[i], ...patch };
+        if (!next.attachedTo) delete next.attachedTo;
+        c.props[i] = next;
+      });
+    },
+
     // ---------- 씬 라이브러리 ----------
 
     openSceneBrowser: (selectId = null) => set({ sceneBrowserOpen: true, sceneBrowserSelectId: selectId, sceneSaveOpen: false }),
@@ -464,16 +546,17 @@ export const useStore = create<StoreState>()(
 
     applyLibraryScene: (item, assignments, mode) => {
       const s = get();
-      const { dolls, newCharacters } = dollsFromScene(item, assignments, s.characters, s.work.code);
+      const { dolls, newCharacters, props } = dollsFromScene(item, assignments, s.characters, s.work.code);
       if (newCharacters.length) set({ characters: [...s.characters, ...newCharacters] });
       get().commitCut((c) => {
         if (mode === 'replace') {
           c.dolls = dolls;
-          c.props = structuredClone(item.props);
+          c.props = props;
           c.camera = { ...item.camera, position: [...item.camera.position] as Vec3 };
           c.aspect = item.aspect;
         } else {
           c.dolls.push(...dolls);
+          c.props.push(...props);
         }
       });
       set({ selection: mode === 'add' && dolls.length ? { dollId: dolls[0].id, bone: null } : NO_SELECTION, sceneBrowserOpen: false, sceneBrowserSelectId: null });
@@ -515,8 +598,7 @@ export const useStore = create<StoreState>()(
       const s = get();
       const i = Math.max(0, Math.min(s.cuts.length - 1, index));
       if (i === s.currentCutIndex) return;
-      const sel = s.selection.dollId && !s.cuts[i].dolls.some((d) => d.id === s.selection.dollId) ? { dollId: null, bone: null } : s.selection;
-      set({ currentCutIndex: i, past: [], future: [], selection: sel });
+      set({ currentCutIndex: i, past: [], future: [], selection: validSelection(s.selection, s.cuts[i]) });
     },
 
     nextCut: () => {
@@ -552,8 +634,7 @@ export const useStore = create<StoreState>()(
       if (!cuts.length) cuts = [createCut(1)];
       const r = renumber(cuts, thumbs);
       const idx = Math.max(0, Math.min(r.cuts.length - 1, index));
-      const sel = s.selection.dollId && !r.cuts[idx].dolls.some((d) => d.id === s.selection.dollId) ? { dollId: null, bone: null } : s.selection;
-      set({ cuts: r.cuts, thumbnails: r.thumbnails, thumbnailsRenumbered: true, currentCutIndex: idx, past: [], future: [], dirty: true, selection: sel, episode: { ...s.episode, cutOrder: r.cuts.map((c) => c.number) } });
+      set({ cuts: r.cuts, thumbnails: r.thumbnails, thumbnailsRenumbered: true, currentCutIndex: idx, past: [], future: [], dirty: true, selection: validSelection(s.selection, r.cuts[idx]), episode: { ...s.episode, cutOrder: r.cuts.map((c) => c.number) } });
     },
 
     moveCut: (index, delta) => {

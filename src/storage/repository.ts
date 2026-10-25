@@ -1,6 +1,7 @@
-import type { Character, Cut, Episode, Pose, SceneLibraryItem, Work } from '../model/types';
+import type { Character, Cut, Episode, Pose, PropAsset, SceneLibraryItem, Work } from '../model/types';
 import { createEpisode, normalizeCharacter } from '../model/defaults';
 import { normalizePose, normalizeScene } from '../model/library';
+import { normalizeProp } from '../model/props';
 import type { Document, Thumbnails } from '../state/store';
 import { pad3, type StorageBackend } from './backend';
 
@@ -14,6 +15,10 @@ export const paths = {
   poseDir: () => '공용/포즈',
   pose: (id: string) => `공용/포즈/${id}.json`,
   poseThumb: (id: string) => `공용/포즈/${id}.png`,
+  propDir: () => '공용/소품',
+  prop: (id: string) => `공용/소품/${id}.json`,
+  propModel: (id: string) => `공용/소품/${id}.glb`,
+  propThumb: (id: string) => `공용/소품/${id}.png`,
   worksDir: () => '작품',
   workDir: (code: string) => `작품/${code}`,
   work: (code: string) => `작품/${code}/작품.json`,
@@ -298,7 +303,48 @@ export class Repository {
     await this.backend.remove(paths.poseThumb(id));
   }
 
-  /** PNG 파일 → 데이터 URL(없으면 null). 씬·포즈 썸네일 읽기용 */
+  // ---------- 공용: 소품 ----------
+
+  async loadProps(): Promise<PropAsset[]> {
+    const files = await this.backend.list(paths.propDir());
+    const out: PropAsset[] = [];
+    for (const f of files) {
+      if (f.kind !== 'file' || !f.name.endsWith('.json')) continue;
+      const t = await this.backend.readText(`${paths.propDir()}/${f.name}`);
+      if (!t) continue;
+      try {
+        out.push(normalizeProp(JSON.parse(t) as Partial<PropAsset>));
+      } catch {
+        /* 깨진 JSON */
+      }
+    }
+    return out.sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+  }
+
+  async saveProp(asset: PropAsset, thumbnailDataUrl: string | null): Promise<PropAsset> {
+    const stored: PropAsset = { ...asset, thumbnail: thumbnailDataUrl ? paths.propThumb(asset.id) : asset.thumbnail };
+    await this.backend.writeText(paths.prop(asset.id), json(stored));
+    if (thumbnailDataUrl) await this.backend.writeBinary(paths.propThumb(asset.id), dataUrlToBlob(thumbnailDataUrl));
+    return stored;
+  }
+
+  /** 소품 JSON·GLB·썸네일을 함께 지운다 */
+  async deleteProp(id: string): Promise<void> {
+    await this.backend.remove(paths.prop(id));
+    await this.backend.remove(paths.propModel(id));
+    await this.backend.remove(paths.propThumb(id));
+  }
+
+  async savePropModel(id: string, data: ArrayBuffer | Blob): Promise<string> {
+    await this.backend.writeBinary(paths.propModel(id), data);
+    return paths.propModel(id);
+  }
+
+  async readPropModel(id: string): Promise<ArrayBuffer | null> {
+    return this.backend.readBinary(paths.propModel(id));
+  }
+
+  /** PNG 파일 → 데이터 URL(없으면 null). 씬·포즈·소품 썸네일 읽기용 */
   async readImage(path: string): Promise<string | null> {
     const buf = await this.backend.readBinary(path);
     return buf ? bufferToDataUrl(buf) : null;

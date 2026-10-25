@@ -6,6 +6,7 @@ import { useStore } from '../state/store';
 import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
 import { PoseTab } from './PoseTab';
+import { PropTab } from './PropTab';
 import { useRefUrl } from './refImages';
 import { saveNow } from './save';
 import { SceneTab } from './SceneTab';
@@ -52,7 +53,7 @@ export function AssetPanel({ engine }: { engine: Engine }) {
       <div className="asset-body">
         {tab === 'character' && <CharacterTab />}
         {tab === 'doll' && <DollTab />}
-        {tab === 'prop' && <div className="placeholder">소품은 3단계에서 제공합니다.</div>}
+        {tab === 'prop' && <PropTab engine={engine} />}
         {tab === 'pose' && <PoseTab engine={engine} />}
         {tab === 'scene' && <SceneTab />}
       </div>

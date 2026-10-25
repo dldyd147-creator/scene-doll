@@ -78,13 +78,18 @@ export interface DollInstance {
   joints: JointRotations;
 }
 
-/** 컷에 놓인 소품(3단계) */
+export type Hand = 'left' | 'right';
+
+/**
+ * 컷에 놓인 소품(3단계).
+ * attachedTo가 있으면 position·rotation은 그 손 뼈의 로컬 좌표(쥐기 오프셋, 뼈 크기 제거)이고, 없으면 월드 좌표다.
+ */
 export interface PropInstance {
   id: string;
   propId: string;
   position: Vec3;
   rotation: Quat;
-  attachedTo?: { dollInstanceId: string; hand: 'left' | 'right' };
+  attachedTo?: { dollInstanceId: string; hand: Hand };
 }
 
 /** 컷 = 그 순간의 씬 전체 스냅샷 */
@@ -228,12 +233,28 @@ export interface SceneLibraryItem {
   createdAt?: string;
 }
 
-/** 소품(3단계) */
+export type PropShape = 'box' | 'cylinder' | 'sphere';
+
+/** 손 뼈 로컬 좌표의 쥐기 오프셋(뼈 크기 제거, m) */
+export interface GripTransform {
+  position: Vec3;
+  rotation: Quat;
+}
+
+/** 소품(3단계). 파일은 공용/소품/{ID}.json (+ {ID}.glb, {ID}.png) */
 export interface PropAsset {
   id: string;
   name: string;
   tags: string[];
-  model: { kind: 'glb'; path: string } | { kind: 'primitive'; shape: 'box' | 'cylinder' | 'sphere'; size: Vec3 };
-  grip: { right?: { position: Vec3; rotation: Quat }; left?: { position: Vec3; rotation: Quat } };
+  /** GLB(저장소 경로, m 단위) 또는 기본 도형(size는 m: 상자 가로·높이·깊이, 원기둥 지름·높이, 구 지름) */
+  model: { kind: 'glb'; path: string } | { kind: 'primitive'; shape: PropShape; size: Vec3 };
+  /** 오른손/왼손 기본 쥐기(없으면 손바닥 쪽 기본값) */
+  grip: { right?: GripTransform; left?: GripTransform };
+  /** 소속 작품(null이면 공용) */
   workCode: string | null;
+  /** 색(HEX). 캐릭터 구분색과 겹치지 않는 회색 계열이 기본 */
+  color?: string;
+  /** 단독 촬영 썸네일 경로 */
+  thumbnail?: string;
+  createdAt?: string;
 }

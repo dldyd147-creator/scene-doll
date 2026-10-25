@@ -21,8 +21,11 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import type { CameraState, Cut, DollAsset, JointRotations } from '../model/types';
+import type { CameraState, Cut, DollAsset, Hand, JointRotations, PropAsset, PropInstance, Vec3 } from '../model/types';
 import { dollAsset } from '../model/defaults';
+import { HAND_BONE } from '../model/props';
+import { loadPropTemplate, PropObject, propTemplateIfLoaded } from './props';
+import { gripToWorld, worldToGrip } from './propMath';
 import type { Selection, ToolMode } from '../state/store';
 import { DEFAULT_SETTINGS, type Settings } from '../state/settings';
 import type { DollRig } from './DollRig';
@@ -41,6 +44,8 @@ export interface EngineCallbacks {
   commit: (mutate: (cut: Cut) => void) => void;
   select: (sel: Selection) => void;
   hint: (text: string) => void;
+  /** GLB 소품의 파일 바이트(저장소에서). 없으면 null */
+  propModel?: (asset: PropAsset) => Promise<ArrayBuffer | null>;
 }
 
 export type ViewKind = 'work' | 'manuscript';
@@ -72,6 +77,13 @@ export class Engine {
   readonly keyLight = new DirectionalLight('#ffffff', KEY_LIGHT_INTENSITY);
   grid: GridHelper;
   readonly dolls = new Map<string, DollRig>();
+  /** 컷의 소품 객체(인스턴스 ID → 객체) */
+  readonly props = new Map<string, PropObject>();
+  /** 등록 소품 정의(소품 ID → 정의). UI가 라이브러리를 읽어 넣어 준다 */
+  private propAssets = new Map<string, PropAsset>();
+  private propAssetKeys = new Map<string, string>();
+  private propKeys = new Map<string, string>();
+  private loadingProps = new Set<string>();
   /** IK 기즈모용 대리 객체(손·발 위치) */
   readonly ikProxy = new Object3D();
   orbit: OrbitControls | null = null;
@@ -89,7 +101,7 @@ export class Engine {
   private loadingTemplates = new Set<string>();
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
-  private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | null = null;
+  private gizmoTarget: 'bone' | 'root' | 'ik' | 'camera' | 'prop' | null = null;
   private disposed = false;
 
   constructor(readonly callbacks: EngineCallbacks) {
@@ -143,6 +155,9 @@ export class Engine {
     this.dolls.clear();
     this.dollKeys.clear();
     this.loadingTemplates.clear();
+    for (const p of this.props.values()) p.dispose();
+    this.props.clear();
+    this.propKeys.clear();
     this.cut = null;
     this.canvas.remove();
   }
@@ -207,6 +222,7 @@ export class Engine {
     if (this.disposed) return;
     this.raf = requestAnimationFrame(this.frame);
     for (const rig of this.dolls.values()) rig.updateHelpers(this.workCamera.position);
+    this.syncProps();
     this.updateFrustumDistance();
     this.render();
   };
@@ -266,6 +282,7 @@ export class Engine {
       rig.updateHelpers();
       rig.setLinePx(linePx);
     }
+    this.syncProps();
     r.setRenderTarget(rt);
     r.setScissorTest(false);
     r.setViewport(0, 0, w, h);
@@ -349,11 +366,230 @@ export class Engine {
         this.dollKeys.delete(id);
       }
     }
+    this.applyProps(cut);
     this.manu.apply(cut.camera, cut.aspect);
     const d = fromVec3(cut.light.direction).normalize();
     this.keyLight.position.copy(d.multiplyScalar(-10));
     this.refreshSelectionVisuals();
     this.updateGizmo();
+  }
+
+  // ---------- 소품 ----------
+
+  /** 등록 소품 정의를 넣어 준다(라이브러리가 바뀔 때마다). 정의가 바뀐 소품 객체는 다시 만든다 */
+  setPropAssets(list: PropAsset[]): void {
+    const next = new Map<string, PropAsset>();
+    const nextKeys = new Map<string, string>();
+    for (const a of list) {
+      const key = JSON.stringify(a);
+      // 내용이 같으면 같은 객체를 유지해 재생성을 피한다
+      next.set(a.id, this.propAssetKeys.get(a.id) === key ? (this.propAssets.get(a.id) ?? a) : a);
+      nextKeys.set(a.id, key);
+    }
+    for (const [id, obj] of this.props) {
+      const asset = next.get(obj.asset.id);
+      if (!asset || asset !== obj.asset) this.removePropObject(id);
+    }
+    this.propAssets = next;
+    this.propAssetKeys = nextKeys;
+    if (this.cut) this.applyProps(this.cut);
+  }
+
+  private applyProps(cut: Cut): void {
+    const seen = new Set<string>();
+    for (const inst of cut.props) {
+      seen.add(inst.id);
+      const asset = this.propAssets.get(inst.propId);
+      if (!asset) continue; // 소품 목록이 아직 없거나 지워진 소품
+      let obj = this.props.get(inst.id);
+      if (obj && obj.asset !== asset) {
+        this.removePropObject(inst.id);
+        obj = undefined;
+      }
+      if (!obj) {
+        const template = asset.model.kind === 'glb' ? propTemplateIfLoaded(asset) : null;
+        if (asset.model.kind === 'glb' && !template) {
+          this.ensurePropTemplate(asset);
+          continue;
+        }
+        obj = new PropObject(inst.id, asset, inst, template);
+        this.scene.add(obj.root);
+        this.props.set(inst.id, obj);
+      }
+      const key = JSON.stringify(inst);
+      if (this.propKeys.get(inst.id) !== key) {
+        obj.inst = inst;
+        obj.dirty = true;
+        obj.live = false;
+        this.propKeys.set(inst.id, key);
+      }
+      obj.setShading(cut.light.shading);
+      obj.setOutline(cut.outline);
+    }
+    for (const id of [...this.props.keys()]) if (!seen.has(id)) this.removePropObject(id);
+    this.syncProps();
+  }
+
+  private removePropObject(id: string): void {
+    const obj = this.props.get(id);
+    if (!obj) return;
+    if (this.gizmo?.object === obj.root) this.gizmo.detach();
+    obj.dispose();
+    this.props.delete(id);
+    this.propKeys.delete(id);
+  }
+
+  private ensurePropTemplate(asset: PropAsset): void {
+    if (this.loadingProps.has(asset.id)) return;
+    this.loadingProps.add(asset.id);
+    loadPropTemplate(asset, () => this.callbacks.propModel?.(asset) ?? Promise.resolve(null))
+      .then(() => {
+        this.loadingProps.delete(asset.id);
+        if (!this.disposed && this.cut) this.applyProps(this.cut);
+      })
+      .catch((e: unknown) => {
+        this.loadingProps.delete(asset.id);
+        this.callbacks.hint(`소품을 불러오지 못했습니다: ${asset.name} (${e instanceof Error ? e.message : String(e)})`);
+      });
+  }
+
+  /** 손 뼈(돌 ID·손)를 찾는다. 돌이나 뼈가 없으면 null */
+  private handBone(dollId: string, hand: Hand): Object3D | null {
+    const rig = this.dolls.get(dollId);
+    return rig?.skel.bones.get(HAND_BONE[hand]) ?? null;
+  }
+
+  /** 소품 자리 맞추기: 손에 쥔 것은 매 프레임 손 뼈를 따라가고, 자유 배치는 인스턴스가 바뀔 때만. 조작 중(live)인 것은 건드리지 않는다 */
+  syncProps(): void {
+    for (const obj of this.props.values()) {
+      if (obj.live) continue;
+      const at = obj.inst.attachedTo;
+      const bone = at ? this.handBone(at.dollInstanceId, at.hand) : null;
+      if (bone) {
+        const w = gripToWorld(bone.matrixWorld, { position: obj.inst.position, rotation: obj.inst.rotation });
+        obj.root.position.copy(w.position);
+        obj.root.quaternion.copy(w.quaternion);
+        obj.root.updateMatrixWorld(true);
+        obj.dirty = false;
+      } else if (obj.dirty) {
+        obj.root.position.fromArray(obj.inst.position);
+        obj.root.quaternion.fromArray(obj.inst.rotation);
+        obj.root.updateMatrixWorld(true);
+        obj.dirty = false;
+      }
+    }
+  }
+
+  selectedProp(): PropObject | null {
+    return this.selection.propId ? (this.props.get(this.selection.propId) ?? null) : null;
+  }
+
+  /** 소품 객체의 지금 변환을 컷에 기록한다. 손에 쥔 것은 손 뼈 로컬(쥐기 오프셋)로 바꿔 적는다 */
+  commitProp(id: string): void {
+    const obj = this.props.get(id);
+    const cut = this.cut;
+    if (!obj || !cut) return;
+    const base = cut.props.find((p) => p.id === id);
+    if (!base) return;
+    obj.root.updateMatrixWorld(true);
+    const at = base.attachedTo;
+    const bone = at ? this.handBone(at.dollInstanceId, at.hand) : null;
+    let inst: PropInstance;
+    if (bone) {
+      const grip = worldToGrip(bone.matrixWorld, obj.root.position, obj.root.quaternion);
+      inst = { ...base, position: grip.position, rotation: grip.rotation };
+    } else {
+      const p = obj.root.position;
+      const q = obj.root.quaternion;
+      inst = { ...base, attachedTo: undefined, position: [roundTo(p.x, 4), roundTo(p.y, 4), roundTo(p.z, 4)], rotation: [roundTo(q.x, 5), roundTo(q.y, 5), roundTo(q.z, 5), roundTo(q.w, 5)] };
+      if (!inst.attachedTo) delete inst.attachedTo;
+    }
+    obj.inst = inst;
+    obj.live = false;
+    obj.dirty = false;
+    this.propKeys.set(id, JSON.stringify(inst));
+    this.callbacks.commit((c) => {
+      const i = c.props.findIndex((p) => p.id === id);
+      if (i >= 0) c.props[i] = inst;
+    });
+  }
+
+  /** 조작을 취소했을 때: 인스턴스 값으로 되돌린다 */
+  cancelPropLive(id: string): void {
+    const obj = this.props.get(id);
+    if (!obj) return;
+    obj.live = false;
+    obj.dirty = true;
+    this.syncProps();
+  }
+
+  /** 손에서 놓기: 지금 월드 자리에 그대로 둔다 */
+  detachProp(id: string): void {
+    const obj = this.props.get(id);
+    if (!obj || !this.cut) return;
+    const inst = this.cut.props.find((p) => p.id === id);
+    if (!inst?.attachedTo) return;
+    this.syncProps();
+    obj.root.updateMatrixWorld(true);
+    const p = obj.root.position;
+    const q = obj.root.quaternion;
+    const next: PropInstance = { id: inst.id, propId: inst.propId, position: [roundTo(p.x, 4), roundTo(p.y, 4), roundTo(p.z, 4)], rotation: [roundTo(q.x, 5), roundTo(q.y, 5), roundTo(q.z, 5), roundTo(q.w, 5)] };
+    this.callbacks.commit((c) => {
+      const i = c.props.findIndex((x) => x.id === id);
+      if (i >= 0) c.props[i] = next;
+    });
+  }
+
+  /** 소품의 지금 월드 위치(드롭 위치 계산 등) */
+  propWorldPosition(id: string): Vec3 | null {
+    const obj = this.props.get(id);
+    if (!obj) return null;
+    const p = obj.root.position;
+    return [p.x, p.y, p.z];
+  }
+
+  /**
+   * 소품 단독 촬영: 돌과 다른 소품을 숨기고 그 소품만 앞쪽 반측면 위에서 찍는다.
+   * 컷에 있는 소품(인스턴스 ID)이든 등록 소품 정의든 받는다. GLB는 먼저 불러온다
+   */
+  async snapshotProp(target: PropAsset | string, width: number, height: number): Promise<HTMLCanvasElement | null> {
+    let obj = typeof target === 'string' ? (this.props.get(target) ?? null) : null;
+    let temp = false;
+    if (!obj) {
+      const asset = typeof target === 'string' ? null : target;
+      if (!asset) return null;
+      let template: Object3D | null = null;
+      if (asset.model.kind === 'glb') template = await loadPropTemplate(asset, () => this.callbacks.propModel?.(asset) ?? Promise.resolve(null));
+      obj = new PropObject(`snapshot:${asset.id}`, asset, { id: 'snapshot', propId: asset.id, position: [0, 0, 0], rotation: [0, 0, 0, 1] }, template);
+      obj.live = true;
+      obj.setShading(true);
+      obj.setOutline(true);
+      this.scene.add(obj.root);
+      temp = true;
+    }
+    this.syncProps();
+    const hidden: Object3D[] = [];
+    for (const r of this.dolls.values()) if (r.root.visible) hidden.push(r.root);
+    for (const p of this.props.values()) if (p !== obj && p.root.visible) hidden.push(p.root);
+    for (const o of hidden) o.visible = false;
+    const wasSelected = this.selection.propId === obj.id;
+    if (wasSelected) obj.setSelected(false);
+    try {
+      const box = obj.worldBounds();
+      const center = box.getCenter(new Vector3());
+      const radius = Math.max(0.03, box.getSize(new Vector3()).length() * 0.5);
+      const fov = 30;
+      const cam = new PerspectiveCamera(fov, width / height, 0.01, 100);
+      const dir = new Vector3(0.6, 0.45, 1).normalize();
+      cam.position.copy(center).addScaledVector(dir, (radius / Math.sin(MathUtils.degToRad(fov / 2))) * 1.08);
+      cam.lookAt(center);
+      cam.updateMatrixWorld(true);
+      return this.renderToCanvas(cam, width, height, { background: 'white' });
+    } finally {
+      for (const o of hidden) o.visible = true;
+      if (wasSelected) obj.setSelected(true);
+      if (temp) obj.dispose();
+    }
   }
 
   private ensureTemplate(asset: DollAsset): void {
@@ -427,6 +663,7 @@ export class Engine {
       rig.setSelected(selected);
       rig.setHighlight(selected ? this.selection.bone : null);
     }
+    for (const p of this.props.values()) p.setSelected(p.id === this.selection.propId);
     this.manu.setSelected(!!this.selection.camera);
   }
 
@@ -451,6 +688,15 @@ export class Engine {
       g.setSpace(this.mode === 'rotate' ? 'local' : 'world');
       g.attach(this.manu.camera);
       this.gizmoTarget = 'camera';
+      return;
+    }
+    const prop = this.selectedProp();
+    if (prop) {
+      g.getHelper().visible = true;
+      g.setMode(this.mode);
+      g.setSpace(this.mode === 'rotate' ? 'local' : 'world');
+      g.attach(prop.root);
+      this.gizmoTarget = 'prop';
       return;
     }
     const rig = this.selectedRig();
@@ -510,9 +756,15 @@ export class Engine {
     return worst;
   }
 
-  private onGizmoStart(): void {}
+  private onGizmoStart(): void {
+    if (this.gizmoTarget === 'prop') {
+      const prop = this.selectedProp();
+      if (prop) prop.live = true;
+    }
+  }
 
   private onGizmoChange(): void {
+    if (this.gizmoTarget === 'prop') return;
     const rig = this.selectedRig();
     if (this.gizmoTarget === 'ik') {
       if (rig && this.selection.bone) this.solveIk(rig, this.selection.bone, this.ikProxy.position);
@@ -530,6 +782,11 @@ export class Engine {
   private onGizmoEnd(): void {
     if (this.gizmoTarget === 'camera') {
       this.commitCamera();
+      return;
+    }
+    if (this.gizmoTarget === 'prop') {
+      const prop = this.selectedProp();
+      if (prop) this.commitProp(prop.id);
       return;
     }
     const rig = this.selectedRig();

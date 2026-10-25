@@ -6,6 +6,7 @@ import { pad3 } from '../storage/backend';
 import { storage } from '../storage';
 import { useStore } from '../state/store';
 import { buildCutPackage, characterFolders, writeCharacterSheets, writeCutPackage, writeEpisodeSummary, type CutPackage } from './packager';
+import { useLibrary } from './library';
 import { saveNow } from './save';
 
 export interface ExportProgress {
@@ -60,6 +61,7 @@ export async function exportEpisode(engine: Engine, onProgress: (p: ExportProgre
   const blocks: string[] = [];
   const packages: CutPackage[] = [];
   const folders = characterFolders(characters);
+  const propAssets = useLibrary.getState().props ?? [];
   const currentCut = s.currentCut();
 
   await saveNow();
@@ -81,7 +83,7 @@ export async function exportEpisode(engine: Engine, onProgress: (p: ExportProgre
         const canvas = engine.renderToCanvas(engine.manu.camera, width, width * cut.aspect, { background });
         const blob = await canvasToBlob(canvas);
         const analysis = analyzeCut(engine, cut, characters);
-        const block = cutBlock(analysis, cut, work.code, episode.number);
+        const block = cutBlock(analysis, cut, work.code, episode.number, propAssets);
         blocks.push(block);
         await repo.writeOutput(work.code, episode.number, pngName(work.code, episode.number, cut.number), blob);
         await repo.writeOutput(work.code, episode.number, `${work.code}_${pad3(episode.number)}_${pad3(cut.number)}.json`, JSON.stringify({ ...cut, desc: block }, null, 2));

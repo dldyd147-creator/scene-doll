@@ -2,6 +2,7 @@ import type { Engine } from '../engine/Engine';
 import { analyzeCut } from '../describe/analyze';
 import { cutBlock } from '../describe/text';
 import { useStore } from '../state/store';
+import { useLibrary } from './library';
 import { saveNow } from './save';
 
 const THUMB_WIDTH = 192;
@@ -16,7 +17,7 @@ export function captureThumbnail(engine: Engine, aspect: number, width = THUMB_W
 export function describeCurrentCut(engine: Engine): string {
   const s = useStore.getState();
   const cut = s.currentCut();
-  return cutBlock(analyzeCut(engine, cut, s.characters), cut, s.work.code, s.episode.number);
+  return cutBlock(analyzeCut(engine, cut, s.characters), cut, s.work.code, s.episode.number, useLibrary.getState().props ?? []);
 }
 
 /**

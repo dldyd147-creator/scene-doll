@@ -16,7 +16,7 @@ function isTyping(e: KeyboardEvent): boolean {
  * `(백틱)은 씬 검색기 토글.
  */
 export function useShortcuts(engine: Engine): void {
-  const clipboard = useRef<string | null>(null);
+  const clipboard = useRef<{ kind: 'doll' | 'prop'; id: string } | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -69,13 +69,19 @@ export function useShortcuts(engine: Engine): void {
         return;
       }
       if (ctrl && key === 'c') {
-        if (s.selection.dollId) clipboard.current = s.selection.dollId;
+        if (s.selection.propId) clipboard.current = { kind: 'prop', id: s.selection.propId };
+        else if (s.selection.dollId) clipboard.current = { kind: 'doll', id: s.selection.dollId };
         return;
       }
       if (ctrl && key === 'v') {
-        if (clipboard.current && s.currentCut().dolls.some((d) => d.id === clipboard.current)) {
+        const clip = clipboard.current;
+        const cut = s.currentCut();
+        if (clip?.kind === 'doll' && cut.dolls.some((d) => d.id === clip.id)) {
           e.preventDefault();
-          s.duplicateDoll(clipboard.current, 0);
+          s.duplicateDoll(clip.id, 0);
+        } else if (clip?.kind === 'prop' && cut.props.some((p) => p.id === clip.id)) {
+          e.preventDefault();
+          s.duplicateProp(clip.id);
         }
         return;
       }
@@ -84,7 +90,10 @@ export function useShortcuts(engine: Engine): void {
       switch (e.key) {
         case 'Delete':
         case 'Backspace':
-          if (s.selection.dollId) {
+          if (s.selection.propId) {
+            e.preventDefault();
+            s.removeProp(s.selection.propId);
+          } else if (s.selection.dollId) {
             e.preventDefault();
             s.removeDoll(s.selection.dollId);
           }

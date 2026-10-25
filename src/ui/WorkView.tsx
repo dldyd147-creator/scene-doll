@@ -1,5 +1,7 @@
 import { useCallback, useState, type DragEvent } from 'react';
 import type { Engine } from '../engine/Engine';
+import { propRestHeight } from '../engine/props';
+import { gripFor } from '../model/props';
 import type { Vec3 } from '../model/types';
 import { useStore } from '../state/store';
 import { dragPayload, endDrag, isSceneDollDrag } from './dragdrop';
@@ -22,7 +24,12 @@ export function WorkView({ engine }: { engine: Engine }) {
   const commitCut = useStore((s) => s.commitCut);
   const removeDoll = useStore((s) => s.removeDoll);
   const duplicateDoll = useStore((s) => s.duplicateDoll);
+  const removeProp = useStore((s) => s.removeProp);
+  const duplicateProp = useStore((s) => s.duplicateProp);
   const hasDoll = !!selection.dollId;
+  const hasProp = !!selection.propId;
+  const duplicateSelected = () => (selection.propId ? duplicateProp(selection.propId) : selection.dollId ? duplicateDoll(selection.dollId) : null);
+  const removeSelected = () => (selection.propId ? removeProp(selection.propId) : selection.dollId ? removeDoll(selection.dollId) : undefined);
 
   const surfaceRef = useCallback(
     (el: HTMLDivElement | null) => {
@@ -62,6 +69,20 @@ export function WorkView({ engine }: { engine: Engine }) {
     if (payload.kind === 'doll') {
       s.addDoll(payload.dollId, payload.heightCm, at);
       s.setStatusHint('기본 돌을 놓았습니다(임시 캐릭터)');
+      return;
+    }
+    if (payload.kind === 'prop') {
+      const asset = useLibrary.getState().props?.find((p) => p.id === payload.id);
+      if (!asset) return;
+      if (rig) {
+        const id = s.addProp(asset.id);
+        s.attachProp(id, rig.id, 'right', gripFor(asset, 'right'));
+        const chr = s.characters.find((c) => c.id === s.currentCut().dolls.find((d) => d.id === rig.id)?.characterId);
+        s.setStatusHint(`${asset.name}을(를) ${chr?.name ?? '돌'}의 오른손에 쥐어 주었습니다 · 끌거나 G/R로 쥐는 위치를 맞추세요`);
+      } else {
+        s.addProp(asset.id, at ? [at[0], propRestHeight(asset), at[2]] : undefined);
+        s.setStatusHint(`${asset.name}을(를) 놓았습니다`);
+      }
       return;
     }
     const pose = useLibrary.getState().poses?.find((p) => p.id === payload.id);
@@ -114,10 +135,10 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasDoll} onClick={() => engine.snapSelectedToGround()} title="가장 낮은 점을 바닥에 붙이기">
             <Icon name="ground" />
           </button>
-          <button className="icon" disabled={!hasDoll} onClick={() => selection.dollId && duplicateDoll(selection.dollId)} title="복제 (Ctrl+C · Ctrl+V는 같은 자리)">
+          <button className="icon" disabled={!hasDoll && !hasProp} onClick={() => duplicateSelected()} title="선택한 돌·소품 복제 (Ctrl+C · Ctrl+V는 같은 자리)">
             <Icon name="copy" />
           </button>
-          <button className="icon danger" disabled={!hasDoll} onClick={() => selection.dollId && removeDoll(selection.dollId)} title="삭제 (Delete)">
+          <button className="icon danger" disabled={!hasDoll && !hasProp} onClick={() => removeSelected()} title="선택한 돌·소품 삭제 (Delete)">
             <Icon name="trash" />
           </button>
         </div>

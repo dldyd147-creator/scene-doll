@@ -161,6 +161,29 @@ describe('씬 불러오기: 슬롯 → 돌', () => {
   });
 });
 
+describe('씬 라이브러리: 소품 슬롯 연결', () => {
+  it('저장 때 쥔 돌 ID → 슬롯 번호, 불러올 때 새 돌 ID로', () => {
+    const cut = cutWithTwoDolls();
+    cut.props.push(
+      { id: 'p1', propId: 'prop_sword', position: [0, 0.07, 0], rotation: [0, 0, 0, 1], attachedTo: { dollInstanceId: 'd2', hand: 'right' } },
+      { id: 'p2', propId: 'prop_cup', position: [1, 0.05, 0], rotation: [0, 0, 0, 1] },
+      { id: 'p3', propId: 'prop_x', position: [0, 0, 0], rotation: [0, 0, 0, 1], attachedTo: { dollInstanceId: 'ghost', hand: 'left' } },
+    );
+    const item = sceneFromCut(cut, { count: 2, shot: 'full', angle: 'eye', dolls: [] }, {});
+    expect(item.props.map((p) => p.attachedTo?.dollInstanceId ?? null)).toEqual(['slot:2', null, null]);
+    // 원본은 그대로
+    expect(cut.props[0].attachedTo?.dollInstanceId).toBe('d2');
+    const { dolls, props } = dollsFromScene(item, {}, [], 'TMP');
+    expect(props).toHaveLength(3);
+    expect(props[0].attachedTo).toEqual({ dollInstanceId: dolls[1].id, hand: 'right' });
+    expect(props[0].id).not.toBe('p1');
+    expect(props[0].position).toEqual([0, 0.07, 0]);
+    expect(props[1].attachedTo).toBeUndefined();
+    expect(props[1].position).toEqual([1, 0.05, 0]);
+    expect(props[2].attachedTo).toBeUndefined();
+  });
+});
+
 describe('저장 파일 정규화', () => {
   it('빠진 필드를 채운다', () => {
     const s = normalizeScene({ id: 'x', slots: [{ slot: 1, dollId: 'mh2_m', position: [0, 0, 0], rotation: [0, 0, 0, 1], joints: {} }] });

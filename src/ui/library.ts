@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
-import type { Pose, SceneLibraryItem } from '../model/types';
+import type { Pose, PropAsset, SceneLibraryItem } from '../model/types';
 import { storage } from '../storage';
 
 /**
- * 공용 라이브러리(씬·포즈) 캐시. 저장소에서 한 번 읽어 두고, 저장·삭제는 저장소에 쓴 뒤 목록을 고친다.
+ * 공용 라이브러리(씬·포즈·소품) 캐시. 저장소에서 한 번 읽어 두고, 저장·삭제는 저장소에 쓴 뒤 목록을 고친다.
  * 썸네일은 보일 때 하나씩 읽는다(경로 → 데이터 URL).
  */
 interface LibraryState {
   /** null = 아직 안 읽음 */
   scenes: SceneLibraryItem[] | null;
   poses: Pose[] | null;
+  props: PropAsset[] | null;
   /** 썸네일 경로 → 데이터 URL. ''는 파일이 없음 */
   thumbs: Record<string, string>;
   error: string | null;
@@ -21,6 +22,9 @@ interface LibraryState {
   deleteScene: (id: string) => Promise<void>;
   savePose: (pose: Pose, thumbDataUrl: string | null) => Promise<Pose>;
   deletePose: (id: string) => Promise<void>;
+  loadProps: (force?: boolean) => Promise<void>;
+  saveProp: (asset: PropAsset, thumbDataUrl: string | null) => Promise<PropAsset>;
+  deleteProp: (id: string) => Promise<void>;
   /** 저장소가 바뀌면 전부 다시 읽도록 비운다 */
   reset: () => void;
 }
@@ -29,10 +33,12 @@ const message = (e: unknown): string => (e instanceof Error ? e.message : String
 const pendingThumbs = new Set<string>();
 let sceneLoad: Promise<void> | null = null;
 let poseLoad: Promise<void> | null = null;
+let propLoad: Promise<void> | null = null;
 
 export const useLibrary = create<LibraryState>()((set, get) => ({
   scenes: null,
   poses: null,
+  props: null,
   thumbs: {},
   error: null,
 
@@ -101,9 +107,36 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
     set((s) => ({ poses: s.poses ? s.poses.filter((x) => x.id !== id) : null }));
   },
 
+  loadProps: (force = false) => {
+    if (!force && get().props) return Promise.resolve();
+    if (propLoad) return propLoad;
+    propLoad = storage.repository
+      .loadProps()
+      .then((props) => set({ props, error: null }))
+      .catch((e: unknown) => set({ props: get().props ?? [], error: `소품 목록을 읽지 못했습니다: ${message(e)}` }))
+      .finally(() => {
+        propLoad = null;
+      });
+    return propLoad;
+  },
+
+  saveProp: async (asset, thumbDataUrl) => {
+    const stored = await storage.repository.saveProp(asset, thumbDataUrl);
+    set((s) => ({
+      props: s.props ? [...s.props.filter((x) => x.id !== stored.id), stored] : null,
+      thumbs: thumbDataUrl && stored.thumbnail ? { ...s.thumbs, [stored.thumbnail]: thumbDataUrl } : s.thumbs,
+    }));
+    return stored;
+  },
+
+  deleteProp: async (id) => {
+    await storage.repository.deleteProp(id);
+    set((s) => ({ props: s.props ? s.props.filter((x) => x.id !== id) : null }));
+  },
+
   reset: () => {
     pendingThumbs.clear();
-    set({ scenes: null, poses: null, thumbs: {}, error: null });
+    set({ scenes: null, poses: null, props: null, thumbs: {}, error: null });
   },
 }));
 

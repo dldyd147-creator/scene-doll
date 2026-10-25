@@ -388,6 +388,26 @@ button.small {
   font-weight: 600;
 }
 
+/* ---------- 소품 탭 ---------- */
+.prop-row .prop-actions button {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+.prop-row .prop-actions button.icon {
+  min-width: 24px;
+  padding: 3px;
+}
+.mini-thumb.square {
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- 드래그앤드롭: 에셋 패널 → 조작뷰 ---------- */
 .card[draggable='true'],
 .pose-card[draggable='true'],

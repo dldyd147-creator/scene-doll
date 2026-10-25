@@ -61,6 +61,8 @@ function rememberOpened(code: string, episode: number): void {
 
 /** 작품·회차 열기 → 편집 화면. 없으면 create=true일 때 새로 만든다 */
 export async function openDocument(code: string, episodeNo: number, create: boolean): Promise<'loaded' | 'created' | 'missing'> {
+  // 컷의 소품을 그리려면 등록 소품 정의가 필요하다
+  void useLibrary.getState().loadProps();
   const doc = await storage.load(code, episodeNo).catch(() => null);
   if (doc) {
     const thumbs = await storage.repository.loadThumbnails(code, episodeNo, doc.cuts.map((c) => c.number)).catch(() => ({}));

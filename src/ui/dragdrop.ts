@@ -1,7 +1,7 @@
 import type { DragEvent } from 'react';
 
-/** 에셋 패널에서 조작뷰로 끌어다 놓는 것: 캐릭터 돌·기본 돌(바닥 자리에 세움), 포즈(돌 위에 놓으면 적용) */
-export type DragPayload = { kind: 'character'; id: string } | { kind: 'doll'; dollId: string; heightCm: number } | { kind: 'pose'; id: string };
+/** 에셋 패널에서 조작뷰로 끌어다 놓는 것: 캐릭터 돌·기본 돌(바닥 자리에 세움), 포즈(돌 위에 놓으면 적용), 소품(바닥에 놓거나 돌 위에 놓으면 오른손에) */
+export type DragPayload = { kind: 'character'; id: string } | { kind: 'doll'; dollId: string; heightCm: number } | { kind: 'pose'; id: string } | { kind: 'prop'; id: string };
 
 const MIME = 'application/x-scene-doll';
 /** dragover 중에는 dataTransfer를 읽을 수 없어 끌기 시작할 때 따로 들고 있는다 */
