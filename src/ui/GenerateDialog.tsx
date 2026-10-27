@@ -20,7 +20,7 @@ const pad3 = (n: number) => String(n).padStart(3, '0');
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** 후보 썸네일 하나: 클릭하면 대표, 도구 줄에 새 탭·삭제 */
-function Candidate({ path, main, onMain, onDelete }: { path: string; main: boolean; onMain: () => void; onDelete: () => void }) {
+function Candidate({ path, main, onMain, onDelete, onZoom }: { path: string; main: boolean; onMain: () => void; onDelete: () => void; onZoom: (url: string) => void }) {
   const url = useThumb(path);
   return (
     <div className={`cand ${main ? 'main' : ''}`} title={`${path}${main ? ' · 대표' : ' · 클릭하면 대표로'}`}>
@@ -34,9 +34,9 @@ function Candidate({ path, main, onMain, onDelete }: { path: string; main: boole
           </button>
         )}
         {url && (
-          <a href={url} target="_blank" rel="noreferrer" title="새 탭에서 열기">
+          <button className="icon" onClick={() => onZoom(url)} title="크게 보기">
             <Icon name="external" size={12} />
-          </a>
+          </button>
         )}
         <button className="icon danger" onClick={onDelete} title="후보 파일 삭제">
           <Icon name="trash" size={12} />
@@ -84,6 +84,18 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const [phase, setPhase] = useState<Phase>('setup');
   const [scope, setScope] = useState<Scope>('all');
   const [single, setSingle] = useState(false);
+  // 크게 보기: 새 탭(blob 주소)은 브라우저가 about:blank#blocked로 막는 일이 있어 앱 안 덮개로 연다
+  const [zoom, setZoom] = useState<string | null>(null);
+  useEffect(() => {
+    if (!zoom) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setZoom(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [zoom]);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [batches, setBatches] = useState<PreparedBatch[]>([]);
   const [outcomes, setOutcomes] = useState<BatchOutcome[]>([]);
@@ -425,9 +437,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                 <summary className="small">결과 격자(자르기 전)</summary>
                 <div className="gen-results">
                   {outcomes.flatMap((o) => o.resultUrls.map((u, k) => (
-                    <a key={`${o.batchId}-${k}`} href={u} target="_blank" rel="noreferrer" title={`컷 ${o.cuts.map(pad3).join('·')} · 후보 ${k + 1}`}>
-                      <img src={u} alt="" />
-                    </a>
+                    <img key={`${o.batchId}-${k}`} src={u} alt="" style={{ cursor: 'zoom-in' }} onClick={() => setZoom(u)} title={`컷 ${o.cuts.map(pad3).join('·')} · 후보 ${k + 1} · 클릭하면 크게`} />
                   )))}
                 </div>
               </details>
@@ -478,7 +488,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                       </div>
                       <div className="cand-list">
                         {list.map((p, i) => (
-                          <Candidate key={p} path={p} main={i === 0} onMain={() => { setGeneratedMain(c.number, p); void saveNow(); }} onDelete={() => void deleteCandidate(c, p)} />
+                          <Candidate key={p} path={p} main={i === 0} onMain={() => { setGeneratedMain(c.number, p); void saveNow(); }} onDelete={() => void deleteCandidate(c, p)} onZoom={setZoom} />
                         ))}
                         {!list.length && <span className="small muted">아직 후보가 없습니다</span>}
                       </div>
@@ -499,6 +509,11 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
           </>
         )}
       </div>
+      {zoom && (
+        <div className="gen-zoom" onClick={() => setZoom(null)} title="누르면 닫힘">
+          <img src={zoom} alt="" />
+        </div>
+      )}
     </div>
   );
 }

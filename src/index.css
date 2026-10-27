@@ -1686,3 +1686,21 @@ button.script-import {
 button.script-import:hover {
   color: #25834a;
 }
+
+/* 생성 후보 크게 보기 덮개 */
+.gen-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.gen-zoom img {
+  max-width: 94vw;
+  max-height: 94vh;
+  object-fit: contain;
+  background: #fff;
+}
