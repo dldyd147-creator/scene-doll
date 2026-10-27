@@ -214,7 +214,7 @@ export function StartScreen() {
               <h3 className="section-title">
                 회차 <span className="muted">{info.episodes.length}</span>
                 <button className="primary" onClick={() => void newEpisode(info)} disabled={busy}>
-                  <Icon name="plus" /> 새 회차(번호 입력)
+                  <Icon name="plus" /> 새 회차
                 </button>
               </h3>
               <div className="episode-grid">

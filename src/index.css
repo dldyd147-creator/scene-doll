@@ -1678,3 +1678,11 @@ code {
   border-radius: 6px;
   padding: 6px 8px;
 }
+
+/* 글콘티 가져오기 아이콘(원고 카메라 위): 녹색 */
+button.script-import {
+  color: #2f9e5a;
+}
+button.script-import:hover {
+  color: #25834a;
+}

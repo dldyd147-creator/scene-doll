@@ -92,7 +92,7 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           <span className="muted">1 : {liveAspect.toFixed(2)}</span>
           <button
-            className={`icon ghost ${scriptSource ? 'active' : ''}`}
+            className={`icon ghost script-import ${scriptSource ? 'active' : ''}`}
             onClick={() => setScriptImportOpen(true)}
             title={scriptSource ? `글콘티: ${scriptSource.fileName} · 다시 가져오기` : '글콘티(NTT 엑셀·CSV) 가져오기: 회차 컷에 대사·지문을 한 번에. 엑셀 없이 대사·지문 칸만 켤 수도 있음'}
           >

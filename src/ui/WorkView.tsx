@@ -159,8 +159,8 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedDoll('all')} title="돌 전체 초기화: 위치 원점·회전 정면·자세 T포즈 (Alt+G: 위치만, Alt+R: 회전만)">
             <Icon name="resetAll" />
           </button>
-          <button className="icon" disabled={!hasDoll} onClick={() => setHandOperator(true)} title="핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양(손 확대 보기·손가락별 슬라이더·프리셋 저장/불러오기)">
-            <Icon name="fingers" />
+          <button disabled={!hasDoll} onClick={() => setHandOperator(true)} title="핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양(손 확대 보기·손가락별 슬라이더·프리셋 저장/불러오기)">
+            <Icon name="fingers" /> 손
           </button>
           <button className="icon" disabled={!hasDoll} onClick={() => engine.fixJoints()} title="관절을 사람 관절 한계 안으로 교정">
             <Icon name="fix" />
