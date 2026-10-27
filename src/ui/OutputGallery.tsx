@@ -20,6 +20,7 @@ export function OutputGallery() {
   const storageKind = useStore((s) => s.storageKind);
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<string | null>(null);
   const folder = paths.outputDir(work.code, episode.number);
 
   useEffect(() => {
@@ -79,7 +80,7 @@ export function OutputGallery() {
         {pngs.length > 0 && (
           <div className="gallery">
             {pngs.map((p) => (
-              <a key={p.name} className="gallery-item" href={p.url} target="_blank" rel="noreferrer" title="새 탭에서 열기">
+              <a key={p.name} className="gallery-item" href={p.url} onClick={(e) => { e.preventDefault(); setZoom(p.url); }} title="크게 보기">
                 <img src={p.url} alt={p.name} />
                 <span className="small">
                   {p.name} <Icon name="external" size={12} />
@@ -102,6 +103,11 @@ export function OutputGallery() {
           </button>
         </div>
       </div>
+      {zoom && (
+        <div className="gen-zoom" onClick={(e) => { e.stopPropagation(); setZoom(null); }} title="누르면 닫힘">
+          <img src={zoom} alt="" />
+        </div>
+      )}
     </div>
   );
 }
