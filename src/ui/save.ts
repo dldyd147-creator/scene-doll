@@ -2,6 +2,7 @@ import { storage } from '../storage';
 import { initShare, lockEpisode, unlockEpisode } from '../storage/remote/service';
 import { useStore } from '../state/store';
 import { createCut, createEpisode, createWork } from '../model/defaults';
+import { startConnectionSync } from '../state/connection';
 
 let saving: Promise<boolean> | null = null;
 const LAST_KEY = 'scene-doll.last-opened';
@@ -42,6 +43,7 @@ export async function initStorage(): Promise<void> {
   await storage.init();
   await initShare().catch(() => undefined);
   syncStorageState();
+  await startConnectionSync();
   useStore.getState().setScreen('start');
 }
 
@@ -115,6 +117,7 @@ export async function reloadCharacters(): Promise<void> {
 /** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장) */
 async function afterStorageChange(): Promise<void> {
   syncStorageState();
+  await startConnectionSync();
   const s = useStore.getState();
   if (s.screen !== 'editor') return;
   const result = await openDocument(s.work.code, s.episode.number, false);
