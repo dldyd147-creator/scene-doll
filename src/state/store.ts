@@ -644,7 +644,8 @@ export const useStore = create<StoreState>()(
       if (i < 0) return;
       const cuts = s.cuts.slice();
       const prev = cuts[i].generatedImages ?? [];
-      cuts[i] = { ...cuts[i], generatedImages: [...prev, ...paths.filter((p) => !prev.includes(p))], updatedAt: nowIso() };
+      // 새로 만든 후보를 앞에 둔다 — 다시 생성했으면 방금 것이 대표(첫 장)가 되고 이전 후보는 뒤에 남는다
+      cuts[i] = { ...cuts[i], generatedImages: [...paths.filter((p) => !prev.includes(p)), ...prev], updatedAt: nowIso() };
       set({ cuts, dirty: true });
     },
 

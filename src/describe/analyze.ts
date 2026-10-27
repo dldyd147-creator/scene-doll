@@ -2,6 +2,7 @@ import { MathUtils, Vector3 } from 'three';
 import type { Engine } from '../engine/Engine';
 import type { DollRig } from '../engine/DollRig';
 import type { AngleTag, Character, Cut, ShotSize } from '../model/types';
+import { angleFromElevation, elevationDeg } from './angle';
 import { colorName } from '../model/defaults';
 import { refinePlacement } from './placement';
 
@@ -32,6 +33,8 @@ export interface DollAnalysis {
   stanceConj: string;
   phrases: string[];
   distance: number;
+  /** 머리(눈높이 기준) 월드 위치 — 앵글 판정용 */
+  head?: { x: number; y: number; z: number };
 }
 
 export interface CutAnalysis {
@@ -187,6 +190,10 @@ export function analyzeCut(engine: Engine, cut: Cut, characters: Character[]): C
       stanceConj: pose.stanceConj,
       phrases: pose.phrases,
       distance,
+      head: (() => {
+        const h = P('Head');
+        return { x: h.x, y: h.y, z: h.z };
+      })(),
     });
   }
 
@@ -195,7 +202,8 @@ export function analyzeCut(engine: Engine, cut: Cut, characters: Character[]): C
   let main: DollAnalysis | null = null;
   for (const d of inFrame) if (!main || d.projectedHeight > main.projectedHeight) main = d;
   const pitch = cut.camera.pitch;
-  const angle: AngleTag = pitch > 8 ? 'low' : pitch < -8 ? 'high' : 'eye';
+  // 앵글은 카메라 기울기가 아니라 주인공 눈높이 대비 카메라 높이로 정한다(angle.ts)
+  const angle: AngleTag = main?.head ? angleFromElevation(elevationDeg(cam.position, main.head)) : 'eye';
   const camDistance = inFrame.length ? Math.min(...inFrame.map((d) => d.distance)) : engine.subjectCenter().distanceTo(cam.position);
   return {
     count: inFrame.length,

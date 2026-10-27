@@ -246,6 +246,11 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
           const k = nextCandidateIndex(list);
           const path = await repo.writeGenerated(work.code, episode.number, cut.number, k, blob);
           list.push(path);
+          useLibrary.setState((st) => {
+            // 지웠던 번호를 다시 쓰면 같은 경로라 미리보기 캐시가 옛 그림을 보여 주므로 비운다
+            const { [path]: _stale, ...rest } = st.thumbs;
+            return { thumbs: rest };
+          });
           (outcome.saved[cut.number] ??= []).push(path);
         }
       }
