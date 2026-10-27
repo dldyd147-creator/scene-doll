@@ -80,7 +80,7 @@ export function OutputGallery() {
         {pngs.length > 0 && (
           <div className="gallery">
             {pngs.map((p) => (
-              <a key={p.name} className="gallery-item" href={p.url} onClick={(e) => { e.preventDefault(); setZoom(p.url); }} title="크게 보기">
+              <a key={p.name} className="gallery-item" href={p.url} onClick={(e) => { e.preventDefault(); setZoom(p.url ?? null); }} title="크게 보기">
                 <img src={p.url} alt={p.name} />
                 <span className="small">
                   {p.name} <Icon name="external" size={12} />
