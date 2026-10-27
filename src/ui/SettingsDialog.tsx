@@ -101,7 +101,6 @@ function GenerateSettings() {
       <Seg label="출력 크기" value={s.genSizeMode} options={['custom', 'fixed', 'auto'] as const} labels={{ custom: '격자 비율', fixed: '고정 3종', auto: '자동' }} onChange={(v) => update({ genSizeMode: v })} title="격자 비율: 격자 크기 그대로 16의 배수·픽셀 상한 안으로(gpt-image-2 계열). 고정 3종: 1024×1024·1024×1536·1536×1024 중 가까운 것(gpt-image-1.5). 자동: API가 정함" />
       <Seg label="칸(컷) 가로 px" value={s.genCellPx} options={[512, 768, 1024] as const} onChange={(v) => update({ genCellPx: v })} title="격자 한 칸(컷 하나)의 가로 픽셀. 클수록 비용·시간이 늘고 선명해짐" />
       <Seg label="품질" value={s.genQuality} options={['auto', 'low', 'medium', 'high'] as const} onChange={(v) => update({ genQuality: v })} title="API quality. 토큰(비용)은 품질·크기에 비례" />
-      <Seg label="안전 검사" value={s.genModeration} options={['auto', 'low'] as const} labels={{ auto: '기본', low: '완화(low)' }} onChange={(v) => update({ genModeration: v })} title="수위 등으로 생성이 거부되는 컷이 많을 때 '완화'. OpenAI가 덜 엄격하게 검사하지만 사용 정책의 금지 내용은 여전히 막힙니다" />
       <Range label="후보 장수(묶음마다)" k="genCandidates" min={1} max={4} step={1} />
       <Range label="캐릭터당 레퍼런스 장수" k="genRefsPerCharacter" min={1} max={3} step={1} />
       <Toggle label="선화 격자 첨부" k="genAttachLine" />

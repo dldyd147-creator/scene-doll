@@ -108,8 +108,6 @@ export async function handleImageRequest(request: Request, env: Env): Promise<Re
   const size = str(form.get('size')).trim() || 'auto';
   if (!/^(auto|\d{2,4}x\d{2,4})$/.test(size)) return fail(`size는 auto 또는 WIDTHxHEIGHT: ${size}`, 'invalid_size', 400, origin);
   const n = Math.max(1, Math.min(int(env.MAX_N, 4), int(str(form.get('n')), 1)));
-  // 안전 검사 강도: 'low'면 덜 엄격하게(gpt-image 계열 moderation 매개변수). 기본은 보내지 않음(auto)
-  const lowModeration = str(form.get('moderation')).trim() === 'low';
   const qualityRaw = str(form.get('quality')).trim() || 'auto';
   const quality = QUALITIES.has(qualityRaw) ? qualityRaw : 'auto';
   // input_fidelity는 gpt-image-1.5만 받는다(gpt-image-2 계열은 항상 고충실도라 보내면 400). gpt-image-1-mini는 low만
@@ -127,14 +125,13 @@ export async function handleImageRequest(request: Request, env: Env): Promise<Re
       fd.set('n', String(n));
       fd.set('quality', quality);
       fd.set('output_format', 'png');
-      if (lowModeration) fd.set('moderation', 'low');
       if (fidelityOk) fd.set('input_fidelity', fidelity);
       upstream = await fetch(`${OPENAI_BASE}/images/edits`, { method: 'POST', headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` }, body: fd });
     } else {
       upstream = await fetch(`${OPENAI_BASE}/images/generations`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, prompt, n, size, quality, output_format: 'png', ...(lowModeration ? { moderation: 'low' } : {}) }),
+        body: JSON.stringify({ model, prompt, n, size, quality, output_format: 'png' }),
       });
     }
   } catch (e) {

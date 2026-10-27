@@ -27,8 +27,6 @@ export interface GenRequest {
   quality: GenQuality;
   /** 입력 충실도. 함수가 모델이 지원할 때만 전달한다(gpt-image-1.5) */
   inputFidelity?: 'high' | 'low';
-  /** 안전 검사 강도. 'low'면 함수가 OpenAI에 moderation=low를 보낸다 */
-  moderation?: 'auto' | 'low';
   signal?: AbortSignal;
 }
 
@@ -219,7 +217,6 @@ export class RemoteEngine implements GenEngine {
     form.set('n', String(Math.max(1, Math.round(req.n))));
     form.set('quality', req.quality);
     if (req.inputFidelity) form.set('input_fidelity', req.inputFidelity);
-    if (req.moderation === 'low') form.set('moderation', 'low');
     for (const img of req.images) form.append('image[]', img.blob, img.name);
     const headers: Record<string, string> = {};
     if (this.token.trim()) headers.Authorization = `Bearer ${this.token.trim()}`;

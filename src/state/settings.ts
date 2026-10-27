@@ -66,8 +66,6 @@ export interface Settings {
   /** 묶음마다 받을 후보 장수(n) */
   genCandidates: number;
   genQuality: GenQuality;
-  /** 안전 검사 강도(수위로 거부되는 컷이 많을 때 'low') */
-  genModeration: 'auto' | 'low';
   /** 돌 격자와 함께 선화 격자 첨부 */
   genAttachLine: boolean;
   /** 돌 격자와 함께 색 마스크 격자 첨부 */
@@ -111,7 +109,6 @@ export const DEFAULT_SETTINGS: Settings = {
   genCellPx: 1024,
   genCandidates: 1,
   genQuality: 'auto',
-  genModeration: 'auto',
   genAttachLine: false,
   genAttachMask: false,
   genRefsPerCharacter: 1,
