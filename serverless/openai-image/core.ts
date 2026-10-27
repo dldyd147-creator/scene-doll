@@ -13,6 +13,10 @@
 
 export interface Env {
   OPENAI_API_KEY: string;
+  /** 베니스(Venice) API 키 — provider=venice 일 때만 쓴다(wrangler secret put VENICE_API_KEY) */
+  VENICE_API_KEY?: string;
+  /** 베니스 기본 모델(요청의 model이 없을 때) */
+  VENICE_IMAGE_MODEL?: string;
   /** 브라우저가 Authorization: Bearer <값> 으로 보내는 접근 토큰. 비우면 검사하지 않음(권장하지 않음) */
   ACCESS_TOKEN?: string;
   /** CORS 허용 출처. '*' 또는 쉼표로 구분한 목록(예: https://dldyd147-creator.github.io,http://localhost:5173) */
@@ -27,6 +31,8 @@ export interface Env {
 
 export const DEFAULT_MODEL = 'gpt-image-2.5-sunburst';
 const OPENAI_BASE = 'https://api.openai.com/v1';
+const VENICE_BASE = 'https://api.venice.ai/api/v1';
+const VENICE_RATIOS: Array<[string, number]> = [['1:1', 1], ['3:2', 3 / 2], ['16:9', 16 / 9], ['21:9', 21 / 9], ['9:16', 9 / 16], ['2:3', 2 / 3], ['3:4', 3 / 4], ['4:3', 4 / 3], ['4:5', 4 / 5]];
 const QUALITIES = new Set(['auto', 'low', 'medium', 'high', 'xhigh', 'max']);
 const MODEL_RE = /^(gpt-image-[\w.-]+|chatgpt-image-latest)$/;
 const MAX_PROMPT = 32_000;
@@ -73,13 +79,73 @@ const int = (v: string | undefined, fallback: number): number => {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 };
 
+/** WxH → 베니스가 받는 화면비 중 가장 가까운 것. auto면 null(첫 이미지에서 추정) */
+function veniceRatio(size: string): string | null {
+  const m = /^(\d+)x(\d+)$/.exec(size);
+  if (!m) return null;
+  const r = Number(m[1]) / Number(m[2]);
+  return VENICE_RATIOS.reduce((best, cur) => (Math.abs(Math.log(cur[1] / r)) < Math.abs(Math.log(best[1] / r)) ? cur : best))[0];
+}
+
+function toBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+type VeniceResult = { ok: true; b64: string; mime: string } | { ok: false; status: number; message: string };
+
+/**
+ * 베니스 이미지 편집(POST /image/multi-edit): 첫 장이 기본 이미지, 나머지는 함께 넣는 이미지. 한 번에 한 장이 나오므로 n번 나란히 보낸다.
+ * 응답은 OpenAI 모양(data[].b64_json)으로 바꿔 돌려준다. 안전·수위 관련 값은 보내지 않는다(베니스 기본 동작 그대로).
+ * 거부(422)는 moderation_blocked 로 알려 앱이 '생성 거부'로 보여 준다.
+ */
+async function handleVenice(env: Env, prompt: string, images: File[], size: string, n: number, model: string, origin: string): Promise<Response> {
+  if (!env.VENICE_API_KEY) return fail('함수에 VENICE_API_KEY가 없습니다(wrangler secret put VENICE_API_KEY)', 'not_configured', 500, origin);
+  if (!images.length) return fail('베니스 편집에는 이미지가 한 장 이상 필요합니다', 'missing_image', 400, origin);
+  const ratio = veniceRatio(size);
+  const one = async (): Promise<VeniceResult> => {
+    const fd = new FormData();
+    fd.set('modelId', model);
+    fd.set('prompt', prompt);
+    for (const f of images) fd.append('images', f, f.name || 'image.png');
+    if (ratio) fd.set('aspect_ratio', ratio);
+    let res: Response;
+    try {
+      res = await fetch(`${VENICE_BASE}/image/multi-edit`, { method: 'POST', headers: { Authorization: `Bearer ${env.VENICE_API_KEY}` }, body: fd });
+    } catch (e) {
+      return { ok: false, status: 502, message: `베니스에 연결하지 못했습니다: ${e instanceof Error ? e.message : String(e)}` };
+    }
+    if (!res.ok) {
+      const t = await res.text();
+      let msg = t.slice(0, 400);
+      try {
+        const j = JSON.parse(t) as { error?: string | { message?: string }; message?: string };
+        msg = (typeof j.error === 'string' ? j.error : j.error?.message) || j.message || msg;
+      } catch {
+        /* 본문이 JSON이 아님 */
+      }
+      return { ok: false, status: res.status, message: msg || res.statusText };
+    }
+    return { ok: true, b64: toBase64(await res.arrayBuffer()), mime: res.headers.get('Content-Type') || 'image/png' };
+  };
+  const results = await Promise.all(Array.from({ length: n }, one));
+  const okList = results.filter((r): r is { ok: true; b64: string; mime: string } => r.ok);
+  if (!okList.length) {
+    const f = results.find((r): r is { ok: false; status: number; message: string } => !r.ok)!;
+    const code = f.status === 422 ? 'moderation_blocked' : f.status === 401 ? 'invalid_api_key' : f.status === 402 ? 'insufficient_quota' : f.status === 429 ? 'rate_limit_exceeded' : 'venice_error';
+    return json({ error: { message: f.message, code, type: 'venice' } }, f.status >= 400 ? f.status : 502, origin);
+  }
+  const fmt = okList[0].mime.includes('jpeg') ? 'jpeg' : okList[0].mime.includes('webp') ? 'webp' : 'png';
+  return json({ data: okList.map((r) => ({ b64_json: r.b64 })), output_format: fmt, model: `venice:${model}` }, 200, origin);
+}
+
 export async function handleImageRequest(request: Request, env: Env): Promise<Response> {
   const origin = pickOrigin(request, env.ALLOWED_ORIGIN);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
-  if (request.method === 'GET') return json({ ok: true, service: 'scene-doll-image', model: env.OPENAI_IMAGE_MODEL || DEFAULT_MODEL, keyConfigured: !!env.OPENAI_API_KEY, tokenRequired: !!env.ACCESS_TOKEN }, 200, origin);
+  if (request.method === 'GET') return json({ ok: true, service: 'scene-doll-image', model: env.OPENAI_IMAGE_MODEL || DEFAULT_MODEL, keyConfigured: !!env.OPENAI_API_KEY, veniceConfigured: !!env.VENICE_API_KEY, tokenRequired: !!env.ACCESS_TOKEN }, 200, origin);
   if (request.method !== 'POST') return fail('POST로 보내세요', 'method_not_allowed', 405, origin);
-  if (!env.OPENAI_API_KEY) return fail('함수에 OPENAI_API_KEY 환경 변수가 없습니다(wrangler secret put OPENAI_API_KEY)', 'not_configured', 500, origin);
-
   if (env.ACCESS_TOKEN) {
     const auth = request.headers.get('Authorization') ?? '';
     if (!safeEqual(auth, `Bearer ${env.ACCESS_TOKEN}`)) return fail('접근 토큰이 맞지 않습니다', 'invalid_token', 401, origin);
@@ -103,6 +169,15 @@ export async function handleImageRequest(request: Request, env: Env): Promise<Re
   if (images.length > maxImages) return fail(`첨부 이미지는 최대 ${maxImages}장입니다(${images.length}장)`, 'too_many_images', 400, origin);
   for (const f of images) if (f.size > MAX_IMAGE_BYTES) return fail(`이미지 한 장은 50MB 미만이어야 합니다: ${f.name}`, 'image_too_large', 400, origin);
 
+  const provider = str(form.get('provider')).trim() === 'venice' ? 'venice' : 'openai';
+  if (provider === 'venice') {
+    const vmodel = str(form.get('model')).trim() || env.VENICE_IMAGE_MODEL || 'firered-image-edit';
+    if (!/^[\w.-]{1,80}$/.test(vmodel)) return fail(`지원하지 않는 모델 이름: ${vmodel}`, 'invalid_model', 400, origin);
+    const vsize = str(form.get('size')).trim() || 'auto';
+    const vn = Math.max(1, Math.min(int(env.MAX_N, 4), int(str(form.get('n')), 1)));
+    return handleVenice(env, prompt, images, vsize, vn, vmodel, origin);
+  }
+  if (!env.OPENAI_API_KEY) return fail('함수에 OPENAI_API_KEY 환경 변수가 없습니다(wrangler secret put OPENAI_API_KEY)', 'not_configured', 500, origin);
   const model = str(form.get('model')).trim() || env.OPENAI_IMAGE_MODEL || DEFAULT_MODEL;
   if (!MODEL_RE.test(model)) return fail(`지원하지 않는 모델 이름: ${model}`, 'invalid_model', 400, origin);
   const size = str(form.get('size')).trim() || 'auto';

@@ -52,6 +52,10 @@ export interface Settings {
   genEndpoint: string;
   /** 함수 접근 토큰(함수 배포 때 정한 값). OpenAI API 키는 절대 여기 넣지 않는다 */
   genToken: string;
+  /** 이미지 생성 서비스(키는 함수에만 있다): openai 또는 venice */
+  genProvider: 'openai' | 'venice';
+  /** 베니스 모델 id(비우면 함수 기본값) */
+  genVeniceModel: string;
   // ---------- 6단계 NTT 연동 ----------
   /** NTT 서버 주소(예: https://ntt.greenkirin.kr) */
   nttUrl: string;
@@ -101,6 +105,8 @@ export const DEFAULT_SETTINGS: Settings = {
   genEngine: 'mock',
   genEndpoint: '',
   genToken: '',
+  genProvider: 'openai',
+  genVeniceModel: '',
   nttUrl: '',
   nttToken: '',
   genMaxPerBatch: 4,

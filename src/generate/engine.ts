@@ -204,6 +204,7 @@ export class RemoteEngine implements GenEngine {
     private readonly endpoint: string,
     private readonly token: string,
     private readonly fetchFn: typeof fetch = (...args) => fetch(...args),
+    private readonly provider: { name: 'openai' | 'venice'; model: string } = { name: 'openai', model: '' },
   ) {}
 
   async generate(req: GenRequest): Promise<GenResult> {
@@ -217,6 +218,10 @@ export class RemoteEngine implements GenEngine {
     form.set('n', String(Math.max(1, Math.round(req.n))));
     form.set('quality', req.quality);
     if (req.inputFidelity) form.set('input_fidelity', req.inputFidelity);
+    if (this.provider.name === 'venice') {
+      form.set('provider', 'venice');
+      if (this.provider.model.trim()) form.set('model', this.provider.model.trim());
+    }
     for (const img of req.images) form.append('image[]', img.blob, img.name);
     const headers: Record<string, string> = {};
     if (this.token.trim()) headers.Authorization = `Bearer ${this.token.trim()}`;
@@ -247,6 +252,6 @@ export class RemoteEngine implements GenEngine {
 }
 
 /** 설정에서 고른 엔진 */
-export function engineFor(settings: Pick<Settings, 'genEngine' | 'genEndpoint' | 'genToken'>): GenEngine {
-  return settings.genEngine === 'remote' ? new RemoteEngine(settings.genEndpoint, settings.genToken) : new MockEngine();
+export function engineFor(settings: Pick<Settings, 'genEngine' | 'genEndpoint' | 'genToken'> & Partial<Pick<Settings, 'genProvider' | 'genVeniceModel'>>): GenEngine {
+  return settings.genEngine === 'remote' ? new RemoteEngine(settings.genEndpoint, settings.genToken, undefined, { name: settings.genProvider ?? 'openai', model: settings.genVeniceModel ?? '' }) : new MockEngine();
 }

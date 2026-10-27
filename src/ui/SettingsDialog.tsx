@@ -68,7 +68,7 @@ function Seg<T extends string | number>({ label, value, options, labels, onChang
   );
 }
 
-function TextSetting({ label, k, placeholder, type = 'text', title }: { label: string; k: 'genEndpoint' | 'genToken' | 'genStyle' | 'nttUrl' | 'nttToken'; placeholder?: string; type?: 'text' | 'password'; title?: string }) {
+function TextSetting({ label, k, placeholder, type = 'text', title }: { label: string; k: 'genEndpoint' | 'genToken' | 'genStyle' | 'genVeniceModel' | 'nttUrl' | 'nttToken'; placeholder?: string; type?: 'text' | 'password'; title?: string }) {
   const value = useStore((s) => s.settings[k]);
   const update = useStore((s) => s.updateSettings);
   return (
@@ -91,6 +91,8 @@ function GenerateSettings() {
         <>
           <TextSetting label="함수 주소(엔드포인트)" k="genEndpoint" placeholder="https://scene-doll-image.<계정>.workers.dev/" title="serverless/openai-image 를 배포한 URL" />
           <TextSetting label="함수 접근 토큰" k="genToken" type="password" placeholder="함수 배포 때 정한 ACCESS_TOKEN" title="함수의 ACCESS_TOKEN 비밀값과 같은 문자열. OpenAI 키가 아님" />
+          <Seg label="생성 서비스" value={s.genProvider} options={['openai', 'venice'] as const} labels={{ openai: 'OpenAI', venice: '베니스(Venice)' }} onChange={(v) => update({ genProvider: v })} title="어느 서비스의 키로 생성할지. 키는 함수(Worker)에만 있고 여기엔 이름만 고릅니다" />
+          {s.genProvider === 'venice' && <TextSetting label="베니스 모델 id" k="genVeniceModel" placeholder="비우면 함수 기본값(firered-image-edit). 예: gpt-image-2-edit" title="베니스 /image/multi-edit 의 modelId. 여러 장 입력을 받는 편집 모델이어야 합니다" />}
         </>
       )}
       <div className="small muted">OpenAI API 키는 브라우저에 두지 않습니다. 키는 서버리스 함수(저장소의 serverless/openai-image, Cloudflare Worker 또는 Vercel)의 환경 변수에만 넣고, 여기에는 그 함수의 주소와 접근 토큰만 넣습니다(이 브라우저의 설정에 저장됨).</div>
