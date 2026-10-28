@@ -58,7 +58,11 @@ function needFs(): WorkFs {
 const toArrayBuffer = (u: Uint8Array): ArrayBuffer => u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) as ArrayBuffer;
 
 function registerIpc(): void {
-  const keys = createKeyStore(app.getPath('userData'), safeStorage);
+  const keys = createKeyStore(app.getPath('userData'), {
+    isEncryptionAvailable: () => safeStorage.isAsyncEncryptionAvailable(),
+    encryptString: (v) => safeStorage.encryptStringAsync(v),
+    decryptString: async (b) => (await safeStorage.decryptStringAsync(b)).result,
+  });
 
   ipcMain.handle('workdir:get', () => workRoot);
   ipcMain.handle('workdir:suggest', () => path.join(app.getPath('documents'), '씬 돌 작업'));
@@ -97,13 +101,27 @@ function registerIpc(): void {
   ipcMain.handle('gen:run', (_e, req) => runGeneration(req, keys));
   ipcMain.handle('gen:cancel', (_e, id: string) => cancelGeneration(id));
 
+  // 자동 시험용: 이 환경 변수가 있으면 파일 대화상자 대신 그 폴더를 쓴다(저장은 거기에 쓰고, 열기는 가장 최근의 해당 확장자 파일)
+  const testDir = process.env.SCENEDOLL_TEST_DIALOG_DIR;
   ipcMain.handle('dialog:save', async (_e, name: string, data: ArrayBuffer, filterName: string, ext: string) => {
+    if (testDir) {
+      await fs.mkdir(testDir, { recursive: true });
+      const target = path.join(testDir, name);
+      await fs.writeFile(target, new Uint8Array(data));
+      return target;
+    }
     const r = await dialog.showSaveDialog(mainWindow!, { defaultPath: path.join(app.getPath('documents'), name), filters: [{ name: filterName, extensions: [ext] }] });
     if (r.canceled || !r.filePath) return null;
     await fs.writeFile(r.filePath, new Uint8Array(data));
     return r.filePath;
   });
   ipcMain.handle('dialog:open', async (_e, filterName: string, ext: string) => {
+    if (testDir) {
+      const names = (await fs.readdir(testDir)).filter((n) => n.endsWith(`.${ext}`)).sort();
+      const last = names[names.length - 1];
+      if (!last) return null;
+      return { name: last, data: toArrayBuffer(new Uint8Array(await fs.readFile(path.join(testDir, last)))) };
+    }
     const r = await dialog.showOpenDialog(mainWindow!, { defaultPath: app.getPath('documents'), filters: [{ name: filterName, extensions: [ext] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const buf = await fs.readFile(r.filePaths[0]);

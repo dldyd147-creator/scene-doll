@@ -7,9 +7,9 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 export interface CryptoLike {
-  isEncryptionAvailable(): boolean;
-  encryptString(plain: string): Buffer;
-  decryptString(cipher: Buffer): string;
+  isEncryptionAvailable(): boolean | Promise<boolean>;
+  encryptString(plain: string): Buffer | Promise<Buffer>;
+  decryptString(cipher: Buffer): string | Promise<string>;
 }
 
 export interface KeyStore {
@@ -38,13 +38,13 @@ export function createKeyStore(dir: string, crypto: CryptoLike): KeyStore {
   };
   return {
     async status() {
-      return { available: crypto.isEncryptionAvailable(), ids: Object.keys(await read()) };
+      return { available: await crypto.isEncryptionAvailable(), ids: Object.keys(await read()) };
     },
     async set(id, key) {
-      if (!crypto.isEncryptionAvailable()) return { ok: false, reason: '이 PC에서 윈도우 계정 암호화를 쓸 수 없어 키를 저장하지 않았습니다' };
+      if (!(await crypto.isEncryptionAvailable())) return { ok: false, reason: '이 PC에서 윈도우 계정 암호화를 쓸 수 없어 키를 저장하지 않았습니다' };
       if (!/^[\w.-]{1,64}$/.test(id)) return { ok: false, reason: '항목 id가 올바르지 않습니다' };
       const s = await read();
-      s[id] = crypto.encryptString(key).toString('base64');
+      s[id] = (await crypto.encryptString(key)).toString('base64');
       await write(s);
       return { ok: true };
     },
@@ -57,9 +57,9 @@ export function createKeyStore(dir: string, crypto: CryptoLike): KeyStore {
     },
     async get(id) {
       const s = await read();
-      if (!s[id] || !crypto.isEncryptionAvailable()) return null;
+      if (!s[id] || !(await crypto.isEncryptionAvailable())) return null;
       try {
-        return crypto.decryptString(Buffer.from(s[id], 'base64'));
+        return await crypto.decryptString(Buffer.from(s[id], 'base64'));
       } catch {
         return null; // 다른 윈도우 계정/PC에서 복사한 파일 등 — 복호화 불가
       }

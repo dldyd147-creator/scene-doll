@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KEY_STATE_LABEL, SERVICE_LABEL, SERVICE_MAX_IMAGES, availableOnWeb, keyState, newCustomEntry, normalizeApiList, removeEntry, type ApiEntry } from '../generate/apiList';
 import { useKeyStatus } from '../generate/keyStatus';
 import { isDesktop } from '../native';
@@ -47,7 +47,8 @@ function KeyEditor({ entry, onDone }: { entry: ApiEntry; onDone: () => void }) {
 
 /** 설정 > 이미지 생성 > API 목록. 버튼 한 번으로 현재 항목을 바꾸고, 키는 붙여넣기 → '설정됨 / 바꾸기 / 지우기'만 보인다 */
 export function ApiListSettings() {
-  const apis = useStore((s) => normalizeApiList(s.settings.genApis));
+  const rawApis = useStore((s) => s.settings.genApis);
+  const apis = useMemo(() => normalizeApiList(rawApis), [rawApis]);
   const selectedId = useStore((s) => s.settings.genApiId);
   const update = useStore((s) => s.updateSettings);
   const { ids, available, loaded, refresh, clear } = useKeyStatus();
