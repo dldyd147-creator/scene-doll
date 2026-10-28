@@ -29,6 +29,7 @@ export function HandOperator({ engine }: { engine: Engine }) {
   const loadHandPoses = useLibrary((s) => s.loadHandPoses);
   const [amounts, setAmounts] = useState<FingerAmounts>(OPEN_AMOUNTS);
   const [noFingers, setNoFingers] = useState(false);
+  const [wrist, setWrist] = useState({ flex: 0, dev: 0, twist: 0 });
   const [view, setView] = useState({ yaw: 0, pitch: 0 });
   const [name, setName] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,6 +46,8 @@ export function HandOperator({ engine }: { engine: Engine }) {
     const curl = engine.estimateFingerCurl(hand, dollId);
     setNoFingers(!curl);
     setAmounts(curl ? amountsFromCurl(curl) : OPEN_AMOUNTS);
+    const rig = engine.dolls.get(dollId);
+    setWrist((rig && engine.readWrist(rig, hand)) || { flex: 0, dev: 0, twist: 0 });
     setView({ yaw: 0, pitch: 0 });
   }, [open, hand, dollId, engine]);
 
@@ -79,6 +82,16 @@ export function HandOperator({ engine }: { engine: Engine }) {
   const apply = (next: FingerAmounts, commit: boolean) => {
     setAmounts(next);
     if (dollId) engine.applyFingerCurl(hand, curlFromAmounts(next), { dollId, commit });
+    scheduleRender();
+  };
+  const setWristValue = (key: 'flex' | 'dev' | 'twist', v: number) => {
+    const next = { ...wrist, [key]: v };
+    setWrist(next);
+    const rig = dollId ? engine.dolls.get(dollId) : undefined;
+    if (rig) {
+      engine.setWrist(rig, hand, next);
+      setWrist(engine.readWrist(rig, hand) ?? next);
+    }
     scheduleRender();
   };
   const commitNow = () => {
@@ -163,9 +176,18 @@ export function HandOperator({ engine }: { engine: Engine }) {
                 onPointerCancel={() => (dragRef.current = null)}
                 title="끌어서 돌려 보기(처음은 손바닥 쪽에서)"
               />
-              <div className="muted small">끌어서 돌려 보기 · 조작뷰에서는 손목까지만 돌아가고 손가락은 여기서만 잡습니다</div>
+              <div className="muted small">끌어서 돌려 보기 · 손은 조작뷰에서 더블클릭해도 열립니다 · 손목·손가락은 여기서 잡습니다</div>
             </div>
             <div className="hand-controls">
+              <h3>손목</h3>
+              {([['flex', '굽힘·젖힘', '손목을 손바닥 쪽으로 굽히고 손등 쪽으로 젖힙니다'], ['dev', '좌우 꺾임', '손목을 엄지 쪽·새끼 쪽으로 꺾습니다'], ['twist', '비틀기', '손목을 축 둘레로 비틉니다']] as const).map(([k, label, tip]) => (
+                <div className="slider-row" key={k} title={tip}>
+                  <label>{label}</label>
+                  <input type="range" min={-90} max={90} value={Math.round(wrist[k])} onChange={(e) => setWristValue(k, Number(e.target.value))} onDoubleClick={() => { setWristValue(k, 0); commitNow(); }} onPointerUp={commitNow} onKeyUp={commitNow} />
+                  <span className="val">{Math.round(wrist[k])}°</span>
+                </div>
+              ))}
+              <h3>손가락</h3>
               <div className="slider-row">
                 <label>전체</label>
                 <input type="range" min={0} max={100} value={Math.round(avg * 100)} onChange={(e) => setAll(Number(e.target.value) / 100)} onPointerUp={commitNow} onKeyUp={commitNow} title="다섯 손가락을 한꺼번에" />

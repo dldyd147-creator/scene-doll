@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_API_ID, DEFAULT_API_LIST, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, selectedApi } from './apiList';
+import { DEFAULT_API_ID, DEFAULT_API_LIST, keyIdOf, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, selectedApi } from './apiList';
 import { cleanKeyInput, maskKey, redactKey } from './keys';
 
 describe('API 목록', () => {
@@ -74,5 +74,24 @@ describe('설정 이전', () => {
     expect(v.genApiId).toBe('venice-flux3');
     expect(v.genApis.find((e) => e.id === 'venice-flux3')?.model).toBe('gpt-image-2-edit');
     expect(migrateSettings({ genApiId: '없는항목' }).genApiId).toBe('venice-flux3');
+  });
+});
+
+describe('서비스별 키 공유', () => {
+  it('베니스 항목은 키 하나를 같이 쓰고, 사용자 정의는 항목마다 따로 둔다', () => {
+    const venice = DEFAULT_API_LIST.filter((e) => e.service === 'venice');
+    expect(venice.length).toBeGreaterThan(1);
+    expect(new Set(venice.map(keyIdOf))).toEqual(new Set(['venice']));
+    const only = new Set(['venice']);
+    for (const e of venice) expect(keyState(e, only)).toBe('set');
+    const custom = newCustomEntry(DEFAULT_API_LIST, '내 서버', 'm', 'https://x.test/v1');
+    expect(keyIdOf(custom)).toBe(custom.id);
+    expect(keyState(custom, only)).toBe('missing');
+  });
+  it('옛 방식(항목 id)으로 저장된 키도 인정한다', () => {
+    const flux = DEFAULT_API_LIST.find((e) => e.id === 'venice-flux3')!;
+    expect(keyState(flux, new Set(['venice-flux3']))).toBe('set');
+    const qwen = DEFAULT_API_LIST.find((e) => e.id === 'venice-qwen')!;
+    expect(keyState(qwen, new Set(['venice-flux3']))).toBe('missing');
   });
 });

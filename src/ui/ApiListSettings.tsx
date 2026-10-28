@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KEY_STATE_LABEL, SERVICE_LABEL, availableOnWeb, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, type ApiEntry } from '../generate/apiList';
+import { KEY_STATE_LABEL, SERVICE_LABEL, availableOnWeb, keyIdOf, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, type ApiEntry } from '../generate/apiList';
 import { useKeyStatus } from '../generate/keyStatus';
 import { VENICE_MODELS_URL, imageLimitOf, modelOptionLabel, parseVeniceModels, type VeniceModel } from '../generate/veniceModels';
 import { isDesktop } from '../native';
@@ -10,7 +10,7 @@ function KeyEditor({ entry, onDone }: { entry: ApiEntry; onDone: () => void }) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
   const submit = async () => {
-    const r = await save(entry.id, value);
+    const r = await save(keyIdOf(entry), value);
     setValue(''); // 입력칸에서도 바로 지운다
     if (r.ok) onDone();
     else setError(r.reason);
@@ -151,7 +151,7 @@ export function ApiListSettings() {
                   <button onClick={() => setEditing(editing === e.id ? null : e.id)} disabled={!available}>
                     {state === 'set' ? '바꾸기' : '키 넣기'}
                   </button>
-                  {state === 'set' && <button onClick={() => void clear(e.id)}>지우기</button>}
+                  {state === 'set' && <button onClick={() => { void clear(keyIdOf(e)); void clear(e.id); }} title={e.service === 'custom' ? undefined : `${SERVICE_LABEL[e.service]} 항목이 같이 쓰는 키를 지웁니다`}>지우기</button>}
                 </>
               )}
               {!e.builtin && <button onClick={() => remove(e.id)} title="이 항목과 저장된 키를 지웁니다">삭제</button>}

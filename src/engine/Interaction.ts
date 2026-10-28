@@ -43,9 +43,17 @@ interface ModalState {
   startHit: Vector3 | null;
   /** 회전 축점(돌은 골반). null이면 제 원점 */
   pivot: Vector3 | null;
+  /** M 이동: 바닥 아래로 내려가도 막지 않는다(발을 다시 잡으면 바닥에 붙는다) */
+  free: boolean;
 }
 
 const DRAG_THRESHOLD_PX = 3;
+
+/** 발·발끝 뼈 → 그 발의 IK 끝점. 발은 관절을 돌리지 않고 IK로만 옮긴다 */
+function footEffector(bone: string): string | null {
+  const m = /^(Left|Right)(Foot|ToeBase|Toe_End)$/.exec(bone);
+  return m ? `${m[1]}Foot` : null;
+}
 const AXES: Record<Exclude<Axis, null>, Vector3> = { x: new Vector3(1, 0, 0), y: new Vector3(0, 1, 0), z: new Vector3(0, 0, 1) };
 const _ray = new Raycaster();
 const _ndc = new Vector2();
@@ -79,6 +87,7 @@ export class Interaction {
     el.addEventListener('pointerup', this.onUp);
     el.addEventListener('pointercancel', this.onUp);
     el.addEventListener('lostpointercapture', this.onLost);
+    el.addEventListener('dblclick', this.onDouble);
     el.style.touchAction = 'none';
   }
 
@@ -90,6 +99,7 @@ export class Interaction {
     el.removeEventListener('pointerup', this.onUp);
     el.removeEventListener('pointercancel', this.onUp);
     el.removeEventListener('lostpointercapture', this.onLost);
+    el.removeEventListener('dblclick', this.onDouble);
   }
 
   get dragging(): boolean {
@@ -245,6 +255,12 @@ export class Interaction {
     this.el.style.cursor = 'move';
   }
 
+  /** 손·발 IK 끌기 시작. 발이면 바닥 아래로 내려가 있던 돌을 먼저 바닥에 붙인다 */
+  private beginIk(rig: DollRig, effector: string, at: Vector3): void {
+    const lifted = effector.endsWith('Foot') && this.engine.settleOnFloor(rig);
+    this.state = { kind: 'ik', rig, effector, plane: this.viewPlaneAt(at), moved: lifted };
+  }
+
   // ---------- 이벤트 ----------
 
   private onDown = (e: PointerEvent): void => {
@@ -268,7 +284,7 @@ export class Interaction {
       case 'ik':
         sel({ dollId: p.rig.id, bone: IK_CHAINS[p.effector].end });
         p.rig.setEffectorState(p.effector, 'active');
-        this.state = { kind: 'ik', rig: p.rig, effector: p.effector, plane: this.viewPlaneAt(p.pos), moved: false };
+        this.beginIk(p.rig, p.effector, p.pos);
         break;
       case 'joint': {
         const isRoot = p.bone === p.rig.skel.order[0];
@@ -298,8 +314,13 @@ export class Interaction {
       case 'part': {
         const isRoot = p.bone === p.rig.skel.order[0];
         sel({ dollId: p.rig.id, bone: isRoot ? null : p.bone });
+        const foot = footEffector(p.bone);
         if (isRoot) this.beginHipMove(p.rig, p.point);
-        else this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey };
+        else if (foot && p.rig.effectors.includes(foot)) {
+          sel({ dollId: p.rig.id, bone: IK_CHAINS[foot].end });
+          p.rig.setEffectorState(foot, 'active');
+          this.beginIk(p.rig, foot, p.rig.worldPos(IK_CHAINS[foot].end));
+        } else this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       }
     }
@@ -420,6 +441,17 @@ export class Interaction {
     }
   };
 
+  /** 손을 더블클릭하면 핸드 오퍼레이터(손가락·손목)를 연다 */
+  private onDouble = (e: MouseEvent): void => {
+    if (this.modal || !this.engine.callbacks.openHand) return;
+    const p = this.pick(e as PointerEvent);
+    let bone: string | null = null;
+    if (p?.kind === 'ik') bone = IK_CHAINS[p.effector].end;
+    else if (p?.kind === 'part') bone = p.bone;
+    const m = bone ? /^(Left|Right)Hand/.exec(bone) : null;
+    if (m) this.engine.callbacks.openHand(m[1] === 'Left' ? 'left' : 'right');
+  };
+
   private onUp = (e: PointerEvent): void => {
     if (this.modal) return;
     this.finish(e.button === 0 || e.type === 'pointercancel');
@@ -464,7 +496,7 @@ export class Interaction {
   // ---------- 모달 변형(G/R) ----------
 
   /** G(이동)·R(회전) 시작. 선택한 돌·소품 또는 원고 카메라가 대상 */
-  startModal(kind: 'move' | 'rotate'): boolean {
+  startModal(kind: 'move' | 'rotate', free = false): boolean {
     if (this.modal || this.dragging) return false;
     const rig = this.engine.selectedRig();
     const prop = this.engine.selectedProp();
@@ -486,6 +518,7 @@ export class Interaction {
       startQuat: obj.quaternion.clone(),
       startHit,
       pivot: rig ? rig.worldPos(rig.skel.order[0]) : null,
+      free: free && kind === 'move',
     };
     if (this.engine.orbit) this.engine.orbit.enabled = false;
     window.addEventListener('pointermove', this.onModalMove);
@@ -500,7 +533,8 @@ export class Interaction {
     if (!m) return;
     const what = 'camera' in m.target ? '원고 카메라' : 'prop' in m.target ? '소품' : '돌';
     const axis = m.axis ? `${AXIS_LABEL[m.axis]} 고정` : m.kind === 'move' ? '바닥 평면' : 'Z축(위아래) 둘레';
-    this.engine.callbacks.hint(`${what} ${m.kind === 'move' ? '이동' : '회전'} · ${axis} · X/Y/Z: 축 고정(Z가 위아래) · 클릭/Enter: 확정 · Esc/우클릭: 취소`);
+    const free = m.free && 'rig' in m.target ? ' · 바닥 아래로 내려가도 됨(발을 다시 잡으면 바닥에 붙음)' : '';
+    this.engine.callbacks.hint(`${what} ${m.kind === 'move' ? '이동' : '회전'} · ${axis}${free} · X/Y/Z: 축 고정(Z가 위아래) · 클릭/Enter: 확정 · Esc/우클릭: 취소`);
   }
 
   private onModalKey = (e: KeyboardEvent): void => {
@@ -522,6 +556,7 @@ export class Interaction {
       if (next !== m.kind) {
         this.restoreModalStart();
         m.kind = next;
+        m.free = k === 'm';
         m.axis = null;
         m.startPointer = { ...m.lastPointer };
         this.modalHint();
@@ -599,8 +634,8 @@ export class Interaction {
       else obj.position.copy(m.startPos);
       obj.updateMatrixWorld(true);
     }
-    // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다
-    if ('rig' in m.target) this.engine.enforceFloor(m.target.rig);
+    // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다(M 자유 이동은 제외)
+    if ('rig' in m.target && !m.free) this.engine.enforceFloor(m.target.rig);
   }
 
   private endModal(): void {

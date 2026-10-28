@@ -92,10 +92,15 @@ export function removeEntry(list: ApiEntry[], id: string): ApiEntry[] {
 
 export type KeyState = 'not-needed' | 'set' | 'missing';
 
-/** keyIds: 키가 저장된 항목 id들 */
+/** 키를 보관하는 이름. 베니스·BFL·OpenAI는 서비스 하나가 키 하나를 같이 쓰고, 사용자 정의는 항목마다 따로 둔다 */
+export function keyIdOf(entry: Pick<ApiEntry, 'id' | 'service'>): string {
+  return entry.service === 'custom' ? entry.id : entry.service;
+}
+
+/** keyIds: 키가 저장된 이름들(서비스 이름 또는 옛 방식의 항목 id) */
 export function keyState(entry: ApiEntry, keyIds: ReadonlySet<string>): KeyState {
   if (!needsKey(entry)) return 'not-needed';
-  return keyIds.has(entry.id) ? 'set' : 'missing';
+  return keyIds.has(keyIdOf(entry)) || keyIds.has(entry.id) ? 'set' : 'missing';
 }
 
 export const KEY_STATE_LABEL: Record<KeyState, string> = { 'not-needed': '키 필요 없음', set: '설정됨', missing: '키 필요' };

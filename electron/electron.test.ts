@@ -97,4 +97,14 @@ describe('생성 IPC', () => {
     expect(ok.ok).toBe(true);
     if (ok.ok) expect(new Uint8Array(ok.images[0])).toEqual(new Uint8Array([5, 6]));
   });
+
+  it('서비스 이름으로 저장한 키를 그 서비스의 다른 항목도 쓴다', async () => {
+    const ks = createKeyStore(dir, fakeCrypto());
+    await ks.set('venice', 'venice-SHARED-1234');
+    const good = (async () => new Response(new Uint8Array([7]), { headers: { 'Content-Type': 'image/png' } })) as typeof fetch;
+    for (const apiId of ['venice-flux3', 'venice-qwen']) {
+      const req = { requestId: 'r2', apiId, service: 'venice', model: 'm', prompt: 'p', images: [{ name: 'a.png', data: new Uint8Array([1]).buffer, mime: 'image/png' }], size: '1024x1024', n: 1, quality: 'auto' };
+      expect((await runGeneration(req, ks, good)).ok).toBe(true);
+    }
+  });
 });

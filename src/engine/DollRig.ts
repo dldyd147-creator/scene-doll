@@ -26,13 +26,11 @@ const JOINT_DOT_BONES = [
   'LeftForeArm',
   'LeftUpLeg',
   'LeftLeg',
-  'LeftToeBase',
   'RightShoulder',
   'RightArm',
   'RightForeArm',
   'RightUpLeg',
   'RightLeg',
-  'RightToeBase',
 ];
 
 /** 몸통 제어점: 몸에 가려져도 항상 보이고 잡힌다(팔다리 점은 가려지면 숨는다) */

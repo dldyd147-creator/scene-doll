@@ -18,7 +18,8 @@ export function cancelGeneration(requestId: string): void {
 
 export async function runGeneration(req: NativeGenRequest, keys: KeyStore, fetchFn?: typeof fetch): Promise<NativeGenResponse> {
   if (!SERVICES.includes(req.service as ApiService)) return { ok: false, kind: 'config', message: `지원하지 않는 서비스: ${req.service}` };
-  const key = await keys.get(req.apiId);
+  // 베니스·BFL·OpenAI는 서비스 하나가 키 하나를 같이 쓴다. 옛 방식(항목별) 키가 있으면 그것도 인정한다
+  const key = (req.service !== 'custom' && (await keys.get(req.service))) || (await keys.get(req.apiId));
   if (!key) return { ok: false, kind: 'config', message: '이 항목의 API 키가 없습니다. 설정 > 이미지 생성 > API 목록에서 키를 넣으세요' };
   const entry: ApiEntry = { id: req.apiId, service: req.service as ApiService, label: req.apiId, model: req.model, baseUrl: req.baseUrl };
   const ctrl = new AbortController();

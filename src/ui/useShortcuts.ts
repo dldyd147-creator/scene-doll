@@ -128,7 +128,7 @@ export function useShortcuts(engine: Engine): void {
             engine.resetSelectedDoll('position');
             return;
           }
-          if (engine.interaction?.startModal('move')) e.preventDefault();
+          if (engine.interaction?.startModal('move', key === 'm')) e.preventDefault();
           return;
         case 'r':
           if (e.altKey) {

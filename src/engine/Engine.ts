@@ -41,6 +41,7 @@ import { IK_CHAINS } from './skeleton';
 import { hingeForward, solveHingeChain, solveTwoBone } from './ik';
 import { hingeCompose, hingeDecompose, limitFor } from './limits';
 import { Interaction } from './Interaction';
+import { angleAbout, armSide, SPINE_BONES, type BodyPose, type BodySlider, type Side } from './bodyPose';
 import { fromVec3, roundTo, rotateObjectWorld } from './three-utils';
 
 export interface EngineCallbacks {
@@ -48,6 +49,8 @@ export interface EngineCallbacks {
   commit: (mutate: (cut: Cut) => void) => void;
   select: (sel: Selection) => void;
   hint: (text: string) => void;
+  /** 손(손 IK 핸들·손 부위)을 더블클릭했을 때: 핸드 오퍼레이터를 연다 */
+  openHand?: (hand: Hand) => void;
   /** 다른 컷(번호)의 카메라를 기록 없이 바꾼다: 컷을 옮긴 뒤에 끝난 원고뷰 휠 조작을 원래 컷에 쓰기 위해 */
   setCutCamera?: (cutNumber: number, camera: CameraState) => void;
   /** GLB 소품의 파일 바이트(저장소에서). 없으면 null */
@@ -959,6 +962,99 @@ export class Engine {
     this.clampAfterChange(rig, spine);
   }
 
+  // ---------- 몸통·어깨·손목 슬라이더 ----------
+
+  private spineOf(rig: DollRig): string[] {
+    return SPINE_BONES.filter((b) => rig.skel.bones.has(b));
+  }
+
+  private shoulderSign(rig: DollRig, side: Side): 1 | -1 {
+    const S = side === 'left' ? 'Left' : 'Right';
+    const arm = rig.skel.rest.get(`${S}Arm`);
+    const sh = rig.skel.rest.get(`${S}Shoulder`);
+    return armSide(arm?.pos.x ?? 0, sh?.pos.x ?? 0, side);
+  }
+
+  /** 허리 숙임·어깨 올림/앞뒤의 지금 값(도). 슬라이더 표시용. 뼈 하나가 부모에 대해 돌아간 만큼을 읽는다 */
+  readBodyPose(rig: DollRig): BodyPose {
+    const deg = MathUtils.radToDeg;
+    const d = rig.jointDeltas();
+    const rel = (bone: string, parent: string | null): Quaternion => {
+      const q = d.get(bone);
+      if (!q) return new Quaternion();
+      const p = parent ? d.get(parent) : null;
+      return p ? q.clone().premultiply(p.clone().invert()) : q.clone();
+    };
+    const spine = this.spineOf(rig);
+    const top = spine[spine.length - 1];
+    const root = rig.skel.order[0];
+    const out: BodyPose = { bend: top ? deg(angleAbout(rel(top, root), 'x')) : 0, shoulderUp: { left: 0, right: 0 }, shoulderFwd: { left: 0, right: 0 } };
+    for (const side of ['left', 'right'] as const) {
+      const clav = `${side === 'left' ? 'Left' : 'Right'}Shoulder`;
+      if (!rig.skel.bones.has(clav)) continue;
+      const q = rel(clav, rig.skel.parents.get(clav) ?? null);
+      const sg = this.shoulderSign(rig, side);
+      out.shoulderUp[side] = deg(angleAbout(q, 'z')) * sg;
+      out.shoulderFwd[side] = -deg(angleAbout(q, 'y')) * sg;
+    }
+    return out;
+  }
+
+  /**
+   * 슬라이더 한 줄을 deltaDeg만큼 더 돌린다(상대값이라 자세가 튀지 않는다). 기록은 하지 않는다(놓을 때 commitSelectedDoll).
+   * 허리는 허리·명치·가슴에 나눠 숙이고, 어깨는 쇄골을 돌린다
+   */
+  nudgeBodyPose(rig: DollRig, slider: BodySlider, deltaDeg: number): void {
+    if (!deltaDeg) return;
+    const rad = MathUtils.degToRad(deltaDeg);
+    rig.root.updateMatrixWorld(true);
+    if (slider.part === 'bend') {
+      const spine = this.spineOf(rig);
+      if (!spine.length) return;
+      const q = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), rad / spine.length);
+      for (const b of spine) rig.setJointDelta(b, q.clone().multiply(rig.jointDelta(b)));
+      this.clampAfterChange(rig, spine);
+    } else {
+      const clav = `${slider.side === 'left' ? 'Left' : 'Right'}Shoulder`;
+      if (!rig.skel.bones.has(clav)) return;
+      const sg = this.shoulderSign(rig, slider.side);
+      const axis = slider.part === 'shoulderUp' ? new Vector3(0, 0, 1) : new Vector3(0, 1, 0);
+      const angle = slider.part === 'shoulderUp' ? rad * sg : -rad * sg;
+      rig.setJointDelta(clav, new Quaternion().setFromAxisAngle(axis, angle).multiply(rig.jointDelta(clav)));
+      this.clampAfterChange(rig, [clav]);
+    }
+    this.enforceFloor(rig);
+  }
+
+  private wristRestLocal(rig: DollRig, bone: string): Quaternion {
+    const rest = rig.skel.rest.get(bone)!.quat;
+    const parent = rig.skel.parents.get(bone);
+    const pr = parent ? rig.skel.rest.get(parent)!.quat : new Quaternion();
+    return pr.clone().invert().multiply(rest);
+  }
+
+  /** 손목의 굽힘(젖힘)·좌우 꺾임·비틀기 각(도). 휴식 자세 기준, 핸드 오퍼레이터 표시용 */
+  readWrist(rig: DollRig, hand: Hand): { flex: number; dev: number; twist: number } | null {
+    const name = `${hand === 'right' ? 'Right' : 'Left'}Hand`;
+    const bone = rig.skel.bones.get(name);
+    if (!bone) return null;
+    const own = this.wristRestLocal(rig, name).invert().multiply(bone.quaternion);
+    const e = new Euler().setFromQuaternion(own, 'YXZ');
+    return { flex: MathUtils.radToDeg(e.x), dev: MathUtils.radToDeg(e.z), twist: MathUtils.radToDeg(e.y) };
+  }
+
+  /** 손목 각을 절대값(도)으로 맞춘다. 기록은 호출한 쪽이 한다 */
+  setWrist(rig: DollRig, hand: Hand, v: { flex: number; dev: number; twist: number }): void {
+    const name = `${hand === 'right' ? 'Right' : 'Left'}Hand`;
+    const bone = rig.skel.bones.get(name);
+    if (!bone) return;
+    const r = MathUtils.degToRad;
+    const own = new Quaternion().setFromEuler(new Euler(r(v.flex), r(v.twist), r(v.dev), 'YXZ'));
+    bone.quaternion.copy(this.wristRestLocal(rig, name).multiply(own));
+    bone.updateWorldMatrix(false, true);
+    this.clampAfterChange(rig, [name]);
+  }
+
   /** 선택한 뼈가 속한 IK 사슬(팔·다리). 없으면 null */
   limbChainOfSelection(): { key: string; kind: 'arm' | 'leg' } | null {
     const bone = this.selection.bone;
@@ -1374,6 +1470,13 @@ export class Engine {
   /** 바닥 뚫기 금지가 켜져 있고 몸의 가장 낮은 점이 바닥 아래인가 */
   belowFloor(rig: DollRig): boolean {
     return this.settings.floorLock && rig.lowestPointY() < -0.002;
+  }
+
+  /** 바닥 아래로 내려가 있으면 올려 붙인다. 올렸으면 true */
+  settleOnFloor(rig: DollRig): boolean {
+    if (!this.belowFloor(rig)) return false;
+    this.enforceFloor(rig);
+    return true;
   }
 
   /** 바닥 뚫기 금지: 몸의 가장 낮은 점이 바닥 아래면 돌 전체를 올린다 */

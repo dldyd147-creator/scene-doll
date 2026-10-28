@@ -6,6 +6,7 @@ import { gripFor } from '../model/props';
 import type { Vec3 } from '../model/types';
 import { useStore } from '../state/store';
 import { dragPayload, endDrag, isSceneDollDrag } from './dragdrop';
+import { BodySliders } from './BodySliders';
 import { DragNumber } from './DragNumber';
 import { Icon } from './icons';
 import { useLibrary } from './library';
@@ -129,6 +130,7 @@ export function WorkView({ engine }: { engine: Engine }) {
   return (
     <section className={`view work-view ${dropHover ? 'drop-hover' : ''}`}>
       <div className="view-surface" ref={surfaceRef} onDragOver={onDragOver} onDragLeave={() => setDropHover(false)} onDrop={onDrop} />
+      <BodySliders engine={engine} />
       <div className="work-toolbar">
         <div className="group" title="조작 모드">
           <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="직접 드래그 (Q): 부위·관절점·핸들을 끌어 자세를 잡음">
