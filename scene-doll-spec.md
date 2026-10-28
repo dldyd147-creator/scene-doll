@@ -625,3 +625,60 @@ tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/wo
 1. 거부된 묶음은 컷 단독으로 다시 보내 걸리는 컷만 가려낸다(후보 비교 탭의 [단독 재생성]).
 2. 끝까지 거부되는 컷은 AI 그림 없이 확정 컷 PNG(돌 렌더)를 그대로 쓴다.
 3. 서비스마다 기준이 다르므로, 여러 이미지 생성 서비스(OpenAI·Gemini·Grok 등)를 어댑터로 두고 거부 시 다음 서비스로 넘기는 방안을 검토 중이다(요청 문구는 그대로, 서비스만 바꿈).
+
+## 7단계 로컬 프로그램 전환 (2026-10-28)
+
+### 결정과 근거
+- **윈도우용 설치형(Electron) 프로그램으로 전환한다.** 이유: 사용자가 공유 저장소(Supabase) 사용법이 어렵다고 했고, 실제로는 회사 PC 한 대에서만 쓴다. 협업·로그인·잠금이 필요 없다. 브라우저는 폴더 권한 재확인, 이미지 저장 속도, 함수(Worker) 배포가 부담이다. Electron은 작업 폴더에 Node `fs`로 바로 읽고 쓰고, 이미지 생성 API를 메인 프로세스에서 직접 부르므로 CORS와 Cloudflare Worker가 필요 없다.
+- **웹 배포판(gh-pages)은 그대로 둔다.** 같은 소스에서 둘 다 나온다. 화면 코드는 `window.sceneDollNative`(preload가 노출)가 있는지로 데스크톱 여부를 판단하고, 기능 플래그(`src/features.ts`)로 분기한다. 웹 빌드의 동작은 바뀌지 않는다.
+- **윈도우만, 회사 PC 한 대, 협업 없음.** 설치는 electron-builder NSIS 파일 하나(관리자 권한 불필요 per-user, 바탕화면 아이콘). 코드 서명이 없어 SmartScreen 경고가 뜬다(README에 설명). 빌드 산출물은 깃에 넣지 않고 GitHub Releases에 올린다.
+
+### 남기는 것 / 숨기는 것
+- 남김: 작품·캐릭터·콘티·씬 라이브러리·소품·생성·원고 조립 전부. 화면과 3D 코드는 저장 방식을 모른다.
+- 숨김(코드는 유지, 기능 플래그 `features.share=false`): Supabase 공유 저장소 UI(`SharePanel`·`MembersPanel`·로그인 칩·회차 잠금 배지). 나중에 `features.share`를 되살리면 켜진다. 데스크톱은 `initShare`도 부르지 않는다.
+- 숨김: 브라우저 전용 저장(IndexedDB)·폴더 권한 재연결 버튼. 데스크톱은 작업 폴더가 항상 있다.
+
+### 저장 (`ElectronFolderBackend`)
+- 기존 `StorageBackend`(`src/storage/backend.ts`)에 `kind: 'folder'`로 동작하는 새 구현을 더했다. 렌더러는 IPC(`native.fs.*`)로 요청하고, 메인 프로세스가 작업 폴더 안에서만(경로 이탈 `..`·절대 경로 거부) Node `fs`로 읽고 쓴다. 쓰기는 임시 파일에 쓴 뒤 이름을 바꿔 중간에 끊겨도 파일이 깨지지 않는다.
+- 작업 폴더 경로는 `%APPDATA%\씬 돌\config.json`에 기억한다. 첫 실행(경로 없음 또는 폴더가 사라짐)에는 시작 화면 대신 환영 화면이 떠서 폴더 선택 → API 키 입력 안내로 이어진다. 기본 제안은 `문서\씬 돌 작업`.
+
+### API 목록과 키
+- 설정 > 이미지 생성에 'API 목록'이 있다. 항목 = 서비스 종류(Venice / BFL 직접 / OpenAI / 사용자 정의) + 표시 이름 + 모델 id + 키 상태. 라디오 버튼 한 번으로 현재 항목을 바꾼다. 모의 엔진도 항목이다(키 불필요).
+- 미리 만들어 두는 항목: ① **베니스 · Flux 3 (flux-3-image-edit)** — 기본값 ② **BFL 직접 · Flux 3 (flux-3-image)** ③ OpenAI · gpt-image-2.5-sunburst ④ 모의 엔진. 키가 없으면 '키 필요'로 표시하고, 선택은 되지만 생성 때 설정 안내가 뜬다. 사용자 정의는 OpenAI 호환 `/images/edits` 주소를 넣는 항목이다(추가·삭제 가능, 기본 항목은 삭제 불가).
+- **키는 화면에 다시 보이지 않는다.** 붙여넣기 → 저장 → '설정됨 / 바꾸기 / 지우기'만 표시한다. 저장은 Electron `safeStorage`(윈도우 계정 DPAPI)로 암호화해 `%APPDATA%\씬 돌\keys.json`에 둔다. 작업 폴더·로그·깃·`localStorage`에는 어떤 형태로도 남기지 않는다(연결설정.json에도 안 쓴다). 메인 프로세스만 복호화하며 렌더러로는 '설정 여부'만 넘어간다. 암호화를 쓸 수 없는 환경(`safeStorage.isEncryptionAvailable()` false)이면 키 저장을 거부한다.
+- 호출은 메인 프로세스(`electron/generate.ts`)가 서비스 어댑터(`src/generate/providers/`)로 직접 한다. 웹 배포판은 기존대로 Worker 경유(OpenAI·베니스만). BFL 직접은 데스크톱 전용이다.
+
+### BFL 직접 Flux 3 (docs.bfl.ml 원문 확인, 2026-10-28)
+- `POST https://api.bfl.ai/v1/flux-3-image`, 헤더 `x-key`, JSON. 필드: `prompt`(필수) · `images`(문자열 또는 배열, http(s) URL 또는 base64, **합계 1~10장**) · `aspect_ratio`(`21:9 2:1 16:9 3:2 7:5 4:3 5:4 1:1 4:5 3:4 5:7 2:3 9:16 1:2 9:21 auto`) · `resolution`(`768sq 1k 1.5k 2k 4k match_input`) · `width`/`height`(256~6256, 참조 이미지가 있으면 곱 4,194,304 이하) · `safety_tolerance`(0~7, 기본 2) · `grounding`(기본 true, 웹 검색 근거) · `user` · `version`(`latest`만). `additionalProperties:false`라 목록 밖 필드를 보내면 거부된다. `output_format`·`seed`는 문서에 없다.
+- 응답 `{id, polling_url, cost(크레딧), input_mp, output_mp}`. 결과는 `GET polling_url`(같은 `x-key`)로 가져온다. 상태: Pending · Reasoning · Generating · Request Moderated · Content Moderated · No Card Generated · Ready · Error. Ready면 `result.sample`에 이미지 URL이 있고 **10분 뒤 만료**, 브라우저 CORS는 안 되지만 메인 프로세스는 상관없다. 동시 요청 24개, 429면 지수 백오프.
+- 가격: 1크레딧 = 0.01달러. 해상도 단계는 768sq(768²)·1k(약 1MP)·1.5k(약 2MP)·2k(약 4MP)·4k(약 16MP). **단계별 크레딧 수는 문서 본문에 비어 있어 확인하지 못했다.** 참조 이미지별 추가 과금 언급은 없다. 응답의 `cost`를 화면에 크레딧·달러로 보여 준다. 사용자가 전한 '1K 약 0.05달러(베니스 0.12달러)'는 **원문으로 확인하지 못한 미확인 수치**다.
+- 구현: 격자 크기 → 가장 가까운 `aspect_ratio` + 픽셀 면적에 맞는 `resolution` 단계로 보낸다(`width/height` 정확 지정은 쓰지 않는다 — 단계별 가격으로 청구되고 격자 비율만 맞으면 분할 단계가 비율 기준으로 자른다). 이미지는 base64. 후보 n장은 요청 n번을 병렬로 보낸다. **`safety_tolerance`는 보내지 않는다**(수위·안전 관련 값은 요청에서 건드리지 않는다는 원칙 유지 — 서비스 기본값 2). `grounding`은 false로 보낸다: 웹 검색이 켜져 있으면 입력 격자·레퍼런스 대신 외부 이미지에 끌릴 수 있고 이 작업에 필요 없다(켜진 채 비용이 더 드는지는 문서에 없음). 
+- 미확인: BFL 계정 쪽 모더레이션 설정(조직 한도), 실제 호출 응답, 실제 청구액.
+
+### 베니스 Flux 3
+- `/image/multi-edit`, `modelId=flux-3-image-edit`, 첫 장이 바탕 그림·나머지는 레퍼런스, 기본 최대 3장(그래서 레퍼런스가 많은 묶음은 BFL 직접이 유리할 수 있다). 사용자 시험: Qwen 2.1 Pro/Turbo·Seedream V5 Pro·Qwen 3 Pro보다 퀄리티·한 묶음 안 캐릭터 일관성·가격 모두 좋아 기본값으로 정했다. 묶음 사이 일관성은 미검증. Nano Banana 계열은 사용자가 곧 시험한다.
+- 첨부 상한은 항목별로 다르다: 베니스 3, BFL 10, OpenAI 16. `src/generate/apiList.ts`의 `maxImages`를 묶음 준비가 참조한다(넘으면 레퍼런스를 뒤에서부터 줄이고 경고).
+
+### 프롬프트(Flux 3 기준 후보, 미적용)
+실제 이미지 시험은 사용자 몫이라 `src/generate/batch.ts` PRESETS·머리말은 바꾸지 않았다. Flux 3 기준 후보만 적는다.
+- 'doll'(돌 우선) 프리셋의 '그대로 따르라' 계열 문구는 Flux 3 편집이 입력 격자 구도를 이미 잘 지키는 편이라 줄여도 될 수 있다.
+- 칸 경계·번호 지시를 한 번 덜 반복해도 되는지(문장이 길수록 Flux가 글자를 그림에 그릴 위험).
+- 레퍼런스가 베니스 3장 한도에 걸릴 때: 격자 1 + 레퍼런스 2장이므로 2인 컷은 인물당 1장. BFL 직접이면 인물당 2~3장 가능.
+- 색 실루엣(고정색) 안내가 옷 색으로 번지는지 Flux 3에서 확인.
+
+### 이동 패키지 `.scenedoll`
+- 용도: 쌓인 자산을 나중에 다른 곳으로 옮기거나 합칠 파일 하나. 웹 배포판에도 같은 내보내기/불러오기를 넣어 지금 브라우저·공유 저장소의 데이터를 새 프로그램으로 옮기는 길을 만든다(작품 목록 화면 버튼).
+- 형식: zip(`fflate`). 최상위 `manifest.json` + `data/` 아래에 작업 폴더와 같은 상대 경로. 매니페스트: `{ format: 'scene-doll-package', version: 1, exportedAt, app, includes: {shared, generated, output}, works: [{code, name, updatedAt, episodes, characters, files, bytes}], shared: {scenes, poses, handPoses, props}, files, bytes }`. 상위 버전(`version` > 지원)은 불러오기를 거부한다.
+- 담는 것: 선택한 작품의 `작품/{코드}/**`(작품·캐릭터·레퍼런스·회차·컷(돌 설정·포즈·카메라)·썸네일), `공용/**`(씬·포즈·손포즈·소품·소품 GLB, 끌 수 있음), 선택 시 `생성/{코드}/**`(후보 PNG)와 `출력/{코드}/**`(출력 PNG). 패키지(`패키지/`)는 다시 만들 수 있어 제외. **`생성/연결설정.json`(예전 연결 토큰)과 API 키는 어떤 경우에도 담지 않는다.**
+- 내보내기: 작품 체크(전체/일부) · 공용 포함 · 생성 후보 포함 · 출력 포함 → 용량 미리 계산 → 저장 위치 선택(데스크톱은 저장 대화상자, 웹은 다운로드).
+- 불러오기: 파일 선택 → **요약**(작품 n개·캐릭터 n명·씬/포즈/소품 n개·용량·내보낸 시각) → 작품 코드가 겹치는 작품마다 처리 선택 → 실행 → 결과(추가·갱신·건너뜀 수).
+- **합치기 규칙** (`src/transfer/merge.ts`, 시험 있음):
+  1. 작품 코드가 현재 작업 폴더에 없으면 그대로 추가한다.
+  2. 겹치면 작품마다 고른다. ⓐ **건너뛰기** 그 작품은 가져오지 않는다. ⓑ **합치기(기본)** 파일 단위로 같은 id(같은 경로)면 JSON의 `updatedAt`이 **새로운 쪽**이 이긴다(같거나 양쪽에 없으면 기존 유지). 한쪽에만 있는 파일은 추가한다. ⓒ **덮어쓰기** 겹치는 파일은 전부 패키지 쪽으로 바꾼다(패키지에 없는 기존 파일은 남긴다). ⓓ **둘 다 남기기** 패키지의 작품을 다른 코드로 바꿔 새 작품으로 추가한다(기본 제안: 빈 코드를 자동 탐색, 사용자가 고칠 수 있음). 경로의 코드와 `작품.json`·회차/캐릭터의 `workCode`를 바꾼다. 이미지 파일 이름 안의 옛 코드는 그대로 둔다.
+  3. 공용 라이브러리(씬·포즈·손포즈·소품)는 id가 같으면 ⓑ와 같은 규칙(`updatedAt` 새로운 쪽, 같으면 기존).
+  4. 보조 파일(썸네일 PNG, 소품 GLB, 캐릭터 레퍼런스, 컷 썸네일)은 주인 JSON이 이기면 같이 가져오고 지면 가져오지 않는다. 주인이 없는 파일(생성 후보·출력 PNG)은 기존에 없을 때만 가져온다(덮어쓰기는 덮어씀).
+  5. 가져오기는 기존 파일을 지우지 않는다. 쓰기 전에 모든 경로를 검증한다(`..`·절대 경로 거부).
+- 한계: 같은 소품/씬의 id가 우연히 겹치는 경우는 id가 무작위라 사실상 없다. 작품 코드 3자가 같지만 서로 다른 작품이면 ⓓ를 쓰면 된다.
+
+### 구현 위치
+`electron/`(main·preload·keystore·generate·fs), `src/native.ts`(타입·감지), `src/features.ts`, `src/storage/electronBackend.ts`, `src/generate/apiList.ts`·`providers/`, `src/transfer/`, `src/ui/ApiListSettings.tsx`·`TransferDialog.tsx`·`WelcomeScreen.tsx`. 빌드: `npm run desktop:dev`(개발 실행) · `npm run desktop:dist`(설치 파일). 설치 파일 빌드·실행 결과는 아래 '검증' 절에 적는다.
