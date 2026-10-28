@@ -12,6 +12,8 @@ export interface ApiEntry {
   model: string;
   /** custom(OpenAI 호환) 전용: 기준 주소. 예: https://example.com/v1 */
   baseUrl?: string;
+  /** 이 항목의 이미지 첨부 상한(서비스 기본값을 덮어쓴다) */
+  maxImages?: number;
   /** 기본 항목은 지울 수 없다 */
   builtin?: boolean;
 }
@@ -31,6 +33,8 @@ export const DEFAULT_API_ID = 'venice-flux3';
 
 export const DEFAULT_API_LIST: ApiEntry[] = [
   { id: 'venice-flux3', service: 'venice', label: '베니스 · Flux 3', model: 'flux-3-image-edit', builtin: true },
+  { id: 'venice-seedream', service: 'venice', label: '베니스 · Seedream V5 Pro (검열 없음)', model: 'seedream-v5-pro-edit', maxImages: 6, builtin: true },
+  { id: 'venice-qwen', service: 'venice', label: '베니스 · Qwen Image 2.1 Pro (검열 없음)', model: 'qwen-image-2-1-pro-edit', maxImages: 10, builtin: true },
   { id: 'bfl-flux3', service: 'bfl', label: 'BFL 직접 · Flux 3', model: 'flux-3-image', builtin: true },
   { id: 'openai-default', service: 'openai', label: 'OpenAI · gpt-image-2.5', model: 'gpt-image-2.5-sunburst', builtin: true },
   { id: 'mock', service: 'mock', label: '모의 엔진(흐름 확인용)', model: '', builtin: true },
@@ -46,7 +50,7 @@ export function needsKey(entry: ApiEntry): boolean {
 }
 
 export function maxImagesFor(entry: ApiEntry): number {
-  return SERVICE_MAX_IMAGES[entry.service];
+  return entry.maxImages ?? SERVICE_MAX_IMAGES[entry.service];
 }
 
 /** 저장된 목록을 읽을 때: 형식이 틀린 항목을 버리고 기본 항목이 항상 있게 한다 */
@@ -58,14 +62,14 @@ export function normalizeApiList(raw: unknown): ApiEntry[] {
       if (!r || typeof r.id !== 'string' || !r.id || seen.has(r.id)) continue;
       if (!r.service || !(r.service in SERVICE_LABEL)) continue;
       seen.add(r.id);
-      out.push({ id: r.id, service: r.service, label: String(r.label ?? r.id), model: String(r.model ?? ''), baseUrl: typeof r.baseUrl === 'string' ? r.baseUrl : undefined, builtin: !!r.builtin && DEFAULT_API_LIST.some((d) => d.id === r.id) });
+      out.push({ id: r.id, service: r.service, label: String(r.label ?? r.id), model: String(r.model ?? ''), baseUrl: typeof r.baseUrl === 'string' ? r.baseUrl : undefined, builtin: !!r.builtin && DEFAULT_API_LIST.some((d) => d.id === r.id), maxImages: typeof r.maxImages === 'number' && r.maxImages >= 1 ? Math.floor(r.maxImages) : undefined });
     }
   }
   const merged: ApiEntry[] = [];
   for (const d of DEFAULT_API_LIST) {
     const saved = out.find((o) => o.id === d.id);
     // 기본 항목의 서비스는 고정, 모델·이름은 사용자가 바꾼 값을 존중한다
-    merged.push(saved ? { ...d, label: saved.label || d.label, model: d.service === 'mock' ? '' : saved.model || d.model } : d);
+    merged.push(saved ? { ...d, label: saved.label || d.label, model: d.service === 'mock' ? '' : saved.model || d.model, maxImages: saved.maxImages ?? d.maxImages } : d);
   }
   for (const o of out) if (!DEFAULT_API_LIST.some((d) => d.id === o.id)) merged.push({ ...o, builtin: false });
   return merged;

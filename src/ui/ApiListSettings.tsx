@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { KEY_STATE_LABEL, SERVICE_LABEL, SERVICE_MAX_IMAGES, availableOnWeb, keyState, newCustomEntry, normalizeApiList, removeEntry, type ApiEntry } from '../generate/apiList';
+import { KEY_STATE_LABEL, SERVICE_LABEL, availableOnWeb, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, type ApiEntry } from '../generate/apiList';
 import { useKeyStatus } from '../generate/keyStatus';
+import { VENICE_MODELS_URL, imageLimitOf, modelOptionLabel, parseVeniceModels, type VeniceModel } from '../generate/veniceModels';
 import { isDesktop } from '../native';
 import { useStore } from '../state/store';
 
@@ -42,6 +43,51 @@ function KeyEditor({ entry, onDone }: { entry: ApiEntry; onDone: () => void }) {
       </button>
       {error && <span className="small" style={{ color: 'var(--danger)' }}>{error}</span>}
     </div>
+  );
+}
+
+/** 베니스 모델 목록을 불러와(키 불필요) 고르게 한다. 검열 없음 표시 모델이 위에 온다 */
+function VeniceModelPicker({ onPick }: { onPick: (m: VeniceModel) => void }) {
+  const [models, setModels] = useState<VeniceModel[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch(VENICE_MODELS_URL);
+      if (!r.ok) throw new Error(`베니스 응답 ${r.status}`);
+      setModels(parseVeniceModels(await r.json()));
+    } catch (e) {
+      setError(`모델 목록을 불러오지 못했습니다: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="api-model-pick">
+      {models ? (
+        <select
+          defaultValue=""
+          onChange={(ev) => {
+            const m = models.find((x) => x.id === ev.target.value);
+            if (m) onPick(m);
+          }}
+        >
+          <option value="">모델 고르기…</option>
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>
+              {modelOptionLabel(m)}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <button onClick={() => void load()} disabled={busy} title="베니스의 이미지 편집 모델 목록을 불러옵니다(키 필요 없음)">
+          {busy ? '불러오는 중…' : '모델 목록'}
+        </button>
+      )}
+      {error && <span className="small" style={{ color: 'var(--danger)' }}>{error}</span>}
+    </span>
   );
 }
 
@@ -91,7 +137,7 @@ export function ApiListSettings() {
                 <b>{e.label}</b>
                 <span className="muted small">
                   {SERVICE_LABEL[e.service]}
-                  {e.service !== 'mock' && ` · 이미지 최대 ${SERVICE_MAX_IMAGES[e.service]}장`}
+                  {e.service !== 'mock' && ` · 이미지 최대 ${maxImagesFor(e)}장`}
                   {webBlocked && ' · 데스크톱 전용'}
                 </span>
               </div>
@@ -115,6 +161,7 @@ export function ApiListSettings() {
                 <span className="small muted">모델 id</span>
                 <input type="text" defaultValue={e.model} key={`${e.id}:${e.model}`} spellCheck={false} onBlur={(ev) => ev.target.value.trim() !== e.model && patchEntry(e.id, { model: ev.target.value.trim() })} />
                 {e.service === 'custom' && <span className="small muted">{e.baseUrl}</span>}
+                {e.service === 'venice' && <VeniceModelPicker onPick={(m) => patchEntry(e.id, { model: m.id, maxImages: imageLimitOf(m) })} />}
               </div>
             )}
             {editing === e.id && <KeyEditor entry={e} onDone={() => setEditing(null)} />}

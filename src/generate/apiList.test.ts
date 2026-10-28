@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_API_ID, DEFAULT_API_LIST, keyState, newCustomEntry, normalizeApiList, removeEntry, selectedApi } from './apiList';
+import { DEFAULT_API_ID, DEFAULT_API_LIST, keyState, maxImagesFor, newCustomEntry, normalizeApiList, removeEntry, selectedApi } from './apiList';
 import { cleanKeyInput, maskKey, redactKey } from './keys';
 
 describe('API 목록', () => {
   it('기본 목록: 베니스 Flux 3이 기본, BFL 직접도 있다', () => {
     const list = normalizeApiList(undefined);
-    expect(list.map((e) => e.id)).toEqual(['venice-flux3', 'bfl-flux3', 'openai-default', 'mock']);
+    expect(list.map((e) => e.id)).toEqual(['venice-flux3', 'venice-seedream', 'venice-qwen', 'bfl-flux3', 'openai-default', 'mock']);
     expect(selectedApi(list, DEFAULT_API_ID)).toMatchObject({ service: 'venice', model: 'flux-3-image-edit' });
     expect(selectedApi(list, 'bfl-flux3')).toMatchObject({ service: 'bfl', model: 'flux-3-image' });
     expect(selectedApi(list, '없는id').id).toBe(DEFAULT_API_ID);
@@ -23,14 +23,25 @@ describe('API 목록', () => {
     expect(c).toMatchObject({ id: 'custom-1', baseUrl: 'https://example.com/v1' });
     list = [...list, c];
     expect(newCustomEntry(list, '', '', 'https://b').id).toBe('custom-2');
-    expect(removeEntry(list, 'custom-1')).toHaveLength(4);
-    expect(removeEntry(list, 'venice-flux3')).toHaveLength(5);
+    expect(removeEntry(list, 'custom-1')).toHaveLength(6);
+    expect(removeEntry(list, 'venice-flux3')).toHaveLength(7);
   });
   it('키 상태: 키 없으면 키 필요, 모의는 필요 없음', () => {
-    const [venice, , , mock] = DEFAULT_API_LIST;
+    const venice = DEFAULT_API_LIST[0];
+    const mock = DEFAULT_API_LIST[DEFAULT_API_LIST.length - 1];
     expect(keyState(venice, new Set())).toBe('missing');
     expect(keyState(venice, new Set(['venice-flux3']))).toBe('set');
     expect(keyState(mock, new Set())).toBe('not-needed');
+  });
+});
+
+describe('이미지 상한', () => {
+  it('항목별 상한이 서비스 기본값을 덮어쓴다', () => {
+    const list = normalizeApiList(undefined);
+    expect(maxImagesFor(selectedApi(list, 'venice-flux3'))).toBe(3);
+    expect(maxImagesFor(selectedApi(list, 'venice-seedream'))).toBe(6);
+    expect(maxImagesFor(selectedApi(list, 'venice-qwen'))).toBe(10);
+    expect(maxImagesFor({ id: 'x', service: 'venice', label: 'x', model: 'm', maxImages: 4 })).toBe(4);
   });
 });
 

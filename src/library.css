@@ -444,3 +444,5 @@ button.small {
 .welcome-card { width: min(640px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid var(--border, #d6d6d0); border-radius: 14px; background: var(--panel, #fff); }
 .welcome-card h1 { margin: 0; font-size: 22px; }
 .welcome-path { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); word-break: break-all; }
+.api-model-pick { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.api-model-pick select { max-width: 420px; }
