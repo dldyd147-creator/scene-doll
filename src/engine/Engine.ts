@@ -59,6 +59,8 @@ export type ViewKind = 'work' | 'manuscript';
 export interface OffscreenOptions {
   background: 'white' | 'transparent' | 'dark';
   helpers?: boolean;
+  /** 원고뷰에 보이는 바닥 격자를 그대로 그린다(컷 목록 썸네일용). 출력 PNG는 항상 격자 없음 */
+  showGrid?: boolean;
 }
 
 const THEME = {
@@ -286,7 +288,7 @@ export class Engine {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const gridWasVisible = this.grid.visible;
-    this.grid.visible = false;
+    this.grid.visible = opts.showGrid ? gridWasVisible : false;
     const linePx = Math.max(2.5, w / 400);
     for (const rig of this.dolls.values()) {
       rig.updateHelpers();

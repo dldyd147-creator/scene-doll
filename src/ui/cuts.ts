@@ -9,9 +9,9 @@ import { saveNow } from './save';
 
 const THUMB_WIDTH = 192;
 
-/** 현재 원고 카메라로 썸네일을 그린다(데이터 URL). width 기본은 컷 목록용 192px */
+/** 현재 원고 카메라로 썸네일을 그린다(데이터 URL). width 기본은 컷 목록용 192px. 원고뷰에 바닥 격자가 보이면 썸네일에도 같이 그려 두 화면이 같게 한다 */
 export function captureThumbnail(engine: Engine, aspect: number, width = THUMB_WIDTH): string {
-  const canvas = engine.renderToCanvas(engine.manu.camera, width, width * aspect, { background: 'white' });
+  const canvas = engine.renderToCanvas(engine.manu.camera, width, width * aspect, { background: 'white', showGrid: useStore.getState().settings.manuscriptGrid });
   return canvas.toDataURL('image/png');
 }
 

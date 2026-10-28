@@ -197,6 +197,8 @@ export interface BatchOutcome {
   resultUrls: string[];
   /** 컷 번호 → 이번에 저장한 후보 경로 */
   saved: Record<number, string[]>;
+  /** 보낸 뒤 결과가 올 때까지 걸린 초(예상 시간 기록용) */
+  seconds?: number;
   /** API가 돌려준 토큰 사용량(과금 확인용)·모델 */
   usage?: GenUsage;
   model?: string;
@@ -231,7 +233,9 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
     const label = `묶음 ${i + 1}/${batches.length} (컷 ${b.cuts.map((c) => c.number).join('·')})`;
     try {
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 보내는 중…` });
+      const sentAt = Date.now();
       const result = await gen.generate({ prompt: b.prompt, images: b.images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, signal: opts.signal });
+      outcome.seconds = (Date.now() - sentAt) / 1000;
       outcome.usage = result.usage;
       outcome.model = result.model;
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 분할·저장` });

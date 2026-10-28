@@ -4,6 +4,7 @@ import { PRESET_ORDER, PRESETS } from '../generate/batch';
 import { availableOnWeb, keyState, maxImagesFor } from '../generate/apiList';
 import { currentApi, engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
 import { useKeyStatus } from '../generate/keyStatus';
+import { estimateRemaining, estimateTotal, loadTimeHistory, perBatchSeconds, recordDuration, roughDuration, saveTimeHistory } from '../generate/timeEstimate';
 import { isDesktop } from '../native';
 import { disposeBatches, disposeOutcomes, prepareBatches, runBatches, type BatchOutcome, type PreparedBatch, type Progress } from '../generate/runner';
 import type { Cut } from '../model/types';
@@ -109,6 +110,10 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const abortRef = useRef<AbortController | null>(null);
   const batchesRef = useRef<PreparedBatch[]>([]);
   const outcomesRef = useRef<BatchOutcome[]>([]);
+  // 예상 시간: 묶음 하나가 걸린 시간을 API 항목별로 기억해 다음 예상에 쓴다
+  const [timeHistory, setTimeHistory] = useState(loadTimeHistory);
+  const [now, setNow] = useState(() => Date.now());
+  const batchStartRef = useRef(Date.now());
 
   const confirmed = useMemo(() => cuts.filter((c) => c.confirmed), [cuts]);
   const currentCut = cuts[currentCutIndex];
@@ -123,6 +128,17 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const gen = useMemo(() => engineFor(settings), [settings]);
   const api = currentApi(settings);
   const keyIds = useKeyStatus((k) => k.ids);
+  const per = useMemo(() => perBatchSeconds(timeHistory, api), [timeHistory, api]);
+  // 생성 중에는 1초마다 남은 시간을 다시 계산하고, 묶음이 하나 끝나면 그 묶음의 시작 시각을 새로 잡는다
+  useEffect(() => {
+    if (phase !== 'running') return;
+    const t = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(t);
+  }, [phase]);
+  const doneBatches = progress?.done ?? 0;
+  useEffect(() => {
+    batchStartRef.current = Date.now();
+  }, [doneBatches]);
   useEffect(() => {
     if (isDesktop) void useKeyStatus.getState().refresh();
   }, []);
@@ -190,6 +206,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
     outcomesRef.current = [];
     setOutcomes([]);
     setPhase('running');
+    batchStartRef.current = Date.now();
     setProgress({ done: 0, total: batches.length, current: '' });
     const results = await runBatches(gen, batches, {
       n: settings.genCandidates,
@@ -197,6 +214,11 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
       signal: ac.signal,
       onProgress: setProgress,
       onBatch: (o) => {
+        if (o.ok && o.seconds) {
+          const next = recordDuration(loadTimeHistory(), api.id, o.seconds);
+          saveTimeHistory(next);
+          setTimeHistory(next);
+        }
         outcomesRef.current = [...outcomesRef.current, o];
         setOutcomes(outcomesRef.current);
       },
@@ -369,6 +391,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
               </div>
               <div className="small muted">
                 {phase === 'preparing' ? '준비' : '생성'} {progress.done}/{progress.total} {progress.current}
+                {phase === 'running' && progress.total > 0 && <span> · 남은 시간 {roughDuration(estimateRemaining(per, progress.total, progress.done, (now - batchStartRef.current) / 1000))}</span>}
               </div>
             </div>
             {phase === 'running' && outcomes.length > 0 && (
@@ -391,6 +414,12 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
           <>
             <div className="small">
               {batches.length}묶음 · 첨부 {attachCount}장 · {gen.label}
+              {batches.length > 0 && (
+                <span title={per.basis === 'history' ? `이 항목으로 생성한 최근 ${per.samples}번의 묶음당 시간(중앙값 ${Math.round(per.seconds)}초)으로 계산했습니다` : '아직 이 항목으로 생성한 기록이 없어 서비스별 대략값(묶음당 ' + Math.round(per.seconds) + '초)으로 계산했습니다. 한 번 생성하면 실제 시간으로 바뀝니다'}>
+                  {' · '}예상 {roughDuration(estimateTotal(per, batches.length))}
+                  <span className="muted">{per.basis === 'history' ? ` (최근 ${per.samples}회 기준)` : ' (처음이라 대략)'}</span>
+                </span>
+              )}
               {!isDesktop && api.service !== 'mock' && <span className="muted"> · {settings.genEndpoint}</span>}
             </div>
             <div className="gen-batches">
