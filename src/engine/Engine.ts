@@ -297,7 +297,9 @@ export class Engine {
     this.syncProps();
     r.setRenderTarget(rt);
     r.setScissorTest(false);
-    r.setViewport(0, 0, w, h);
+    // three.js는 렌더 타깃에서도 뷰포트에 화면 배율(pixelRatio)을 곱한다. 나누어 주지 않으면 배율 1.25·1.5·2 화면에서 그림이 확대돼 잘린다
+    const pr = r.getPixelRatio();
+    r.setViewport(0, 0, w / pr, h / pr);
     if (opts.background === 'transparent') r.setClearColor(0x000000, 0);
     else r.setClearColor(opts.background === 'white' ? MANU_BG : this.workBg, 1);
     r.clear();

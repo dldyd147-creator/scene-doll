@@ -21,7 +21,7 @@ import { ScriptImportDialog } from './ui/ScriptImportDialog';
 import { HandOperator } from './ui/HandOperator';
 import { GenerateDialog } from './ui/GenerateDialog';
 import { AssembleDialog } from './ui/AssembleDialog';
-import { useThumbnailSync } from './ui/cuts';
+import { useThumbnailRepair, useThumbnailSync } from './ui/cuts';
 import { useStore } from './state/store';
 
 export default function App() {
@@ -29,6 +29,7 @@ export default function App() {
   useShortcuts(engine);
   useAutosave();
   useThumbnailSync(engine);
+  useThumbnailRepair(engine);
   const theme = useStore((s) => s.settings.theme);
   const screen = useStore((s) => s.screen);
   useEffect(() => {

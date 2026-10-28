@@ -72,3 +72,57 @@ export function useThumbnailSync(engine: Engine): void {
     };
   }, [engine]);
 }
+
+const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+/** 확정 컷들의 썸네일을 지금 코드로 모두 다시 찍는다. 현재 컷은 그대로 돌아온다 */
+export async function refreshAllThumbnails(engine: Engine): Promise<number> {
+  const s = useStore.getState();
+  const confirmed = s.cuts.filter((c) => c.confirmed);
+  if (!confirmed.length) return 0;
+  const back = s.currentCut();
+  await engine.ensureTemplatesFor(confirmed);
+  try {
+    for (const cut of confirmed) {
+      engine.applyCut(cut);
+      await nextFrame();
+      useStore.getState().setThumbnail(cut.number, captureThumbnail(engine, cut.aspect));
+    }
+  } finally {
+    engine.applyCut(useStore.getState().cuts.find((c) => c.number === back.number) ?? back);
+  }
+  return confirmed.length;
+}
+
+const REPAIR_KEY = 'scene-doll.thumbRepair.v1';
+
+/**
+ * 고해상도(화면 배율 1.25·1.5·2) 화면에서 옛 버전이 썸네일을 확대해 잘라 저장했다. 회차를 처음 열 때 한 번 모두 다시 찍는다.
+ * 배율 1인 화면은 문제가 없었으므로 건드리지 않는다
+ */
+export function useThumbnailRepair(engine: Engine): void {
+  const screen = useStore((s) => s.screen);
+  const key = useStore((s) => `${s.work.code}/${s.episode.number}`);
+  useEffect(() => {
+    if (screen !== 'editor' || window.devicePixelRatio === 1) return;
+    let done: string[] = [];
+    try {
+      done = JSON.parse(localStorage.getItem(REPAIR_KEY) ?? '[]') as string[];
+    } catch {
+      /* 읽지 못하면 처음인 것으로 */
+    }
+    if (done.includes(key)) return;
+    const t = window.setTimeout(() => {
+      const st = useStore.getState();
+      if (st.screen !== 'editor' || `${st.work.code}/${st.episode.number}` !== key || st.readOnly) return;
+      void refreshAllThumbnails(engine).then(() => {
+        try {
+          localStorage.setItem(REPAIR_KEY, JSON.stringify([...done, key]));
+        } catch {
+          /* 다음에 다시 시도 */
+        }
+      });
+    }, 2000);
+    return () => window.clearTimeout(t);
+  }, [engine, screen, key]);
+}
