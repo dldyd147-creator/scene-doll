@@ -274,7 +274,6 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
             <Icon name="close" size={16} />
           </button>
         </h2>
-        <div className="muted small">캐릭터는 작품에 종속됩니다. 돌에 지정하면 성별 돌·키·고정색이 따라오고, AI 전달 패키지에 설명과 레퍼런스가 실립니다. 고치면 바로 저장됩니다. 목록은 역할 순(주인공 → 조연 → 엑스트라)입니다.</div>
         {error && (
           <div className="small" style={{ color: 'var(--danger)' }}>
             {error}{' '}
@@ -296,13 +295,12 @@ export function CharacterManagerDialog({ workCode, onClose }: { workCode: string
                 </span>
               </div>
             ))}
-            {list && list.length === 0 && <div className="muted small">등록된 캐릭터가 없습니다.</div>}
-            <button className="primary" onClick={() => void add()}>
-              <Icon name="plus" /> 새 캐릭터
+            <button className="primary" onClick={() => void add()} title="새 캐릭터">
+              <Icon name="plus" />
             </button>
           </div>
           <div className="cm-form">
-            {!selected && <div className="placeholder">왼쪽에서 캐릭터를 고르거나 새로 만드세요.</div>}
+            {!selected && <div className="placeholder">EMPTY</div>}
             {selected && (
               <>
                 <div className="field-row">

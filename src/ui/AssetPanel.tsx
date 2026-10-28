@@ -87,7 +87,6 @@ function CharacterTab() {
       {characters.map((c) => (
         <CharacterRow key={c.id} chr={c} />
       ))}
-      {characters.length === 0 && <div className="muted small" style={{ padding: '2px' }}>등록된 캐릭터가 없습니다. 관리에서 등록하거나, 돌 탭의 기본 돌을 꺼내 임시 캐릭터로 쓰세요.</div>}
       <SceneDolls />
     </>
   );
@@ -138,13 +137,7 @@ function DollTab() {
         </button>
       </div>
       {filter === 'work' &&
-        (characters.length ? (
-          characters.map((c) => <CharacterRow key={c.id} chr={c} />)
-        ) : (
-          <div className="muted small" style={{ padding: '2px' }}>
-            등록된 캐릭터가 없습니다. 캐릭터 탭의 관리에서 등록하거나 기본 돌을 꺼내세요.
-          </div>
-        ))}
+        characters.map((c) => <CharacterRow key={c.id} chr={c} />)}
       {filter === 'all' &&
         DOLL_ASSETS.filter((d) => !d.hidden).map((d) => (
           <div key={d.id} className="card" title={d.glbPath ? '실제 인체 메시(MakeHuman, CC0). 같은 뼈대라 포즈가 호환됩니다' : '코드로 만든 단순 캡슐 돌(테스트용)'}>

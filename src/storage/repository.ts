@@ -4,6 +4,7 @@ import { normalizePose, normalizeScene } from '../model/library';
 import { normalizeProp } from '../model/props';
 import type { Document, Thumbnails } from '../state/store';
 import { pad3, type StorageBackend } from './backend';
+import { sortWorks } from '../model/workOrder';
 import { normalizeHandPose, type HandPose } from '../model/fingers';
 
 /** 기획서의 폴더 구조 */
@@ -25,6 +26,7 @@ export const paths = {
   worksDir: () => '작품',
   workDir: (code: string) => `작품/${code}`,
   work: (code: string) => `작품/${code}/작품.json`,
+  workCover: (code: string, file: string) => `작품/${code}/${file}`,
   characterDir: (code: string) => `작품/${code}/캐릭터`,
   character: (code: string, id: string) => `작품/${code}/캐릭터/${id}.json`,
   characterFolder: (code: string, id: string) => `작품/${code}/캐릭터/${id}`,
@@ -188,6 +190,18 @@ export class Repository {
     await this.backend.writeText(paths.work(work.code), json(work));
   }
 
+  async saveWorkCover(code: string, file: string, data: Blob | ArrayBuffer): Promise<void> {
+    await this.backend.writeBinary(paths.workCover(code, file), data);
+  }
+
+  async readWorkCover(code: string, file: string): Promise<ArrayBuffer | null> {
+    return this.backend.readBinary(paths.workCover(code, file));
+  }
+
+  async removeWorkCover(code: string, file: string): Promise<void> {
+    await this.backend.remove(paths.workCover(code, file));
+  }
+
   /** 새 작품: 작품.json과 1화 회차 파일을 만든다 */
   async createWork(work: Work): Promise<void> {
     await this.saveWork(work);
@@ -219,7 +233,7 @@ export class Repository {
       const characters = (await this.loadCharacters(code)).filter((c) => !c.temporary);
       out.push({ work, episodes, characters });
     }
-    return out;
+    return sortWorks(out, (w) => w.work);
   }
 
   // ---------- 회차 ----------

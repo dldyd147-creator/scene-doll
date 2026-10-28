@@ -103,7 +103,6 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
       <div className="manu-wrap" ref={wrapRef}>
         {showScript && <DialogueBlock ref={topRef} cut={cut} />}
         <div className="manu-view view" ref={viewRef} style={{ width: size.w, height: size.h }} title="드래그: 카메라 궤도 회전 · Shift+드래그: 팬 · 휠: 거리 · Ctrl+휠: 화각">
-          <span className="no-edit">보기 전용 · 드래그로 카메라 회전 · 휠로 거리</span>
         </div>
         {showScript && <NoteBlock ref={bottomRef} cut={cut} />}
       </div>
@@ -121,7 +120,7 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
           </button>
         </div>
         <div className="row">
-          <input className="memo" type="text" value={cut.memo} onChange={(e) => setCutMemo(e.target.value)} placeholder="메모(설명 텍스트의 메모 줄)" spellCheck={false} />
+          <input className="memo" type="text" value={cut.memo} onChange={(e) => setCutMemo(e.target.value)} placeholder="PROMPT" spellCheck={false} />
         </div>
         <div className="row">
           <span className="label">화면비</span>
@@ -165,11 +164,11 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
         </div>
         <div className="row">
           <span className="label">시점</span>
-          <button onClick={() => engine.cameraEyeLevel()} title="아이레벨: 선택한 캐릭터의 눈높이(앉아 있으면 앉은 눈높이)에 카메라를 수평으로. 선택이 없으면 첫 돌">
+          <button onClick={() => engine.cameraEyeLevel()}>
             <Icon name="eyeLevel" /> 아이레벨
           </button>
           <button onClick={() => engine.cameraPov()} title="시점샷(POV): 선택한 캐릭터의 눈에서 머리가 보는 방향으로">
-            <Icon name="pov" /> POV
+            POV
           </button>
           <button className="icon" onClick={() => engine.aimManuscriptAtSubject()} title="카메라가 피사체(선택한 돌)를 바라보게. 위치는 그대로">
             <Icon name="aim" />

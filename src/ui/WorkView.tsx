@@ -17,7 +17,6 @@ export function WorkView({ engine }: { engine: Engine }) {
   const mode = useStore((s) => s.mode);
   const setMode = useStore((s) => s.setMode);
   const selection = useStore((s) => s.selection);
-  const dollCount = useStore((s) => s.cuts[s.currentCutIndex].dolls.length);
   const shading = useStore((s) => s.cuts[s.currentCutIndex].light.shading);
   const crosshair = useStore((s) => s.cuts[s.currentCutIndex].crosshair);
   const outline = useStore((s) => s.cuts[s.currentCutIndex].outline);
@@ -130,13 +129,6 @@ export function WorkView({ engine }: { engine: Engine }) {
   return (
     <section className={`view work-view ${dropHover ? 'drop-hover' : ''}`}>
       <div className="view-surface" ref={surfaceRef} onDragOver={onDragOver} onDragLeave={() => setDropHover(false)} onDrop={onDrop} />
-      {dollCount === 0 && (
-        <div className="work-empty">
-          <div>
-            오른쪽 <b>돌</b> 탭에서 <Icon name="plus" size={14} /> 를 눌러 돌을 꺼내세요.
-          </div>
-        </div>
-      )}
       <div className="work-toolbar">
         <div className="group" title="조작 모드">
           <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="직접 드래그 (Q): 부위·관절점·핸들을 끌어 자세를 잡음">

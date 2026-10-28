@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, safeStorage, session, shell } from 'electron';
 import { promises as fs } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cancelGeneration, runGeneration } from './generate';
@@ -158,6 +159,7 @@ function relaxCorsForRenderer(): void {
 }
 
 function createWindow(): void {
+  const devIcon = path.join(app.getAppPath(), 'build', 'icon.png');
   mainWindow = new BrowserWindow({
     width: 1500,
     height: 950,
@@ -165,6 +167,7 @@ function createWindow(): void {
     minHeight: 700,
     title: '씬 돌',
     backgroundColor: '#f4f4f2',
+    ...(existsSync(devIcon) ? { icon: devIcon } : {}),
     autoHideMenuBar: true,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: false },
   });

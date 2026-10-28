@@ -1,4 +1,5 @@
 import { useStore } from '../state/store';
+import logoUrl from '../assets/logo.png';
 import { Icon } from './icons';
 import { goToStart, saveNow } from './save';
 import { StorageControls } from './StorageControls';
@@ -38,11 +39,11 @@ export function TopBar() {
   return (
     <header className="topbar">
       <div className="brand">
-        씬 <span>돌</span>
+        <img className="brand-logo" src={logoUrl} alt="씬 돌" title="씬 돌" draggable={false} />
       </div>
       <div className="sep" />
-      <button onClick={() => void goToStart()} title="작품 관리로 돌아가기(저장됨). 작품·회차를 고르거나 캐릭터를 등록합니다">
-        <Icon name="home" /> 작품 관리
+      <button className="icon" onClick={() => void goToStart()} title="작품 관리로 돌아가기(저장됨)">
+        <Icon name="book" />
       </button>
       <span className="doc-label" title={`작품 ${work.code} · ${work.name} · ${episode.number}화`}>
         <b>{work.name}</b> <span className="muted">{work.code}</span> · {episode.number}화{episode.title ? ` ${episode.title}` : ''}

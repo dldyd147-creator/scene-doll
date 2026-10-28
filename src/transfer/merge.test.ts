@@ -17,6 +17,7 @@ describe('주인 파일', () => {
   it('썸네일·GLB·레퍼런스·컷 썸네일은 주인 JSON을 따른다', () => {
     expect(ownerOf('공용/씬/s1.png')).toBe('공용/씬/s1.json');
     expect(ownerOf('공용/소품/p1.glb')).toBe('공용/소품/p1.json');
+    expect(ownerOf('작품/ACS/표지.jpg')).toBe('작품/ACS/작품.json');
     expect(ownerOf('작품/ACS/캐릭터/c1/레퍼런스/a.png')).toBe('작품/ACS/캐릭터/c1.json');
     expect(ownerOf('작품/ACS/회차/001/썸네일/002.png')).toBe('작품/ACS/회차/001/컷/002.json');
     expect(ownerOf('생성/ACS/001/002/cand_1.png')).toBeNull();

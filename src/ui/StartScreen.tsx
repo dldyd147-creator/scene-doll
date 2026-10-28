@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createWork, mainReferenceOf, nowIso, sortCharacters } from '../model/defaults';
+import { moveWork } from '../model/workOrder';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
 import type { WorkInfo } from '../storage/repository';
+import logoUrl from '../assets/logo.png';
 import { Icon } from './icons';
 import { useRefUrl } from './refImages';
+import { makeCoverBlob, useWorkCover } from './workCover';
 import { lastOpened, openDocument, saveNow } from './save';
 import { features } from '../features';
 import { StorageControls } from './StorageControls';
@@ -38,6 +41,8 @@ export function StartScreen() {
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
   const [transferOpen, setTransferOpen] = useState(false);
+  const [episodePrompt, setEpisodePrompt] = useState<{ w: WorkInfo; value: string } | null>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
 
   const reload = useCallback(async () => {
     try {
@@ -101,15 +106,19 @@ export function StartScreen() {
     }
   };
 
-  const newEpisode = async (w: WorkInfo) => {
+  const askNewEpisode = (w: WorkInfo) => {
     const suggested = (w.episodes.length ? Math.max(...w.episodes.map((e) => e.number)) : 0) + 1;
-    const answer = window.prompt('만들 회차 번호를 입력하세요(숫자). 이미 있는 번호면 그 회차를 엽니다.', String(suggested));
-    if (answer === null) return;
+    setEpisodePrompt({ w, value: String(suggested) });
+  };
+
+  const newEpisode = async (w: WorkInfo, answer: string) => {
     const next = Number.parseInt(answer.trim(), 10);
     if (!Number.isInteger(next) || next < 1 || next > 9999) {
-      window.alert('회차 번호는 1~9999 사이의 숫자여야 합니다.');
+      setError('회차 번호는 1~9999 사이의 숫자여야 합니다.');
       return;
     }
+    setEpisodePrompt(null);
+    setError(null);
     const exists = w.episodes.some((e) => e.number === next);
     setBusy(true);
     try {
@@ -123,6 +132,40 @@ export function StartScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const move = async (code: string, dir: -1 | 1) => {
+    const changes = moveWork((works ?? []).map((w) => w.work.code), code, dir);
+    if (!changes) return;
+    for (const c of changes) {
+      const w = works?.find((x) => x.work.code === c.code);
+      if (w && w.work.order !== c.order) await storage.repository.saveWork({ ...w.work, order: c.order });
+    }
+    await reload();
+  };
+
+  const onCoverChosen = async (e: React.ChangeEvent<HTMLInputElement>, w: WorkInfo) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const blob = await makeCoverBlob(f);
+      const file = '표지.jpg';
+      await storage.repository.saveWorkCover(w.work.code, file, blob);
+      await storage.repository.saveWork({ ...w.work, cover: file, updatedAt: nowIso() });
+      setError(null);
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const removeCover = async (w: WorkInfo) => {
+    if (!w.work.cover) return;
+    await storage.repository.removeWorkCover(w.work.code, w.work.cover);
+    const { cover: _drop, ...rest } = w.work;
+    await storage.repository.saveWork({ ...rest, updatedAt: nowIso() });
+    await reload();
   };
 
   const renameWork = async (w: WorkInfo, name: string) => {
@@ -150,13 +193,12 @@ export function StartScreen() {
     <div className="start">
       <header className="topbar">
         <div className="brand">
-          씬 <span>돌</span>
+          <img className="brand-logo" src={logoUrl} alt="씬 돌" title="씬 돌" draggable={false} />
         </div>
-        <span className="muted small">작품 관리 · 작품을 고르고 회차를 열면 편집 화면으로 갑니다</span>
         <div className="grow" />
         <StorageControls onChanged={() => void reload()} />
-        <button onClick={() => setTransferOpen(true)} title="쌓아 둔 작품·캐릭터·소품·씬을 이동 파일(.scenedoll) 하나로 내보내거나, 받은 파일을 합칩니다">
-          이동 파일
+        <button onClick={() => setTransferOpen(true)} title="이동 파일(.scenedoll): 작품·캐릭터·소품·씬을 파일 하나로 내보내거나, 받은 파일을 합칩니다">
+          EXPORT
         </button>
         <div className="sep" />
         <button className="icon" onClick={() => setSettingsOpen(true)} title="설정">
@@ -172,14 +214,25 @@ export function StartScreen() {
             작품 <span className="muted">{works?.length ?? 0}</span>
           </div>
           {!works && !error && <div className="muted small">불러오는 중…</div>}
-          {works?.map((w) => (
+          {works?.map((w, i) => (
             <div key={w.work.code} className={`work-card ${w.work.code === selected ? 'selected' : ''}`} onClick={() => setSelected(w.work.code)}>
-              <div className="row">
-                <b className="code">{w.work.code}</b>
-                <span className="grow name">{w.work.name}</span>
+              <WorkCover work={w.work} />
+              <div className="work-card-body">
+                <div className="row">
+                  <b className="code">{w.work.code}</b>
+                  <span className="grow name">{w.work.name}</span>
+                </div>
+                <div className="muted small">
+                  회차 {w.episodes.length} · 캐릭터 {w.characters.length} · {dateLabel(w.work.updatedAt)}
+                </div>
               </div>
-              <div className="muted small">
-                회차 {w.episodes.length} · 캐릭터 {w.characters.length} · {dateLabel(w.work.updatedAt)}
+              <div className="work-order">
+                <button className="icon ghost" disabled={i === 0} onClick={(e) => (e.stopPropagation(), void move(w.work.code, -1))} title="위로">
+                  <Icon name="up" size={13} />
+                </button>
+                <button className="icon ghost" disabled={i === works.length - 1} onClick={(e) => (e.stopPropagation(), void move(w.work.code, 1))} title="아래로">
+                  <Icon name="down" size={13} />
+                </button>
               </div>
             </div>
           ))}
@@ -212,6 +265,15 @@ export function StartScreen() {
                 <b className="code">{info.work.code}</b>
                 <input className="work-name" type="text" defaultValue={info.work.name} key={info.work.code} onBlur={(e) => void renameWork(info, e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} spellCheck={false} title="작품명(고치고 Enter)" />
                 <div className="grow" />
+                <input ref={coverInput} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => void onCoverChosen(e, info)} />
+                <button className="ghost" onClick={() => coverInput.current?.click()} title="작품 목록에 보일 표지(썸네일) 이미지를 등록합니다">
+                  <Icon name="gallery" /> 표지
+                </button>
+                {info.work.cover && (
+                  <button className="icon ghost" onClick={() => void removeCover(info)} title="표지 지우기">
+                    <Icon name="close" size={13} />
+                  </button>
+                )}
                 <button className="ghost danger" onClick={() => void deleteWork(info)} title="작품 삭제">
                   <Icon name="trash" /> 작품 삭제
                 </button>
@@ -219,7 +281,7 @@ export function StartScreen() {
 
               <h3 className="section-title">
                 회차 <span className="muted">{info.episodes.length}</span>
-                <button className="primary" onClick={() => void newEpisode(info)} disabled={busy}>
+                <button className="primary" onClick={() => askNewEpisode(info)} disabled={busy}>
                   <Icon name="plus" /> 새 회차
                 </button>
               </h3>
@@ -254,7 +316,6 @@ export function StartScreen() {
                 {sortCharacters(info.characters).map((c) => (
                   <CharacterCard key={c.id} workCode={info.work.code} chr={c} onClick={() => setCharacterManagerFor(info.work.code)} />
                 ))}
-                {info.characters.length === 0 && <div className="muted small">등록된 캐릭터가 없습니다. 캐릭터 관리에서 이름·설명·레퍼런스를 등록하면 돌에 지정할 수 있습니다.</div>}
               </div>
 
               {shareStatus === 'signedIn' && <MembersPanel workCode={info.work.code} />}
@@ -262,9 +323,43 @@ export function StartScreen() {
           )}
         </section>
       </div>
+      {episodePrompt && (
+        <div className="modal-backdrop" onClick={() => setEpisodePrompt(null)}>
+          <div className="modal" style={{ width: 360 }} onClick={(e) => e.stopPropagation()}>
+            <h2>새 회차</h2>
+            <div className="small muted">만들 회차 번호(숫자)를 입력하세요. 이미 있는 번호면 그 회차를 엽니다.</div>
+            <div className="row" style={{ marginTop: 10 }}>
+              <input
+                type="number"
+                min={1}
+                max={9999}
+                autoFocus
+                className="grow"
+                value={episodePrompt.value}
+                onChange={(e) => setEpisodePrompt({ ...episodePrompt, value: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && void newEpisode(episodePrompt.w, episodePrompt.value)}
+              />
+              <button className="primary" onClick={() => void newEpisode(episodePrompt.w, episodePrompt.value)}>
+                만들기
+              </button>
+              <button onClick={() => setEpisodePrompt(null)}>취소</button>
+            </div>
+            {error && (
+              <div className="small" style={{ color: 'var(--danger)', marginTop: 6 }}>
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {transferOpen && <TransferDialog works={works ?? []} onClose={() => setTransferOpen(false)} onChanged={() => void reload()} />}
     </div>
   );
+}
+
+function WorkCover({ work }: { work: WorkInfo['work'] }) {
+  const url = useWorkCover(work.code, work.cover, work.updatedAt);
+  return <div className="work-cover">{url ? <img src={url} alt="" draggable={false} /> : <Icon name="book" size={20} />}</div>;
 }
 
 function CharacterCard({ workCode, chr, onClick }: { workCode: string; chr: WorkInfo['characters'][number]; onClick: () => void }) {

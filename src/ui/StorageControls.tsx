@@ -32,8 +32,8 @@ export function StorageControls({ onChanged }: { onChanged?: () => void }) {
         <span className="storage-chip folder" title={`작업 폴더: ${folderName} · 클릭하면 탐색기에서 엽니다`} onClick={() => void native?.workDir.reveal()}>
           <Icon name="folder" /> {folderName}
         </span>
-        <button className="ghost" onClick={() => void choose()} title="작업 폴더를 다른 곳으로 바꿉니다(기존 폴더의 파일은 옮겨지지 않습니다)">
-          폴더 바꾸기
+        <button className="icon ghost" onClick={() => void choose()} title="작업 폴더 바꾸기(기존 폴더의 파일은 옮겨지지 않습니다)">
+          <Icon name="folderOpen" />
         </button>
       </>
     );

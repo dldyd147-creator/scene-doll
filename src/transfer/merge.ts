@@ -30,6 +30,7 @@ export function isSafePath(path: string): boolean {
 /**
  * 파일이 '주인'으로 따르는 JSON 경로. 주인의 승패가 이 파일의 승패를 정한다. 주인이 없으면 null.
  * - 공용/씬/ID.png → 공용/씬/ID.json (소품 .glb도 같은 규칙)
+ * - 작품/C/표지.jpg → 작품/C/작품.json
  * - 작품/C/캐릭터/ID/… → 작품/C/캐릭터/ID.json
  * - 작품/C/회차/N/썸네일/K.png → 작품/C/회차/N/컷/K.json
  */
@@ -39,6 +40,7 @@ export function ownerOf(path: string): string | null {
     const m = /^(.+)\.(png|glb)$/.exec(s[2]);
     return m ? `${s[0]}/${s[1]}/${m[1]}.json` : null;
   }
+  if (s[0] === '작품' && s.length === 3 && /^표지\.(jpg|png)$/.test(s[2])) return `작품/${s[1]}/작품.json`;
   if (s[0] === '작품' && s[2] === '캐릭터' && s.length > 4) return `작품/${s[1]}/캐릭터/${s[3]}.json`;
   if (s[0] === '작품' && s[2] === '회차' && s[4] === '썸네일' && s.length === 6) {
     const m = /^(.+)\.png$/.exec(s[5]);

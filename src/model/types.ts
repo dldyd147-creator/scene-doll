@@ -29,6 +29,10 @@ export interface Work {
   /** 영문 대문자 3자리, 예: ACS */
   code: string;
   name: string;
+  /** 작품 목록에서의 순서(작은 쪽이 위). 없으면 코드 순으로 뒤에 온다 */
+  order?: number;
+  /** 표지 썸네일 파일 이름(작품 폴더 안). 없으면 표지 없음 */
+  cover?: string;
   output: OutputSettings;
   createdAt: string;
   updatedAt: string;
