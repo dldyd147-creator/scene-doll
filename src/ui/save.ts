@@ -1,4 +1,6 @@
 import { storage } from '../storage';
+import { features } from '../features';
+import { isDesktop } from '../native';
 import { initShare, lockEpisode, unlockEpisode } from '../storage/remote/service';
 import { useStore } from '../state/store';
 import { createCut, createEpisode, createWork } from '../model/defaults';
@@ -41,10 +43,11 @@ function syncStorageState(): void {
 /** 앱 시작: 저장소 연결(공유 저장소 세션이 남아 있으면 되살림). 문서는 열지 않고 시작 화면(작품 관리)을 보여 준다 */
 export async function initStorage(): Promise<void> {
   await storage.init();
-  await initShare().catch(() => undefined);
+  if (features.share) await initShare().catch(() => undefined);
   syncStorageState();
-  await startConnectionSync();
-  useStore.getState().setScreen('start');
+  // 데스크톱은 연결 토큰을 작업 폴더 파일에 남기지 않는다(설정은 이 프로그램의 로컬 저장소에만)
+  if (!isDesktop) await startConnectionSync();
+  useStore.getState().setScreen(storage.needsWorkDir ? 'welcome' : 'start');
 }
 
 /** 마지막으로 연 작품·회차(시작 화면에서 먼저 보여 주기용) */
@@ -117,7 +120,7 @@ export async function reloadCharacters(): Promise<void> {
 /** 저장소가 바뀐 뒤: 편집 중이면 같은 작품·회차를 새 저장소에서 다시 연다(없으면 지금 문서를 그대로 저장) */
 async function afterStorageChange(): Promise<void> {
   syncStorageState();
-  await startConnectionSync();
+  if (!isDesktop) await startConnectionSync();
   const s = useStore.getState();
   if (s.screen !== 'editor') return;
   const result = await openDocument(s.work.code, s.episode.number, false);
@@ -147,4 +150,17 @@ export function pendingFolderName(): string | null {
 
 export function folderSupported(): boolean {
   return storage.supportsFolder;
+}
+
+/** 데스크톱: 지정한 경로를 작업 폴더로 쓴다(첫 실행의 기본 위치) */
+export async function useDesktopFolder(dir: string): Promise<boolean> {
+  const ok = await storage.useDesktopPath(dir);
+  if (ok) await afterStorageChange();
+  return ok;
+}
+
+/** 첫 실행 안내를 마치고 작품 관리로 */
+export function finishWelcome(): void {
+  syncStorageState();
+  useStore.getState().setScreen('start');
 }

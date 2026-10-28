@@ -40,6 +40,8 @@ export interface SceneDollNative {
   workDir: {
     get(): Promise<string | null>;
     suggest(): Promise<string>;
+    /** 지정한 경로를 작업 폴더로 쓴다(없으면 만든다) */
+    use(path: string): Promise<string>;
     /** 폴더 선택 창 → 고르면 경로(작업 폴더로 지정됨), 취소하면 null */
     choose(): Promise<string | null>;
     reveal(): Promise<void>;

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { PRESET_ORDER, PRESETS } from '../generate/batch';
 import { DEFAULT_SITUATION_TAGS, parseTagList } from '../model/library';
+import { isDesktop } from '../native';
 import { useStore } from '../state/store';
+import { ApiListSettings } from './ApiListSettings';
 import type { Settings } from '../state/settings';
 
 function Range({ label, k, min, max, step, fmt }: { label: string; k: keyof Settings; min: number; max: number; step: number; fmt?: (v: number) => string }) {
@@ -86,16 +88,14 @@ function GenerateSettings() {
   const update = useStore((st) => st.updateSettings);
   return (
     <>
-      <Seg label="엔진" value={s.genEngine} options={['mock', 'remote'] as const} labels={{ mock: '모의', remote: '원격(함수)' }} onChange={(v) => update({ genEngine: v })} title="모의: 네트워크 없이 돌 격자에 MOCK 표시를 얹어 돌려줌(흐름 확인용). 원격: 아래 주소의 서버리스 함수가 OpenAI Images API를 호출" />
-      {s.genEngine === 'remote' && (
+      <ApiListSettings />
+      {!isDesktop && (
         <>
-          <TextSetting label="함수 주소(엔드포인트)" k="genEndpoint" placeholder="https://scene-doll-image.<계정>.workers.dev/" title="serverless/openai-image 를 배포한 URL" />
-          <TextSetting label="함수 접근 토큰" k="genToken" type="password" placeholder="함수 배포 때 정한 ACCESS_TOKEN" title="함수의 ACCESS_TOKEN 비밀값과 같은 문자열. OpenAI 키가 아님" />
-          <Seg label="생성 서비스" value={s.genProvider} options={['openai', 'venice'] as const} labels={{ openai: 'OpenAI', venice: '베니스(Venice)' }} onChange={(v) => update({ genProvider: v })} title="어느 서비스의 키로 생성할지. 키는 함수(Worker)에만 있고 여기엔 이름만 고릅니다" />
-          {s.genProvider === 'venice' && <TextSetting label="베니스 모델 id" k="genVeniceModel" placeholder="비우면 함수 기본값(firered-image-edit). 예: gpt-image-2-edit" title="베니스 /image/multi-edit 의 modelId. 여러 장 입력을 받는 편집 모델이어야 합니다" />}
+          <TextSetting label="함수 주소(엔드포인트)" k="genEndpoint" placeholder="https://scene-doll-image.<계정>.workers.dev/" title="serverless/openai-image 를 배포한 URL (웹 배포판 전용)" />
+          <TextSetting label="함수 접근 토큰" k="genToken" type="password" placeholder="함수 배포 때 정한 ACCESS_TOKEN" title="함수의 ACCESS_TOKEN 비밀값과 같은 문자열. OpenAI·베니스 키가 아님" />
+          <div className="small muted">웹 배포판은 키를 브라우저에 두지 않고 서버리스 함수(Cloudflare Worker)의 비밀값에 둡니다. 설치형 프로그램에서는 위 목록에 키를 직접 넣습니다.</div>
         </>
       )}
-      <div className="small muted">OpenAI API 키는 브라우저에 두지 않습니다. 키는 서버리스 함수(저장소의 serverless/openai-image, Cloudflare Worker 또는 Vercel)의 환경 변수에만 넣고, 여기에는 그 함수의 주소와 접근 토큰만 넣습니다(이 브라우저의 설정에 저장됨).</div>
       <TextSetting label="NTT 서버 주소(6단계)" k="nttUrl" placeholder="https://ntt.greenkirin.kr" title="원고 내보내기에서 CLIP 콘티를 만들 NTT 서버" />
       <TextSetting label="NTT 연동 토큰" k="nttToken" type="password" placeholder="서버의 NTT_SCENE_DOLL_TOKEN" title="NTT 서버에만 있는 연동용 토큰. NTT 로그인 비밀번호가 아님" />
       <Seg label="묶음 상한" value={s.genMaxPerBatch} options={[4, 6, 8] as const} labels={{ 4: '4컷', 6: '6컷', 8: '8컷' }} onChange={(v) => update({ genMaxPerBatch: v })} title="한 번에 격자로 묶어 보내는 컷 수. 같은 묶음 태그끼리 묶이고 넘치면 균등 분할" />

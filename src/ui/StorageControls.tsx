@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isDesktop, native } from '../native';
 import { useStore } from '../state/store';
 import { Icon } from './icons';
 import { chooseWorkFolder, folderSupported, pendingFolderName, reconnectWorkFolder, useBrowserStorage } from './save';
@@ -24,6 +25,19 @@ export function StorageControls({ onChanged }: { onChanged?: () => void }) {
     await useBrowserStorage();
     onChanged?.();
   };
+
+  if (isDesktop) {
+    return (
+      <>
+        <span className="storage-chip folder" title={`작업 폴더: ${folderName} · 클릭하면 탐색기에서 엽니다`} onClick={() => void native?.workDir.reveal()}>
+          <Icon name="folder" /> {folderName}
+        </span>
+        <button className="ghost" onClick={() => void choose()} title="작업 폴더를 다른 곳으로 바꿉니다(기존 폴더의 파일은 옮겨지지 않습니다)">
+          폴더 바꾸기
+        </button>
+      </>
+    );
+  }
 
   return (
     <>

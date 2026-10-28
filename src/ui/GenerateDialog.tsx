@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Engine } from '../engine/Engine';
 import { PRESET_ORDER, PRESETS } from '../generate/batch';
-import { engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
+import { availableOnWeb, keyState, maxImagesFor } from '../generate/apiList';
+import { currentApi, engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
+import { useKeyStatus } from '../generate/keyStatus';
+import { isDesktop } from '../native';
 import { disposeBatches, disposeOutcomes, prepareBatches, runBatches, type BatchOutcome, type PreparedBatch, type Progress } from '../generate/runner';
 import type { Cut } from '../model/types';
 import type { GenPreset, GenSizeMode } from '../state/settings';
@@ -118,7 +121,15 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   }, [scope, confirmed, currentCut, failedCuts]);
 
   const gen = useMemo(() => engineFor(settings), [settings]);
-  const remoteUnset = settings.genEngine === 'remote' && !settings.genEndpoint.trim();
+  const api = currentApi(settings);
+  const keyIds = useKeyStatus((k) => k.ids);
+  useEffect(() => {
+    if (isDesktop) void useKeyStatus.getState().refresh();
+  }, []);
+  // 설정이 모자라면 생성 버튼을 막고 안내한다: 데스크톱은 키, 웹은 함수 주소, 웹에서 쓸 수 없는 항목
+  const setupProblem: string | null =
+    api.service === 'mock' ? null : isDesktop ? (keyState(api, keyIds) === 'missing' ? `${api.label}의 API 키가 없습니다.` : null) : !availableOnWeb(api.service) ? `${api.label}은(는) 설치형 프로그램에서만 쓸 수 있습니다.` : !settings.genEndpoint.trim() ? '함수 주소(엔드포인트)가 없습니다.' : null;
+  const remoteUnset = setupProblem !== null;
   const folder = paths.generatedDir(work.code, episode.number);
 
   const resetWork = () => {
@@ -155,7 +166,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
     setProgress({ done: 0, total: list.length, current: '' });
     setTab('generate');
     try {
-      const prepared = await prepareBatches(engine, { cuts: list, single: asSingle, settings }, setProgress, ac.signal);
+      const prepared = await prepareBatches(engine, { cuts: list, single: asSingle, settings, maxImages: maxImagesFor(api) }, setProgress, ac.signal);
       if (ac.signal.aborted) {
         disposeBatches(prepared);
         setPhase('setup');
@@ -263,7 +274,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
           <>
             {remoteUnset && (
               <div className="small" style={{ color: 'var(--danger)' }}>
-                원격 엔진이 선택됐지만 함수 주소가 없습니다.{' '}
+                {setupProblem}{' '}
                 <button onClick={() => setSettingsOpen(true)}>설정 열기</button>
               </div>
             )}
@@ -380,7 +391,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
           <>
             <div className="small">
               {batches.length}묶음 · 첨부 {attachCount}장 · {gen.label}
-              {settings.genEngine === 'remote' && <span className="muted"> · {settings.genEndpoint}</span>}
+              {!isDesktop && api.service !== 'mock' && <span className="muted"> · {settings.genEndpoint}</span>}
             </div>
             <div className="gen-batches">
               {batches.map((b, i) => (

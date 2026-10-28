@@ -10,3 +10,7 @@ doll-src/makehuman/**/*.blend1
 
 # Cloudflare wrangler 로컬 상태
 .wrangler
+
+# 7단계 데스크톱 빌드 산출물(GitHub Releases로 배포)
+electron-dist
+release

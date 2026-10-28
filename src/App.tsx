@@ -13,6 +13,7 @@ import { ExportDialog } from './ui/ExportDialog';
 import { HelpDialog } from './ui/HelpDialog';
 import { OutputGallery } from './ui/OutputGallery';
 import { StartScreen } from './ui/StartScreen';
+import { WelcomeScreen } from './ui/WelcomeScreen';
 import { CharacterManager } from './ui/CharacterManager';
 import { SceneBrowser } from './ui/SceneBrowser';
 import { SceneSaveDialog } from './ui/SceneSaveDialog';
@@ -35,7 +36,9 @@ export default function App() {
   }, [theme]);
   return (
     <>
-      {screen === 'start' ? (
+      {screen === 'welcome' ? (
+        <WelcomeScreen />
+      ) : screen === 'start' ? (
         <StartScreen />
       ) : (
         <div className="app">

@@ -43,6 +43,8 @@ export interface PrepareOptions {
   cuts: Cut[];
   /** true면 컷마다 한 묶음(단독 생성) */
   single: boolean;
+  /** 선택한 API의 첨부 상한(없으면 MAX_INPUT_IMAGES) */
+  maxImages?: number;
   settings: Pick<Settings, 'genMaxPerBatch' | 'genPreset' | 'genCellPx' | 'genSizeMode' | 'genAttachLine' | 'genAttachMask' | 'genRefsPerCharacter' | 'genStyle'>;
 }
 
@@ -90,6 +92,7 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
   const s = useStore.getState();
   const { work, episode, characters } = s;
   const st = opts.settings;
+  const maxImages = Math.max(2, Math.min(MAX_INPUT_IMAGES, Math.round(opts.maxImages ?? MAX_INPUT_IMAGES)));
   const preset = PRESETS[st.genPreset];
   const groups: CutBatch[] = opts.single ? opts.cuts.map((c) => ({ key: batchKey(c), cuts: [c] })) : groupCuts(opts.cuts, st.genMaxPerBatch);
   const folders = characterFolders(characters);
@@ -149,14 +152,14 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
       // 등장 캐릭터 레퍼런스(대표부터, 캐릭터당 장수 제한, 전체 16장 상한)
       const warnings: string[] = [];
       const perChar = Math.max(0, Math.min(8, Math.round(st.genRefsPerCharacter)));
-      const room = MAX_INPUT_IMAGES - images.length;
+      const room = maxImages - images.length;
       let truncated = 0;
       for (const chr of registeredCharactersOf(packages, characters)) {
         const main = mainReferenceOf(chr);
         const refs = [...(main ? [main] : []), ...chr.references.filter((r) => r.id !== main?.id)].slice(0, perChar);
         if (!refs.length) warnings.push(`${chr.name}: 레퍼런스가 없어 글 설명만 보냅니다`);
         for (const r of refs) {
-          if (images.length >= MAX_INPUT_IMAGES) {
+          if (images.length >= maxImages) {
             truncated++;
             continue;
           }
@@ -172,7 +175,7 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
           attachments.push({ role: 'reference', name, note: `${chr.name} 레퍼런스(${refLabel(r)}${main?.id === r.id ? ' · 대표' : ''})`, characterId: chr.id });
         }
       }
-      if (truncated) warnings.push(`첨부 상한 ${MAX_INPUT_IMAGES}장(여유 ${room}장)을 넘어 레퍼런스 ${truncated}장을 뺐습니다`);
+      if (truncated) warnings.push(`첨부 상한 ${maxImages}장(여유 ${room}장)을 넘어 레퍼런스 ${truncated}장을 뺐습니다`);
       const size = requestSize(layout, st.genSizeMode);
       const prompt = buildBatchPrompt({ work: { code: work.code, name: work.name }, episode: episode.number, layout, packages, preset: st.genPreset, attachments, outputSize: size, style: st.genStyle });
       out.push({ id: `b${++batchSeq}`, key: group.key, cuts: group.cuts, layout, packages, images, gridUrl: URL.createObjectURL(gridBlob), prompt, size, inputFidelity: preset.fidelity, warnings });

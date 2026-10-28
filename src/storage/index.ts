@@ -1,6 +1,8 @@
 import type { Document } from '../state/store';
 import type { BackendKind, StorageBackend } from './backend';
 import { BrowserBackend } from './browserBackend';
+import { native } from '../native';
+import { ElectronBackend, folderNameOf } from './electronBackend';
 import { FolderBackend, folderAccessSupported, forgetFolderHandle, loadFolderHandle, saveFolderHandle } from './folderBackend';
 import { HybridBackend } from './remote/hybridBackend';
 import { Repository } from './repository';
@@ -19,6 +21,8 @@ class StorageService {
   private backend_: StorageBackend = this.localBackend_;
   private repo = new Repository(this.backend_);
   private pendingHandle: FileSystemDirectoryHandle | null = null;
+  /** 데스크톱: 작업 폴더가 아직 정해지지 않음(첫 실행) */
+  needsWorkDir = false;
 
   get status(): StorageStatus {
     return {
@@ -31,10 +35,16 @@ class StorageService {
   }
 
   get supportsFolder(): boolean {
-    return folderAccessSupported();
+    return native !== null || folderAccessSupported();
   }
 
   async init(): Promise<StorageStatus> {
+    if (native) {
+      const dir = await native.workDir.get();
+      if (dir) this.useDesktopFolder(dir);
+      else this.needsWorkDir = true;
+      return this.status;
+    }
     if (!folderAccessSupported()) return this.status;
     const handle = await loadFolderHandle();
     if (!handle) return this.status;
@@ -51,6 +61,20 @@ class StorageService {
   private rebuild(): void {
     this.backend_ = this.remote_ ? new HybridBackend(this.remote_, this.localBackend_) : this.localBackend_;
     this.repo = new Repository(this.backend_);
+  }
+
+  private useDesktopFolder(dir: string): void {
+    this.localBackend_ = new ElectronBackend(native!, folderNameOf(dir));
+    this.needsWorkDir = false;
+    this.pendingHandle = null;
+    this.rebuild();
+  }
+
+  /** 데스크톱: 경로를 직접 지정(첫 실행의 기본 위치) */
+  async useDesktopPath(dir: string): Promise<boolean> {
+    if (!native) return false;
+    this.useDesktopFolder(await native.workDir.use(dir));
+    return true;
   }
 
   private useFolder(handle: FileSystemDirectoryHandle): void {
@@ -76,6 +100,12 @@ class StorageService {
 
   /** 작업 폴더 고르기(사용자 클릭에서 호출) */
   async chooseFolder(): Promise<boolean> {
+    if (native) {
+      const dir = await native.workDir.choose();
+      if (!dir) return false;
+      this.useDesktopFolder(dir);
+      return true;
+    }
     if (!folderAccessSupported()) return false;
     try {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite', id: 'scene-doll-work' });

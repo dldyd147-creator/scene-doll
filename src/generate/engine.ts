@@ -1,4 +1,6 @@
 import type { GenEngineKind, GenQuality, Settings } from '../state/settings';
+import { SERVICE_LABEL, availableOnWeb, normalizeApiList, selectedApi, type ApiEntry } from './apiList';
+import type { SceneDollNative } from '../native';
 
 /**
  * 5단계 이미지 생성 엔진 인터페이스.
@@ -43,11 +45,18 @@ export interface GenResult {
   images: Blob[];
   model?: string;
   usage?: GenUsage;
+  /** BFL 직접: 이번 요청의 비용(크레딧, 1크레딧=0.01달러) */
+  costCredits?: number;
 }
 
 /** usage → '토큰 입력 1,234(이미지 1,000) · 출력 6,240'. 숫자가 없으면 null */
+export function formatCost(credits: number | undefined): string | null {
+  return credits === undefined ? null : `${credits.toFixed(credits % 1 ? 1 : 0)}크레딧(약 $${(credits / 100).toFixed(2)})`;
+}
+
 export function formatUsage(usage: GenUsage | undefined): string | null {
   if (!usage) return null;
+  if (typeof usage.cost_credits === 'number') return formatCost(usage.cost_credits);
   const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v.toLocaleString('en-US') : null);
   const parts: string[] = [];
   const input = n(usage.input_tokens);
@@ -251,7 +260,64 @@ export class RemoteEngine implements GenEngine {
   }
 }
 
-/** 설정에서 고른 엔진 */
-export function engineFor(settings: Pick<Settings, 'genEngine' | 'genEndpoint' | 'genToken'> & Partial<Pick<Settings, 'genProvider' | 'genVeniceModel'>>): GenEngine {
-  return settings.genEngine === 'remote' ? new RemoteEngine(settings.genEndpoint, settings.genToken, undefined, { name: settings.genProvider ?? 'openai', model: settings.genVeniceModel ?? '' }) : new MockEngine();
+/** 데스크톱: 메인 프로세스가 API 목록 항목의 서비스를 직접 부른다(키는 메인 프로세스의 암호화 저장소) */
+export class NativeEngine implements GenEngine {
+  readonly kind = 'remote' as const;
+
+  constructor(
+    private readonly entry: ApiEntry,
+    private readonly nativeApi: SceneDollNative,
+  ) {}
+
+  get label(): string {
+    return `${SERVICE_LABEL[this.entry.service]} · ${this.entry.label}`;
+  }
+
+  async generate(req: GenRequest): Promise<GenResult> {
+    if (!req.images.length) throw new GenError('request', '입력 이미지가 없습니다');
+    if (req.signal?.aborted) throw new GenError('cancelled', '취소됨');
+    const requestId = `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const images = await Promise.all(req.images.map(async (i) => ({ name: i.name, data: await i.blob.arrayBuffer(), mime: i.blob.type || 'image/png' })));
+    const onAbort = () => void this.nativeApi.generate.cancel(requestId);
+    req.signal?.addEventListener('abort', onAbort, { once: true });
+    try {
+      const res = await this.nativeApi.generate.run({ requestId, apiId: this.entry.id, service: this.entry.service, model: this.entry.model, baseUrl: this.entry.baseUrl, prompt: req.prompt, images, size: req.size, n: req.n, quality: req.quality, inputFidelity: req.inputFidelity });
+      if (!res.ok) throw new GenError(res.kind as GenErrorKind, res.message);
+      const usage: GenUsage | undefined = res.usage || res.costCredits !== undefined ? { ...(res.usage ?? {}), ...(res.costCredits !== undefined ? { cost_credits: res.costCredits } : {}) } : undefined;
+      return { images: res.images.map((b) => new Blob([b], { type: res.mime })), model: res.model, usage, costCredits: res.costCredits };
+    } finally {
+      req.signal?.removeEventListener('abort', onAbort);
+    }
+  }
+}
+
+/** 이 환경에서 쓸 수 없는 항목(웹에서 BFL 직접 등) */
+class UnavailableEngine implements GenEngine {
+  readonly kind = 'remote' as const;
+  constructor(
+    readonly label: string,
+    private readonly why: string,
+  ) {}
+  async generate(): Promise<GenResult> {
+    throw new GenError('config', this.why);
+  }
+}
+
+type EngineSettings = Pick<Settings, 'genEngine' | 'genEndpoint' | 'genToken'> & Partial<Pick<Settings, 'genProvider' | 'genVeniceModel' | 'genApiId' | 'genApis'>>;
+
+/** 현재 선택한 API 목록 항목 (옛 설정만 있으면 그에 맞춰 고른다) */
+export function currentApi(settings: EngineSettings): ApiEntry {
+  const list = normalizeApiList(settings.genApis);
+  if (settings.genApiId) return selectedApi(list, settings.genApiId);
+  if (settings.genEngine === 'mock') return selectedApi(list, 'mock');
+  return selectedApi(list, settings.genProvider === 'venice' ? 'venice-flux3' : 'openai-default');
+}
+
+/** 설정에서 고른 엔진. 데스크톱이면 직접 호출, 웹이면 Worker(함수) 경유 */
+export function engineFor(settings: EngineSettings, nativeApi: SceneDollNative | null = typeof window !== 'undefined' ? (window.sceneDollNative ?? null) : null): GenEngine {
+  const entry = currentApi(settings);
+  if (entry.service === 'mock') return new MockEngine();
+  if (nativeApi) return new NativeEngine(entry, nativeApi);
+  if (!availableOnWeb(entry.service)) return new UnavailableEngine(`${SERVICE_LABEL[entry.service]} · ${entry.label}`, `${SERVICE_LABEL[entry.service]} 항목은 설치형 프로그램(데스크톱)에서만 쓸 수 있습니다. 웹에서는 베니스·OpenAI(함수 경유)·모의만 됩니다`);
+  return new RemoteEngine(settings.genEndpoint, settings.genToken, undefined, { name: entry.service === 'venice' ? 'venice' : 'openai', model: entry.service === 'venice' ? entry.model : '' });
 }

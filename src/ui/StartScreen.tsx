@@ -6,7 +6,9 @@ import type { WorkInfo } from '../storage/repository';
 import { Icon } from './icons';
 import { useRefUrl } from './refImages';
 import { lastOpened, openDocument, saveNow } from './save';
+import { features } from '../features';
 import { StorageControls } from './StorageControls';
+import { TransferDialog } from './TransferDialog';
 import { LockBadge, SharePanel } from './SharePanel';
 import { MembersPanel } from './MembersPanel';
 import { episodeLockPath } from '../storage/remote/locks';
@@ -35,6 +37,7 @@ export function StartScreen() {
   const [busy, setBusy] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [newName, setNewName] = useState('');
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -152,6 +155,9 @@ export function StartScreen() {
         <span className="muted small">작품 관리 · 작품을 고르고 회차를 열면 편집 화면으로 갑니다</span>
         <div className="grow" />
         <StorageControls onChanged={() => void reload()} />
+        <button onClick={() => setTransferOpen(true)} title="쌓아 둔 작품·캐릭터·소품·씬을 이동 파일(.scenedoll) 하나로 내보내거나, 받은 파일을 합칩니다">
+          이동 파일
+        </button>
         <div className="sep" />
         <button className="icon" onClick={() => setSettingsOpen(true)} title="설정">
           <Icon name="settings" />
@@ -188,7 +194,7 @@ export function StartScreen() {
               </button>
             </div>
           </div>
-          <SharePanel workCode={selected} onChanged={() => void reload()} />
+          {features.share && <SharePanel workCode={selected} onChanged={() => void reload()} />}
           {error && (
             <div className="small" style={{ color: 'var(--danger)' }}>
               {error}
@@ -256,6 +262,7 @@ export function StartScreen() {
           )}
         </section>
       </div>
+      {transferOpen && <TransferDialog works={works ?? []} onClose={() => setTransferOpen(false)} onChanged={() => void reload()} />}
     </div>
   );
 }

@@ -7,5 +7,5 @@ export default defineConfig({
   base: './',
   server: { port: 5173, strictPort: true },
   build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 1500 },
-  test: { environment: 'node', include: ['src/**/*.test.ts'] },
+  test: { environment: 'node', include: ['src/**/*.test.ts', 'electron/**/*.test.ts'] },
 });

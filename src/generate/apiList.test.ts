@@ -51,3 +51,17 @@ describe('키 마스킹·정리', () => {
     expect(redactKey('invalid key abcdefgh12345 given', 'abcdefgh12345')).toBe('invalid key •••• given');
   });
 });
+
+import { migrateSettings } from '../state/settings';
+
+describe('설정 이전', () => {
+  it('7단계 이전 설정을 API 목록 선택으로 옮긴다', () => {
+    expect(migrateSettings({}).genApiId).toBe('venice-flux3');
+    expect(migrateSettings({ genEngine: 'mock' }).genApiId).toBe('mock');
+    expect(migrateSettings({ genEngine: 'remote', genProvider: 'openai' }).genApiId).toBe('openai-default');
+    const v = migrateSettings({ genEngine: 'remote', genProvider: 'venice', genVeniceModel: 'gpt-image-2-edit' });
+    expect(v.genApiId).toBe('venice-flux3');
+    expect(v.genApis.find((e) => e.id === 'venice-flux3')?.model).toBe('gpt-image-2-edit');
+    expect(migrateSettings({ genApiId: '없는항목' }).genApiId).toBe('venice-flux3');
+  });
+});

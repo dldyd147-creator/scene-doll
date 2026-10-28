@@ -422,3 +422,25 @@ button.small {
   border-radius: 10px;
   pointer-events: none;
 }
+
+/* 7단계: API 목록·이동 패키지·환영 화면 */
+.api-list { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.api-row { border: 1px solid var(--border, #d6d6d0); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.api-row.selected { border-color: var(--accent, #2f6feb); background: color-mix(in srgb, var(--accent, #2f6feb) 7%, transparent); }
+.api-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.api-title { display: flex; flex-direction: column; flex: 1; min-width: 160px; }
+.api-model { display: flex; align-items: center; gap: 8px; }
+.api-model input { flex: 1; min-width: 0; }
+.api-key-state { font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #e8e8e4; }
+.api-key-state.set { background: #d9f2df; color: #1b6b32; }
+.api-key-state.missing { background: #fde6d8; color: #9a4a12; }
+.api-key-edit { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.api-key-edit input { flex: 1; min-width: 200px; }
+.api-add { display: flex; flex-direction: column; gap: 6px; }
+.transfer-section { display: flex; flex-direction: column; gap: 6px; }
+.transfer-works { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+.transfer-work { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 6px; border-radius: 6px; background: color-mix(in srgb, currentColor 5%, transparent); }
+.welcome { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.welcome-card { width: min(640px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 28px; border: 1px solid var(--border, #d6d6d0); border-radius: 14px; background: var(--panel, #fff); }
+.welcome-card h1 { margin: 0; font-size: 22px; }
+.welcome-path { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); word-break: break-all; }

@@ -1,7 +1,7 @@
 {
   "name": "scene-doll",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist",
+    "electron:build": "node scripts/build-electron.mjs",
+    "desktop:dev": "node scripts/desktop-dev.mjs",
+    "desktop:start": "npm run build && npm run electron:build && electron .",
+    "desktop:dist": "npm run build && npm run electron:build && electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -35,5 +39,42 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5",
     "wait-on": "^9.5.1"
+  },
+  "main": "electron-dist/main.cjs",
+  "description": "씬 돌 — 3D 돌 콘티 도구",
+  "author": "LEEYONGSOO",
+  "build": {
+    "appId": "kr.greenkirin.scenedoll",
+    "productName": "씬 돌",
+    "artifactName": "SceneDoll-Setup-${version}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "electron-dist/**",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "씬 돌",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { DEFAULT_API_ID, DEFAULT_API_LIST, normalizeApiList, type ApiEntry } from '../generate/apiList';
 import { DEFAULT_SITUATION_TAGS } from '../model/library';
 
 /** 5단계 이미지 생성 엔진: 모의(네트워크 없음, 파이프라인 확인용) / 원격(사용자가 배포한 서버리스 함수) */
@@ -47,7 +48,11 @@ export interface Settings {
   situationTags: string[];
 
   // ---------- 5단계 이미지 생성 ----------
+  /** (웹 호환) 옛 엔진 선택. 새 코드는 genApiId를 쓴다 */
   genEngine: GenEngineKind;
+  /** 7단계 API 목록과 현재 선택한 항목 id. 키는 설정이 아니라 데스크톱의 암호화 저장소에 있다 */
+  genApis: ApiEntry[];
+  genApiId: string;
   /** 서버리스 함수 주소(원격 엔진). OpenAI 키가 아니라 함수 URL */
   genEndpoint: string;
   /** 함수 접근 토큰(함수 배포 때 정한 값). OpenAI API 키는 절대 여기 넣지 않는다 */
@@ -103,6 +108,8 @@ export const DEFAULT_SETTINGS: Settings = {
   showHints: false,
   situationTags: [...DEFAULT_SITUATION_TAGS],
   genEngine: 'remote',
+  genApis: DEFAULT_API_LIST.map((e) => ({ ...e })),
+  genApiId: DEFAULT_API_ID,
   genEndpoint: 'https://scene-doll-image.dldyd147.workers.dev/',
   genToken: '',
   genProvider: 'openai',
@@ -123,13 +130,25 @@ export const DEFAULT_SETTINGS: Settings = {
 
 const KEY = 'scene-doll.settings.v1';
 
+/** 저장된 설정을 읽어 기본값과 합치고, 7단계 이전 설정(genEngine/genProvider만 있음)은 API 목록 선택으로 옮긴다 */
+export function migrateSettings(stored: Partial<Settings>): Settings {
+  const merged = { ...DEFAULT_SETTINGS, ...stored } as Settings;
+  merged.genApis = normalizeApiList(stored.genApis);
+  if (!stored.genApiId) {
+    merged.genApiId = stored.genEngine === 'mock' ? 'mock' : stored.genProvider === 'venice' ? 'venice-flux3' : stored.genProvider === 'openai' ? 'openai-default' : DEFAULT_API_ID;
+    if (stored.genProvider === 'venice' && stored.genVeniceModel) merged.genApis = merged.genApis.map((e) => (e.id === 'venice-flux3' ? { ...e, model: stored.genVeniceModel as string } : e));
+  }
+  if (!merged.genApis.some((e) => e.id === merged.genApiId)) merged.genApiId = DEFAULT_API_ID;
+  return merged;
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...(JSON.parse(raw) as Partial<Settings>) };
+    if (!raw) return migrateSettings({});
+    return migrateSettings(JSON.parse(raw) as Partial<Settings>);
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return migrateSettings({});
   }
 }
 

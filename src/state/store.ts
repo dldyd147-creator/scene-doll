@@ -63,7 +63,7 @@ export interface StoreState extends Document {
   /** 컷 번호가 바뀌어 저장소의 썸네일 파일을 모두 다시 써야 함 */
   thumbnailsRenumbered: boolean;
   /** 시작 화면(작품 관리) / 편집 화면 */
-  screen: 'start' | 'editor';
+  screen: 'welcome' | 'start' | 'editor';
   /** 남이 잠근 회차를 보는 중(공유 저장소): 컷 편집·확정·저장이 막힌다 */
   readOnly: boolean;
   /** 캐릭터 관리 대화상자가 열린 작품코드(null이면 닫힘) */
@@ -118,7 +118,7 @@ export interface StoreState extends Document {
   setSaveError: (msg: string | null) => void;
   setStatusHint: (hint: string) => void;
   snapshotDocument: () => Document;
-  setScreen: (screen: 'start' | 'editor') => void;
+  setScreen: (screen: 'welcome' | 'start' | 'editor') => void;
   setReadOnly: (on: boolean) => void;
   setCharacterManagerFor: (code: string | null) => void;
   /** 저장소에서 다시 읽은 캐릭터로 바꾼다. 아직 저장 안 된 임시 캐릭터는 남긴다 */
