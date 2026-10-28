@@ -1299,8 +1299,21 @@ code {
 
 /* ---------- 핸드 오퍼레이터 ---------- */
 
+.hand-win-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
 .modal.hand-op {
+  position: fixed;
   width: 860px;
+  pointer-events: auto;
+}
+.hand-win-bar {
+  cursor: move;
+  user-select: none;
+  touch-action: none;
 }
 .hand-layout {
   display: grid;
@@ -1749,44 +1762,67 @@ button.script-import:hover {
   filter: invert(1);
 }
 
-.body-sliders {
+.spine-handle {
   position: absolute;
   left: 0;
   top: 0;
   z-index: 6;
-  width: 208px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  font-size: 11px;
+  width: 0;
+  height: 0;
 }
-.body-sliders.folded {
-  width: auto;
-  padding: 2px 4px;
+.spine-dot {
+  position: absolute;
+  left: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: color-mix(in srgb, var(--accent) 80%, transparent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
 }
-.body-sliders .body-fold {
-  padding: 0 4px;
-  border: 0;
-  background: none;
-  font-size: 11px;
-  font-weight: 600;
+.spine-dot.active {
+  background: var(--accent);
 }
-.body-row {
-  display: grid;
-  grid-template-columns: 62px 1fr 32px;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
+.spine-track {
+  position: absolute;
+  left: -14px;
+  top: 0;
+  transform: translateY(-50%);
+  width: 28px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  backdrop-filter: blur(2px);
+  touch-action: none;
+  cursor: ns-resize;
 }
-.body-row input[type='range'] {
-  width: 100%;
-  min-width: 0;
+.spine-thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 75%, transparent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
-.body-row .val {
-  text-align: right;
+.spine-hint {
+  position: absolute;
+  left: 34px;
+  font-size: 10px;
   color: var(--muted);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.spine-hint.up {
+  top: 2px;
+}
+.spine-hint.down {
+  bottom: 2px;
 }
 .hand-controls .slider-row {
   grid-template-columns: 64px minmax(0, 1fr) 44px;

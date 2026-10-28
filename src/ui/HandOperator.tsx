@@ -9,11 +9,24 @@ import { Icon } from './icons';
 import { useLibrary } from './library';
 
 const VIEW = 380;
+const POS_KEY = 'scene-doll.handOperator.pos';
+/** 손 확대 보기는 손바닥 쪽 정면에 고정한다(돌려 보지 않는다) */
+const FRONT = { yaw: 0, pitch: 0 };
+
+function loadPos(): { x: number; y: number } {
+  try {
+    const v = JSON.parse(localStorage.getItem(POS_KEY) ?? 'null');
+    if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) return v;
+  } catch {
+    /* 저장 불가 환경 */
+  }
+  return { x: Math.max(8, window.innerWidth - 900), y: 70 };
+}
 const HAND_LABEL: Record<Hand, string> = { left: '왼손', right: '오른손' };
 
 /**
  * 핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양을 손 확대 보기와 손가락별 슬라이더로 잡는다.
- * 조작뷰에서는 손목까지만 돌리고, 손가락은 여기서만 다룬다. 기본 프리셋과 저장한 손 모양(공용/손포즈)을 불러오고 저장한다.
+ * 정면에 고정한 손 하나만 편집하고, 창은 제목줄을 끌어 마음대로 옮긴다(뒤의 조작뷰는 그대로 쓸 수 있다). 기본 프리셋과 저장한 손 모양(공용/손포즈)을 불러오고 저장한다.
  */
 export function HandOperator({ engine }: { engine: Engine }) {
   const open = useStore((s) => s.handOperatorOpen);
@@ -30,10 +43,11 @@ export function HandOperator({ engine }: { engine: Engine }) {
   const [amounts, setAmounts] = useState<FingerAmounts>(OPEN_AMOUNTS);
   const [noFingers, setNoFingers] = useState(false);
   const [wrist, setWrist] = useState({ flex: 0, dev: 0, twist: 0 });
-  const [view, setView] = useState({ yaw: 0, pitch: 0 });
+  const view = FRONT;
+  const [pos, setPos] = useState(loadPos);
+  const winDrag = useRef<{ dx: number; dy: number } | null>(null);
   const [name, setName] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dragRef = useRef<{ x: number; y: number } | null>(null);
   const raf = useRef(0);
 
   useEffect(() => {
@@ -48,7 +62,6 @@ export function HandOperator({ engine }: { engine: Engine }) {
     setAmounts(curl ? amountsFromCurl(curl) : OPEN_AMOUNTS);
     const rig = engine.dolls.get(dollId);
     setWrist((rig && engine.readWrist(rig, hand)) || { flex: 0, dev: 0, twist: 0 });
-    setView({ yaw: 0, pitch: 0 });
   }, [open, hand, dollId, engine]);
 
   const render = useCallback(() => {
@@ -76,6 +89,16 @@ export function HandOperator({ engine }: { engine: Engine }) {
       cancelAnimationFrame(raf.current);
     };
   }, [open, scheduleRender, amounts]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key === 'Escape' && !(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'))) setOp(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, setOp]);
 
   if (!open) return null;
 
@@ -135,9 +158,31 @@ export function HandOperator({ engine }: { engine: Engine }) {
   const close = () => setOp(false);
 
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <div className="modal hand-op" onClick={(e) => e.stopPropagation()}>
-        <h2>
+    <div className="hand-win-layer">
+      <div className="modal hand-op" style={{ left: pos.x, top: pos.y }}>
+        <h2
+          className="hand-win-bar"
+          title="제목줄을 끌어 창을 옮깁니다"
+          onPointerDown={(e) => {
+            if ((e.target as HTMLElement).closest('button')) return;
+            winDrag.current = { dx: e.clientX - pos.x, dy: e.clientY - pos.y };
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            const d = winDrag.current;
+            if (!d) return;
+            setPos({ x: Math.min(window.innerWidth - 120, Math.max(-600, e.clientX - d.dx)), y: Math.min(window.innerHeight - 40, Math.max(0, e.clientY - d.dy)) });
+          }}
+          onPointerUp={() => {
+            if (!winDrag.current) return;
+            winDrag.current = null;
+            try {
+              localStorage.setItem(POS_KEY, JSON.stringify(pos));
+            } catch {
+              /* 저장 불가 환경 */
+            }
+          }}
+        >
           핸드 오퍼레이터 <span className="muted small">{chrName ?? '돌을 선택하세요'}</span>
           <span className="segmented" style={{ marginLeft: 12 }}>
             <button className={hand === 'left' ? 'active' : ''} onClick={() => setOp(true, 'left')}>
@@ -160,23 +205,9 @@ export function HandOperator({ engine }: { engine: Engine }) {
                 ref={canvasRef}
                 width={VIEW}
                 height={VIEW}
-                onPointerDown={(e) => {
-                  dragRef.current = { x: e.clientX, y: e.clientY };
-                  (e.target as HTMLElement).setPointerCapture(e.pointerId);
-                }}
-                onPointerMove={(e) => {
-                  const d = dragRef.current;
-                  if (!d) return;
-                  const dx = e.clientX - d.x;
-                  const dy = e.clientY - d.y;
-                  dragRef.current = { x: e.clientX, y: e.clientY };
-                  setView((v) => ({ yaw: v.yaw - dx * 0.01, pitch: Math.max(-1.4, Math.min(1.4, v.pitch + dy * 0.01)) }));
-                }}
-                onPointerUp={() => (dragRef.current = null)}
-                onPointerCancel={() => (dragRef.current = null)}
-                title="끌어서 돌려 보기(처음은 손바닥 쪽에서)"
+                title="손바닥 쪽 정면에 고정된 보기"
               />
-              <div className="muted small">끌어서 돌려 보기 · 손은 조작뷰에서 더블클릭해도 열립니다 · 손목·손가락은 여기서 잡습니다</div>
+              <div className="muted small">손바닥 정면 고정 · 손은 조작뷰에서 더블클릭해도 열립니다 · 제목줄을 끌어 창을 옮기세요</div>
             </div>
             <div className="hand-controls">
               <h3>손목</h3>

@@ -931,8 +931,24 @@ export class Engine {
     // 끝 방향을 잠근 경우(발 고정·끝 방향 잠금) 손목·발목 한계는 적용하지 않는다: 깊이 앉힐 때 발바닥이 바닥에 붙어 있어야 한다
     const chainBones = [chain.clavicle, chain.upper, chain.lower, keepEnd ? null : chain.end].filter((x): x is string => !!x);
     this.clampAfterChange(rig, chainBones);
+    // 사용자가 손을 끌 때 손목이 꺾인 채 따라오지 않게, 손목 굽힘·꺾임을 팔뚝 방향 쪽으로 조금씩 풀어 준다
+    if (!keepEnd && opts.shoulder !== false && chain.end.endsWith('Hand')) this.relaxWrist(rig, chain.end);
     // 발 고정(keepFeet)에서 부르는 내부 풀이(shoulder:false)는 제외하고, 사용자가 끄는 IK에서만 바닥을 지킨다
     if (opts.shoulder !== false) this.enforceFloor(rig);
+  }
+
+  /** 손목의 굽힘·좌우 꺾임을 휴식 자세(팔뚝과 일직선) 쪽으로 한 걸음 푼다. 비틀기는 그대로 */
+  private relaxWrist(rig: DollRig, hand: string): void {
+    const bone = rig.skel.bones.get(hand);
+    if (!bone) return;
+    const restLocal = this.wristRestLocal(rig, hand);
+    const own = restLocal.clone().invert().multiply(bone.quaternion);
+    const e = new Euler().setFromQuaternion(own, 'YXZ');
+    const keep = 0.7;
+    e.x *= keep;
+    e.z *= keep;
+    bone.quaternion.copy(restLocal.multiply(new Quaternion().setFromEuler(e)));
+    bone.updateWorldMatrix(false, true);
   }
 
   /** 돌 전체를 바닥 수직축으로 돌린다 */
@@ -1477,6 +1493,29 @@ export class Engine {
     if (!this.belowFloor(rig)) return false;
     this.enforceFloor(rig);
     return true;
+  }
+
+  /**
+   * 바닥 아래로 내려간 발을 바닥에 붙인다. 돌은 그대로 두고 다리를 접어(IK) 발바닥만 바닥에 닿게 하므로 자세가 바뀐다.
+   * 다리가 못 닿아 몸이 아직 바닥 아래면 그만큼만 올린다. 바꾼 게 있으면 true
+   */
+  snapFeetToFloor(rig: DollRig): boolean {
+    if (!this.settings.floorLock) return false;
+    rig.root.updateMatrixWorld(true);
+    let changed = false;
+    for (const eff of ['LeftFoot', 'RightFoot']) {
+      if (!rig.skel.bones.has(eff)) continue;
+      const ankle = (rig.skel.rest.get(eff)?.pos.y ?? 0) * rig.root.scale.x;
+      const pos = rig.worldPos(eff);
+      if (pos.y >= ankle - 0.002) continue;
+      this.solveIk(rig, eff, pos, { shoulder: false, keepEndOrientation: true });
+      changed = true;
+    }
+    if (this.belowFloor(rig)) {
+      this.enforceFloor(rig);
+      changed = true;
+    }
+    return changed;
   }
 
   /** 바닥 뚫기 금지: 몸의 가장 낮은 점이 바닥 아래면 돌 전체를 올린다 */

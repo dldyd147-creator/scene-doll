@@ -49,6 +49,12 @@ interface ModalState {
 
 const DRAG_THRESHOLD_PX = 3;
 
+/** 손 뼈(손가락 제외) → 그 손의 IK 끝점. 손목·손을 잡으면 손목이 꺾이지 않게 IK로 옮긴다 */
+function handEffector(bone: string): string | null {
+  const m = /^(Left|Right)Hand$/.exec(bone);
+  return m ? `${m[1]}Hand` : null;
+}
+
 /** 발·발끝 뼈 → 그 발의 IK 끝점. 발은 관절을 돌리지 않고 IK로만 옮긴다 */
 function footEffector(bone: string): string | null {
   const m = /^(Left|Right)(Foot|ToeBase|Toe_End)$/.exec(bone);
@@ -257,7 +263,7 @@ export class Interaction {
 
   /** 손·발 IK 끌기 시작. 발이면 바닥 아래로 내려가 있던 돌을 먼저 바닥에 붙인다 */
   private beginIk(rig: DollRig, effector: string, at: Vector3): void {
-    const lifted = effector.endsWith('Foot') && this.engine.settleOnFloor(rig);
+    const lifted = effector.endsWith('Foot') && this.engine.snapFeetToFloor(rig);
     this.state = { kind: 'ik', rig, effector, plane: this.viewPlaneAt(at), moved: lifted };
   }
 
@@ -314,13 +320,21 @@ export class Interaction {
       case 'part': {
         const isRoot = p.bone === p.rig.skel.order[0];
         sel({ dollId: p.rig.id, bone: isRoot ? null : p.bone });
-        const foot = footEffector(p.bone);
+        const limb = footEffector(p.bone) ?? handEffector(p.bone);
         if (isRoot) this.beginHipMove(p.rig, p.point);
-        else if (foot && p.rig.effectors.includes(foot)) {
-          sel({ dollId: p.rig.id, bone: IK_CHAINS[foot].end });
-          p.rig.setEffectorState(foot, 'active');
-          this.beginIk(p.rig, foot, p.rig.worldPos(IK_CHAINS[foot].end));
-        } else this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point: p.point, x: e.clientX, y: e.clientY, alt: e.altKey };
+        else if (limb && p.rig.effectors.includes(limb)) {
+          sel({ dollId: p.rig.id, bone: IK_CHAINS[limb].end });
+          p.rig.setEffectorState(limb, 'active');
+          this.beginIk(p.rig, limb, p.rig.worldPos(IK_CHAINS[limb].end));
+        } else {
+          // 정강이(무릎 아래)를 만져도 바닥 아래로 내려간 발은 바닥에 붙는다. 붙으면서 움직인 만큼 잡은 점도 따라 옮긴다
+          let point = p.point;
+          if (/^(Left|Right)Leg$/.test(p.bone)) {
+            const before = p.rig.worldPos(p.bone);
+            if (this.engine.snapFeetToFloor(p.rig)) point = point.clone().add(p.rig.worldPos(p.bone).sub(before));
+          }
+          this.state = { kind: 'pending', rig: p.rig, bone: p.bone, point, x: e.clientX, y: e.clientY, alt: e.altKey };
+        }
         break;
       }
     }
@@ -533,7 +547,7 @@ export class Interaction {
     if (!m) return;
     const what = 'camera' in m.target ? '원고 카메라' : 'prop' in m.target ? '소품' : '돌';
     const axis = m.axis ? `${AXIS_LABEL[m.axis]} 고정` : m.kind === 'move' ? '바닥 평면' : 'Z축(위아래) 둘레';
-    const free = m.free && 'rig' in m.target ? ' · 바닥 아래로 내려가도 됨(발을 다시 잡으면 바닥에 붙음)' : '';
+    const free = (m.free || (m.kind === 'move' && m.axis === 'y')) && 'rig' in m.target ? ' · 바닥 아래로 내려가도 됨(발을 만지면 발이 바닥에 붙음)' : '';
     this.engine.callbacks.hint(`${what} ${m.kind === 'move' ? '이동' : '회전'} · ${axis}${free} · X/Y/Z: 축 고정(Z가 위아래) · 클릭/Enter: 확정 · Esc/우클릭: 취소`);
   }
 
@@ -635,7 +649,8 @@ export class Interaction {
       obj.updateMatrixWorld(true);
     }
     // G/R은 돌을 통째로 옮기고 돌릴 뿐 자세(관절)는 건드리지 않는다. 바닥 아래로만 안 내려가게 한다(M 자유 이동은 제외)
-    if ('rig' in m.target && !m.free) this.engine.enforceFloor(m.target.rig);
+    // Z(위아래) 이동은 땅속으로 내려가도 막지 않는다
+    if ('rig' in m.target && !m.free && !(m.kind === 'move' && m.axis === 'y')) this.engine.enforceFloor(m.target.rig);
   }
 
   private endModal(): void {
