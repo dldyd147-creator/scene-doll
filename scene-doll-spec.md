@@ -645,7 +645,7 @@ tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/wo
 ### API 목록과 키
 - 설정 > 이미지 생성에 'API 목록'이 있다. 항목 = 서비스 종류(Venice / BFL 직접 / OpenAI / 사용자 정의) + 표시 이름 + 모델 id + 키 상태. 라디오 버튼 한 번으로 현재 항목을 바꾼다. 모의 엔진도 항목이다(키 불필요).
 - 미리 만들어 두는 항목: ① **베니스 · Flux 3 (flux-3-image-edit)** — 기본값 ② **BFL 직접 · Flux 3 (flux-3-image)** ③ OpenAI · gpt-image-2.5-sunburst ④ 모의 엔진. 키가 없으면 '키 필요'로 표시하고, 선택은 되지만 생성 때 설정 안내가 뜬다. 사용자 정의는 OpenAI 호환 `/images/edits` 주소를 넣는 항목이다(추가·삭제 가능, 기본 항목은 삭제 불가).
-- **키는 화면에 다시 보이지 않는다.** 붙여넣기 → 저장 → '설정됨 / 바꾸기 / 지우기'만 표시한다. 저장은 Electron `safeStorage`(윈도우 계정 DPAPI)로 암호화해 `%APPDATA%\씬 돌\keys.json`에 둔다. 작업 폴더·로그·깃·`localStorage`에는 어떤 형태로도 남기지 않는다(연결설정.json에도 안 쓴다). 메인 프로세스만 복호화하며 렌더러로는 '설정 여부'만 넘어간다. 암호화를 쓸 수 없는 환경(`safeStorage.isEncryptionAvailable()` false)이면 키 저장을 거부한다.
+- **키는 화면에 다시 보이지 않는다.** 붙여넣기 → 저장 → '설정됨 / 바꾸기 / 지우기'만 표시한다. 저장은 Electron `safeStorage`의 비동기 API(`encryptStringAsync`, 윈도우 계정 DPAPI — 동기 API는 폐지 예고)로 암호화해 `%APPDATA%\씬 돌\keys.json`에 둔다. 작업 폴더·로그·깃·`localStorage`에는 어떤 형태로도 남기지 않는다(연결설정.json에도 안 쓴다). 메인 프로세스만 복호화하며 렌더러로는 '설정 여부'만 넘어간다. 암호화를 쓸 수 없는 환경(`safeStorage.isEncryptionAvailable()` false)이면 키 저장을 거부한다.
 - 호출은 메인 프로세스(`electron/generate.ts`)가 서비스 어댑터(`src/generate/providers/`)로 직접 한다. 웹 배포판은 기존대로 Worker 경유(OpenAI·베니스만). BFL 직접은 데스크톱 전용이다.
 
 ### BFL 직접 Flux 3 (docs.bfl.ml 원문 확인, 2026-10-28)
@@ -670,7 +670,7 @@ tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/wo
 - 용도: 쌓인 자산을 나중에 다른 곳으로 옮기거나 합칠 파일 하나. 웹 배포판에도 같은 내보내기/불러오기를 넣어 지금 브라우저·공유 저장소의 데이터를 새 프로그램으로 옮기는 길을 만든다(작품 목록 화면 버튼).
 - 형식: zip(`fflate`). 최상위 `manifest.json` + `data/` 아래에 작업 폴더와 같은 상대 경로. 매니페스트: `{ format: 'scene-doll-package', version: 1, exportedAt, app, includes: {shared, generated, output}, works: [{code, name, updatedAt, episodes, characters, files, bytes}], shared: {scenes, poses, handPoses, props}, files, bytes }`. 상위 버전(`version` > 지원)은 불러오기를 거부한다.
 - 담는 것: 선택한 작품의 `작품/{코드}/**`(작품·캐릭터·레퍼런스·회차·컷(돌 설정·포즈·카메라)·썸네일), `공용/**`(씬·포즈·손포즈·소품·소품 GLB, 끌 수 있음), 선택 시 `생성/{코드}/**`(후보 PNG)와 `출력/{코드}/**`(출력 PNG). 패키지(`패키지/`)는 다시 만들 수 있어 제외. **`생성/연결설정.json`(예전 연결 토큰)과 API 키는 어떤 경우에도 담지 않는다.**
-- 내보내기: 작품 체크(전체/일부) · 공용 포함 · 생성 후보 포함 · 출력 포함 → 용량 미리 계산 → 저장 위치 선택(데스크톱은 저장 대화상자, 웹은 다운로드).
+- 내보내기: 작품 체크(전체/일부) · 공용 포함 · 생성 후보 포함 · 출력 포함 → 만든 뒤 작품 수·파일 수·용량을 보여 주고 저장 위치 선택(데스크톱은 저장 대화상자, 웹은 다운로드). 저장소 백엔드에 파일 크기 조회가 없어 용량은 미리 계산하지 않고 만든 뒤에 표시한다.
 - 불러오기: 파일 선택 → **요약**(작품 n개·캐릭터 n명·씬/포즈/소품 n개·용량·내보낸 시각) → 작품 코드가 겹치는 작품마다 처리 선택 → 실행 → 결과(추가·갱신·건너뜀 수).
 - **합치기 규칙** (`src/transfer/merge.ts`, 시험 있음):
   1. 작품 코드가 현재 작업 폴더에 없으면 그대로 추가한다.
@@ -682,3 +682,19 @@ tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/wo
 
 ### 구현 위치
 `electron/`(main·preload·keystore·generate·fs), `src/native.ts`(타입·감지), `src/features.ts`, `src/storage/electronBackend.ts`, `src/generate/apiList.ts`·`providers/`, `src/transfer/`, `src/ui/ApiListSettings.tsx`·`TransferDialog.tsx`·`WelcomeScreen.tsx`. 빌드: `npm run desktop:dev`(개발 실행) · `npm run desktop:dist`(설치 파일). 설치 파일 빌드·실행 결과는 아래 '검증' 절에 적는다.
+
+### 7단계 검증 (2026-10-28)
+- **자동 시험**: `npx tsc -b` 통과, `npm test` 25개 파일 153개 통과. 새 시험: 합치기 규칙(`transfer/merge.test.ts`)·패키지 왕복(`transfer/package.test.ts`: 빈 폴더로 가져오기 → 내용 동일, 새로운 쪽 승, 기존이 더 새로우면 유지, 건너뛰기·덮어쓰기·둘 다 남기기, 키 파일 제외)·API 목록·설정 이전·키 마스킹(`generate/apiList.test.ts`)·어댑터(`generate/providers/providers.test.ts`: BFL 제출→폴링→내려받기·`x-key`·모더레이션·402·장수 초과, 베니스·OpenAI 요청 형식)·작업 폴더 입출력(경로 이탈 거부, 임시 파일 안 남음)·키 보관소(평문이 파일에 없음, 암호화 불가 시 저장 거부, 오류 문구에서 키 제거)(`electron/electron.test.ts`).
+- **Electron 개발·빌드 실행**: CDP로 화면을 조작해 확인했다. 첫 실행 환영 화면 → 작업 폴더 지정 → 작품 만들기(`작품/ACS/…` 파일이 생김) → 회차 열기(3D·WebGL 정상) → 돌 꺼내기·저장(캐릭터·컷 JSON) → **이동 파일 내보내기 → 다른 작업 폴더로 바꿔 불러오기 → 폴더 비교 결과 바이트 단위로 동일** → 같은 파일을 다시 불러오기(합치기: 4개 모두 유지) → 덮어쓰기(갱신 4) → 둘 다 남기기(ACS→ACA, 경로·`code`·`workCode` 변경 확인). API 목록에서 사용자 정의 항목을 추가하고 키를 넣으면 '설정됨'으로 바뀌고 페이지 HTML에 키가 없으며, `keys.json`은 DPAPI 암호문(키 문자열 0회 등장)이었다. 로컬 모의 서버(OpenAI 호환 `/images/edits`)로 생성을 호출해 저장한 키가 `Authorization: Bearer`로 정확히 전달되고 이미지가 돌아오는 것, 키 없는 항목은 설정 안내로 막히는 것을 확인했다. 앱 화면에서 외부 주소(NTT 서버)를 부르는 요청이 CORS 없이 나가는 것도 모의 서버로 확인했다.
+- **발견·수정**: 설정 창이 열리자마자 화면 전체가 사라졌다(React #185). API 목록 컴포넌트가 선택자에서 매번 새 배열을 만들어 무한 렌더였다 → `useMemo`로 고쳤다. 웹 배포판 쪽에서도 같은 컴포넌트를 쓰므로 웹에서 설정을 열어 확인했다(BFL 항목은 '데스크톱 전용'으로 비활성).
+- **설치 파일**: `npm run desktop:dist` → `release/SceneDoll-Setup-0.7.0.exe` 약 117MB(Electron 런타임이 대부분, 앱 코드 `app.asar` 5MB). 런타임 의존성은 vite가 화면에 묶으므로 `devDependencies`로 옮겨 설치 파일에서 뺐다. **무인 설치(`/S`)로 8초에 설치**됐고 `%LOCALAPPDATA%\Programs\scene-doll`에 풀렸으며 바탕화면 바로가기·제거 항목이 생겼다. 설치된 프로그램을 실행해 환영 화면 → 작업 폴더 → 작품 만들기 → 편집 화면(3D)까지 확인한 뒤 무인 제거(`/currentuser /S`)해 되돌렸다. 코드 서명이 없어 SmartScreen 경고가 뜬다.
+- **웹 배포판**: 같은 빌드를 웹으로 열어 공유 저장소 UI가 그대로 있고 `이동 파일` 버튼이 추가된 것을 확인했다.
+
+### 사용자가 정하거나 확인할 것
+1. **실제 키로 호출**: 베니스·BFL 직접·OpenAI 실제 호출은 하지 않았다(모의 서버로 경로만 확인). 첫 실사용에서 베니스 `flux-3-image-edit`가 격자+레퍼런스를 받아들이는지, BFL 직접이 `aspect_ratio`+`resolution` 조합과 `grounding:false`를 받아들이는지 확인해야 한다. BFL이 거부하면 응답 문구가 화면에 그대로 나온다.
+2. **BFL 가격**: 크레딧 단가를 문서 본문에서 확인하지 못했다. '1K 약 0.05달러'는 미확인이다. 첫 호출 후 화면에 나오는 크레딧(약 달러)으로 확인한다.
+3. **BFL 모더레이션**: `safety_tolerance`는 보내지 않는다(기본 2). 계정·조직 쪽 한도는 확인하지 못했다. 422 거부가 나면 '생성 거부'로 표시된다.
+4. **코드 서명**: 없어서 SmartScreen 경고가 뜬다. 서명 인증서(연 수십만 원)를 살지 정해야 한다. 회사 PC의 앱 설치 정책도 확인이 필요하다.
+5. **Releases 발행**: `gh release create` 절차만 README에 적었고 실제 발행은 하지 않았다.
+6. **묶음 사이 캐릭터 일관성**(미검증), Nano Banana 시험 뒤 API 목록에 항목 추가.
+7. NTT 서버 호출을 설치형에서 실제 서버로는 시험하지 않았다(CORS 처리는 모의 서버로 확인).

@@ -15,15 +15,8 @@
     "desktop:start": "npm run build && npm run electron:build && electron .",
     "desktop:dist": "npm run build && npm run electron:build && electron-builder --win nsis --publish never"
   },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
-    "fflate": "^0.8.3",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "three": "^0.186.1",
-    "zustand": "^5.0.16"
-  },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -34,11 +27,16 @@
     "electron": "^45.1.0",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
+    "fflate": "^0.8.3",
     "gh-pages": "^6.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.186.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5",
-    "wait-on": "^9.5.1"
+    "wait-on": "^9.5.1",
+    "zustand": "^5.0.16"
   },
   "main": "electron-dist/main.cjs",
   "description": "씬 돌 — 3D 돌 콘티 도구",
@@ -76,5 +74,6 @@
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true
     }
-  }
+  },
+  "dependencies": {}
 }
