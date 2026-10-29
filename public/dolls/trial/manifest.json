@@ -1,1 +1,4 @@
-[]
+[
+  { "id": "trial_ch47", "name": "시험 Ch47(믹사모)", "gender": "female", "baseHeightCm": 162, "file": "Ch47_nonPBR.fbx" },
+  { "id": "trial_ch12", "name": "시험 Ch12(믹사모)", "gender": "male", "baseHeightCm": 175, "file": "Ch12_nonPBR.fbx" }
+]

@@ -185,7 +185,19 @@ export function buildSkeleton(specList: BoneSpec[]): BuiltSkeleton {
 /** GLB 뼈 이름을 표준 이름으로: 매핑표 → mixamorig 접두어 제거 */
 export function normalizeBoneName(name: string, boneMap: Record<string, string>): string {
   if (boneMap[name]) return boneMap[name];
-  return name.replace(/^mixamorig[:_]?/i, '');
+  return name.replace(/^mixamorig\d*[:_]?/i, '');
+}
+
+/** 같은 이름의 겹친 뼈를 건너뛰고 실제 자식 뼈를 모은다 */
+function realChildren(b: Bone, boneMap: Record<string, string>): Bone[] {
+  const me = normalizeBoneName(b.name, boneMap);
+  const out: Bone[] = [];
+  for (const c of b.children) {
+    if (!(c as Bone).isBone) continue;
+    if (normalizeBoneName(c.name, boneMap) === me) out.push(...realChildren(c as Bone, boneMap));
+    else out.push(c as Bone);
+  }
+  return out;
 }
 
 /**
@@ -208,7 +220,8 @@ export function skeletonFromHierarchy(rootBone: Bone, boneMap: Record<string, st
     const quat = new Quaternion();
     m.decompose(pos, quat, scale);
     // 방향은 트위스트 뼈가 아닌 첫 자식 뼈 쪽. 없으면 부모 방향을 물려받는다
-    const childBones = b.children.filter((c) => (c as Bone).isBone) as Bone[];
+    // 같은 이름의 뼈가 겹겹이 이어진 경우(일부 믹사모 내보내기)는 한 뼈로 보고, 그 자식들을 이 뼈의 자식으로 본다
+    const childBones = realChildren(b, boneMap);
     const mainChild = childBones.find((c) => !isDrivenBone(normalizeBoneName(c.name, boneMap))) ?? childBones[0];
     let length = 0;
     const dir = parentDir.clone();
