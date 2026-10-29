@@ -1811,48 +1811,35 @@ button.script-import:hover {
   border: 2px solid #fff;
   background: color-mix(in srgb, var(--accent) 80%, transparent);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
+  cursor: ns-resize;
+  touch-action: none;
 }
 .spine-dot.active {
   background: var(--accent);
 }
-.spine-track {
+.spine-hip {
   position: absolute;
-  left: -14px;
-  top: 0;
-  transform: translateY(-50%);
-  width: 28px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--panel) 55%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  backdrop-filter: blur(2px);
-  touch-action: none;
+  left: -9px;
+  top: 14px;
+  width: 18px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
   cursor: ns-resize;
+  touch-action: none;
 }
-.spine-thumb {
+.spine-hip::after {
+  content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--accent) 75%, transparent);
-  border: 2px solid #fff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  inset: 2px 3px 4px;
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
-.spine-hint {
-  position: absolute;
-  left: 34px;
-  font-size: 10px;
-  color: var(--muted);
-  white-space: nowrap;
-  pointer-events: none;
-}
-.spine-hint.up {
-  top: 2px;
-}
-.spine-hint.down {
-  bottom: 2px;
+.spine-hip.active::after {
+  background: var(--accent);
 }
 .hand-controls .slider-row {
   grid-template-columns: 64px minmax(0, 1fr) 44px;

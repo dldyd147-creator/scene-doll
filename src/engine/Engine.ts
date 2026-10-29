@@ -1044,6 +1044,25 @@ export class Engine {
     this.enforceFloor(rig);
   }
 
+  /**
+   * 고관절 숙임: 다리는 그대로 두고 골반 위 상체 전체를 앞뒤로 숙인다(deltaDeg 양수 = 숙임).
+   * 골반 위 뼈는 함께 돌리고 다리 뼈는 원래 방향을 되돌린 뒤, 발을 기억해 둔 자리(feet)에 다시 푼다
+   */
+  nudgeHipHinge(rig: DollRig, deltaDeg: number, feet: Map<string, Vector3> | null): void {
+    if (!deltaDeg) return;
+    const q = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), MathUtils.degToRad(deltaDeg));
+    rig.root.updateMatrixWorld(true);
+    const orig = rig.jointDeltas();
+    const isLeg = (n: string) => /^(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End)$/.test(n);
+    for (const name of rig.skel.order) {
+      const d = orig.get(name)!;
+      rig.setJointDelta(name, isLeg(name) ? d : q.clone().multiply(d));
+    }
+    rig.root.updateMatrixWorld(true);
+    this.keepFeet(rig, feet);
+    this.enforceFloor(rig);
+  }
+
   private wristRestLocal(rig: DollRig, bone: string): Quaternion {
     const rest = rig.skel.rest.get(bone)!.quat;
     const parent = rig.skel.parents.get(bone);

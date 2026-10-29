@@ -20,6 +20,7 @@ type Pick =
   | { kind: 'ik'; rig: DollRig; effector: string; pos: Vector3 }
   | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
   | { kind: 'toe'; rig: DollRig; foot: string; pos: Vector3 }
+  | { kind: 'tip'; rig: DollRig; wrist: string; hand: 'left' | 'right'; pos: Vector3 }
   | { kind: 'camera'; point: Vector3 }
   | { kind: 'prop'; prop: PropObject; point: Vector3 }
   | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
@@ -195,6 +196,16 @@ export class Interaction {
         }
       }
       if (toe) return toe;
+      // 손끝 제어점
+      for (const h of selected.handDots) {
+        const pos = selected.fingerTipPos(h);
+        const d = this.screenDist(e, pos);
+        if (d < td && !this.occluded(pos, 0.04 * s, targets)) {
+          td = d;
+          toe = { kind: 'tip', rig: selected, wrist: h.wrist, hand: h.hand, pos };
+        }
+      }
+      if (toe) return toe;
     }
 
     // 3) 관절점(선택한 돌만)
@@ -337,6 +348,11 @@ export class Interaction {
         // 발끝을 끌면 발목 관절이 돌아 발끝이 커서를 따라간다(발 방향·발목 꺾기)
         sel({ dollId: p.rig.id, bone: p.foot });
         this.state = { kind: 'pending', rig: p.rig, bone: p.foot, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
+        break;
+      case 'tip':
+        // 손끝을 끌면 손목 관절이 돌아 손끝이 커서를 따라간다(손 방향). 더블클릭하면 핸드 오퍼레이터
+        sel({ dollId: p.rig.id, bone: p.wrist });
+        this.state = { kind: 'pending', rig: p.rig, bone: p.wrist, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       case 'camera': {
         sel({ dollId: null, bone: null, camera: true });
@@ -510,6 +526,7 @@ export class Interaction {
     let bone: string | null = null;
     if (p?.kind === 'ik') bone = IK_CHAINS[p.effector].end;
     else if (p?.kind === 'part') bone = p.bone;
+    else if (p?.kind === 'tip') bone = p.wrist;
     const m = bone ? /^(Left|Right)Hand/.exec(bone) : null;
     if (m) this.engine.callbacks.openHand(m[1] === 'Left' ? 'left' : 'right');
   };
@@ -772,6 +789,10 @@ export class Interaction {
       case 'toe':
         this.el.style.cursor = 'grab';
         hint('발끝 · 끌면 발목이 돌아 발 방향이 바뀝니다(시점을 돌리면 다른 방향으로도 꺾임) · 발 전체 이동은 발 IK 핸들');
+        return;
+      case 'tip':
+        this.el.style.cursor = 'grab';
+        hint('손끝 · 끌면 손목이 돌아 손 방향이 바뀝니다 · 더블클릭: 핸드 오퍼레이터(손가락·손목)');
         return;
       case 'camera':
         this.el.style.cursor = 'move';

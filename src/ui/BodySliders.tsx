@@ -1,34 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Vector3 } from 'three';
 import type { Engine } from '../engine/Engine';
 import { useStore } from '../state/store';
 
-/** 슬라이더를 끌 때 화면 100px당 허리가 도는 각도 */
+/** 버튼을 끌 때 화면 100px당 도는 각도 */
 const DEG_PER_100PX = 60;
-const TRACK = 150;
+/** 버튼이 따라 움직이는 최대 거리(px) */
+const MAX_TRAVEL = 70;
+
+type Kind = 'spine' | 'hip';
 
 /**
- * 척추 제어점: 선택한 돌의 가슴께에 상시로 떠 있는 점. 누르면 그 자리에 위아래 반투명 슬라이더가 열린다.
- * 위로 올리면 허리를 뒤로 젖히고, 아래로 내리면 숙인다. 놓으면 손잡이는 가운데로 돌아가고 자세만 남는다(끄는 만큼 더 도는 상대 조작)
+ * 척추 제어점: 선택한 돌의 가슴께에 상시로 떠 있는 두 버튼. 누른 채 그대로 끌면 된다(따로 열 것 없음).
+ * - 네모(■): 허리를 위로 끌면 뒤로 젖히고, 아래로 끌면 숙인다
+ * - 역삼각(▼): 다리는 가만히 두고 상체 전체를 고관절에서 숙이거나 젖힌다(아래로 = 숙임)
+ * 놓으면 버튼은 제자리로 돌아오고 자세만 남는다(끄는 만큼 더 도는 상대 조작)
  */
 export function BodySliders({ engine }: { engine: Engine }) {
   const dollId = useStore((s) => s.selection.dollId);
-  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState<Kind | null>(null);
   const [offset, setOffset] = useState(0);
   const box = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ startY: number; lastY: number } | null>(null);
+  const drag = useRef<{ kind: Kind; startY: number; lastY: number; feet: Map<string, Vector3> | null } | null>(null);
 
-  useEffect(() => setOpen(false), [dollId]);
-
-  // 슬라이더 바깥(캔버스 등)을 누르면 슬라이더를 닫고 제어점을 다시 보인다
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (drag.current || box.current?.contains(e.target as Node)) return;
-      setOpen(false);
-    };
-    window.addEventListener('pointerdown', onDown, true);
-    return () => window.removeEventListener('pointerdown', onDown, true);
-  }, [open]);
+    setActive(null);
+    setOffset(0);
+    drag.current = null;
+  }, [dollId]);
 
   // 돌의 가슴께(화면 좌표)를 따라다닌다
   useEffect(() => {
@@ -53,10 +52,13 @@ export function BodySliders({ engine }: { engine: Engine }) {
 
   if (!dollId) return null;
 
-  const onDown = (e: React.PointerEvent) => {
+  const onDown = (kind: Kind) => (e: React.PointerEvent) => {
     e.stopPropagation();
+    e.preventDefault();
+    const rig = engine.dolls.get(dollId);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    drag.current = { startY: e.clientY, lastY: e.clientY };
+    drag.current = { kind, startY: e.clientY, lastY: e.clientY, feet: kind === 'hip' && rig ? engine.capturePlantedFeet(rig) : null };
+    setActive(kind);
   };
   const onMove = (e: React.PointerEvent) => {
     const d = drag.current;
@@ -65,26 +67,40 @@ export function BodySliders({ engine }: { engine: Engine }) {
     const dy = e.clientY - d.lastY;
     d.lastY = e.clientY;
     // 아래로 끌면 숙이고(+) 위로 끌면 젖힌다(−). 관절 한계에서 멈춘다
-    engine.nudgeBodyPose(rig, { part: 'bend' }, (dy / 100) * DEG_PER_100PX);
-    setOffset(Math.max(-TRACK / 2, Math.min(TRACK / 2, e.clientY - d.startY)));
+    const deg = (dy / 100) * DEG_PER_100PX;
+    if (d.kind === 'spine') engine.nudgeBodyPose(rig, { part: 'bend' }, deg);
+    else engine.nudgeHipHinge(rig, deg, d.feet);
+    setOffset(Math.max(-MAX_TRAVEL, Math.min(MAX_TRAVEL, e.clientY - d.startY)));
   };
   const onUp = () => {
     if (!drag.current) return;
     drag.current = null;
+    setActive(null);
     setOffset(0);
     engine.commitDoll(dollId);
   };
+  const move = (kind: Kind) => ({ transform: active === kind ? `translateY(${offset}px)` : undefined });
 
   return (
     <div className="spine-handle" ref={box} onPointerDown={(e) => e.stopPropagation()}>
-      {open && (
-        <div className="spine-track" style={{ height: TRACK }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} title="위로: 허리 젖힘 · 아래로: 숙임">
-          <span className="spine-hint up">젖힘</span>
-          <span className="spine-hint down">숙임</span>
-          <div className="spine-thumb" style={{ transform: `translate(-50%, calc(-50% + ${offset}px))` }} />
-        </div>
-      )}
-      {!open && <button className="spine-dot" onClick={() => setOpen(true)} title="척추 슬라이더(허리 젖힘·숙임) 열기 — 슬라이더 밖을 누르면 닫힙니다" />}
+      <button
+        className={`spine-dot${active === 'spine' ? ' active' : ''}`}
+        style={move('spine')}
+        onPointerDown={onDown('spine')}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        title="누른 채 위로: 허리 젖힘 · 아래로: 숙임"
+      />
+      <button
+        className={`spine-hip${active === 'hip' ? ' active' : ''}`}
+        style={move('hip')}
+        onPointerDown={onDown('hip')}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={onUp}
+        title="누른 채 아래로: 다리는 그대로 두고 상체 전체를 숙임 · 위로: 젖힘"
+      />
     </div>
   );
 }
