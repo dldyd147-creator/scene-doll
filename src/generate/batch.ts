@@ -1,5 +1,5 @@
 import type { Cut } from '../model/types';
-import type { GenDetail, GenPreset, GenSizeMode } from '../state/settings';
+import type { GenDetail, GenGridRef, GenPreset, GenSizeMode } from '../state/settings';
 import { pad3 } from '../storage/backend';
 import type { CutPackage } from '../ui/packager';
 import type { GenImageRole } from './engine';
@@ -389,6 +389,8 @@ export interface BatchPromptInput {
   style?: string;
   /** 그림 디테일(기본이면 문구를 더하지 않는다) */
   detail?: GenDetail;
+  /** 첨부 이미지에 투시 격자가 들어 있는지 */
+  gridRef?: GenGridRef;
 }
 
 const GENDER_LABEL = { male: '남', female: '여', other: '기타' } as const;
@@ -499,6 +501,9 @@ export function buildBatchPrompt(inp: BatchPromptInput): string {
   }
   L.push(`- ${n > 1 ? '칸 번호 숫자, ' : ''}돌의 십자선, 회색 여백은 그리지 않는다(여백은 컷 바깥이다).`);
   L.push('- 같은 색의 돌은 모든 칸에서 같은 인물이다. 레퍼런스가 있는 캐릭터는 얼굴·머리 모양·복장을 레퍼런스에 맞추고, 없는 돌은 위 지시대로 임의의 인물로 그리되 모든 칸에서 일관되게 유지한다.');
+  if (inp.gridRef && inp.gridRef !== 'off') {
+    L.push(`- 첨부 이미지의 옅은 회색 격자선(${inp.gridRef === 'both' ? '바닥 격자와 인물 뒤의 수직 벽 격자' : '바닥 격자'})은 카메라 앵글·화각·쇼트·원근을 읽기 위한 투시 참조선이다. 선 자체는 그림에 그리지 말고, 배경과 인물의 원근(수평선 높이·소실점·세로선 기울기)을 이 격자에 맞춘다.`);
+  }
   L.push('- 화면 밖 인물은 그리지 않는다. 배경은 메모·지문을 따르고, 없으면 단순하게 둔다.');
   L.push('- 대사·효과음 글자와 말풍선은 그리지 않는다.');
   return L.join('\n') + '\n';

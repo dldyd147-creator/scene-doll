@@ -4,6 +4,7 @@ import {
   DirectionalLight,
   Euler,
   GridHelper,
+  type Material,
   MathUtils,
   MOUSE,
   Object3D,
@@ -64,6 +65,11 @@ export interface OffscreenOptions {
   helpers?: boolean;
   /** 원고뷰에 보이는 바닥 격자를 그대로 그린다(컷 목록 썸네일용). 출력 PNG는 항상 격자 없음 */
   showGrid?: boolean;
+  /**
+   * AI 참조용 투시 격자: 바닥 격자를 그리고(floor), 'both'면 카메라 정면 뒤쪽에 수직 벽 격자도 그린다.
+   * 낮은 앵글에서 바닥이 안 보여도 벽 격자의 세로선 기울기로 앵글을 읽을 수 있다. 조작뷰 설정과 무관하게 켠다
+   */
+  perspectiveGrid?: 'floor' | 'both';
 }
 
 const THEME = {
@@ -138,6 +144,26 @@ export class Engine {
     this.scene.add(this.manu.camera);
     this.scene.add(this.ikProxy);
     this.scene.add(this.rotateProxy);
+  }
+
+  /** 카메라 정면 뒤쪽에 세워 두는 벽 격자(가장 먼 돌 뒤 2m). 장면에 더해 두고 그린 뒤 호출한 쪽이 치운다 */
+  private makeWallGrid(camera: PerspectiveCamera): GridHelper {
+    const fwd = camera.getWorldDirection(new Vector3());
+    const fwdH = new Vector3(fwd.x, 0, fwd.z);
+    if (fwdH.lengthSq() < 1e-6) fwdH.set(0, 0, 1);
+    fwdH.normalize();
+    let far = 3;
+    for (const rig of this.dolls.values()) far = Math.max(far, rig.root.position.clone().sub(camera.position).dot(fwdH) + 2);
+    const g = new GridHelper(20, 40, new Color(THEME.light.gridCenter), new Color(THEME.light.grid));
+    g.rotation.x = Math.PI / 2;
+    g.rotation.order = 'YXZ';
+    g.rotation.y = Math.atan2(fwdH.x, fwdH.z);
+    g.position.copy(camera.position).addScaledVector(fwdH, far);
+    g.position.y = 10;
+    g.layers.set(0);
+    this.scene.add(g);
+    g.updateMatrixWorld(true);
+    return g;
   }
 
   private makeGrid(theme: 'light' | 'dark'): GridHelper {
@@ -293,7 +319,13 @@ export class Engine {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const gridWasVisible = this.grid.visible;
-    this.grid.visible = opts.showGrid ? gridWasVisible : false;
+    const gridHadBase = this.grid.layers.isEnabled(0);
+    this.grid.visible = opts.perspectiveGrid ? true : opts.showGrid ? gridWasVisible : false;
+    let wall: GridHelper | null = null;
+    if (opts.perspectiveGrid) {
+      this.grid.layers.enable(0);
+      if (opts.perspectiveGrid === 'both') wall = this.makeWallGrid(camera);
+    }
     const linePx = Math.max(2.5, w / 400);
     for (const rig of this.dolls.values()) {
       rig.updateHelpers();
@@ -315,6 +347,12 @@ export class Engine {
     rt.dispose();
     for (const rig of this.dolls.values()) rig.setLinePx(2.5);
     this.grid.visible = gridWasVisible;
+    if (opts.perspectiveGrid && !gridHadBase) this.grid.layers.disable(0);
+    if (wall) {
+      this.scene.remove(wall);
+      wall.geometry.dispose();
+      (wall.material as Material).dispose();
+    }
     camera.layers.mask = prevMask;
     camera.aspect = prevAspect;
     camera.updateProjectionMatrix();

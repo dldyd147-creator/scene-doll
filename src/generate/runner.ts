@@ -45,7 +45,7 @@ export interface PrepareOptions {
   single: boolean;
   /** 선택한 API의 첨부 상한(없으면 MAX_INPUT_IMAGES) */
   maxImages?: number;
-  settings: Pick<Settings, 'genMaxPerBatch' | 'genPreset' | 'genCellPx' | 'genSizeMode' | 'genAttachLine' | 'genAttachMask' | 'genRefsPerCharacter' | 'genStyle' | 'genDetail'>;
+  settings: Pick<Settings, 'genMaxPerBatch' | 'genPreset' | 'genCellPx' | 'genSizeMode' | 'genAttachLine' | 'genAttachMask' | 'genRefsPerCharacter' | 'genStyle' | 'genDetail' | 'genGridRef'>;
 }
 
 export interface Progress {
@@ -125,7 +125,7 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
         await nextFrame();
         const h = Math.round(cellW * cut.aspect);
         const cam = engine.manu.camera;
-        renders.set(cut.number, preset.input === 'silhouette' ? onWhite(engine.renderPass(cam, cellW, h, 'mask')) : engine.renderToCanvas(cam, cellW, h, { background: 'white' }));
+        renders.set(cut.number, preset.input === 'silhouette' ? onWhite(engine.renderPass(cam, cellW, h, 'mask')) : engine.renderToCanvas(cam, cellW, h, { background: 'white', perspectiveGrid: st.genGridRef === 'off' ? undefined : st.genGridRef }));
         if (st.genAttachLine) lines.set(cut.number, engine.renderPass(cam, cellW, h, 'line'));
         if (st.genAttachMask) masks.set(cut.number, onWhite(engine.renderPass(cam, cellW, h, 'mask')));
         const analysis = analyzeCut(engine, cut, characters);
@@ -177,7 +177,7 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
       }
       if (truncated) warnings.push(`첨부 상한 ${maxImages}장(여유 ${room}장)을 넘어 레퍼런스 ${truncated}장을 뺐습니다`);
       const size = requestSize(layout, st.genSizeMode);
-      const prompt = buildBatchPrompt({ work: { code: work.code, name: work.name }, episode: episode.number, layout, packages, preset: st.genPreset, attachments, outputSize: size, style: st.genStyle, detail: st.genDetail });
+      const prompt = buildBatchPrompt({ work: { code: work.code, name: work.name }, episode: episode.number, layout, packages, preset: st.genPreset, attachments, outputSize: size, style: st.genStyle, detail: st.genDetail, gridRef: preset.input === 'silhouette' ? 'off' : st.genGridRef });
       out.push({ id: `b${++batchSeq}`, key: group.key, cuts: group.cuts, layout, packages, images, gridUrl: URL.createObjectURL(gridBlob), prompt, size, inputFidelity: preset.fidelity, warnings });
     }
   } finally {

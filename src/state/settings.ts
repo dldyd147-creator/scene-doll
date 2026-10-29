@@ -5,6 +5,8 @@ import { DEFAULT_SITUATION_TAGS } from '../model/library';
 export type GenEngineKind = 'mock' | 'remote';
 /** 강도 프리셋: 돌 우선 / 균형 / 프롬프트 우선 */
 export type GenPreset = 'doll' | 'balanced' | 'prompt';
+/** AI 참조 이미지에 넣는 투시 격자: 없음 / 바닥 / 바닥+벽 */
+export type GenGridRef = 'off' | 'floor' | 'both';
 /** 그림 디테일: 기본 / 디테일 줄임 / 흑백 선화 */
 export type GenDetail = 'normal' | 'simple' | 'lineart';
 /** 출력 크기: 격자 비율대로(gpt-image-2 계열) / 고정 3종 중 가까운 것(gpt-image-1.5) / API 자동 */
@@ -74,6 +76,7 @@ export interface Settings {
   genMaxPerBatch: number;
   genPreset: GenPreset;
   genDetail: GenDetail;
+  genGridRef: GenGridRef;
   genSizeMode: GenSizeMode;
   /** 격자 한 칸(컷 하나)의 목표 가로 px */
   genCellPx: number;
@@ -125,6 +128,7 @@ export const DEFAULT_SETTINGS: Settings = {
   genMaxPerBatch: 4,
   genPreset: 'balanced',
   genDetail: 'normal',
+  genGridRef: 'floor',
   genSizeMode: 'custom',
   genCellPx: 1024,
   genCandidates: 1,

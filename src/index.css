@@ -1310,6 +1310,22 @@ code {
   width: 860px;
   pointer-events: auto;
 }
+.modal.gen-float {
+  position: fixed;
+  pointer-events: auto;
+  max-height: calc(100vh - 64px);
+}
+.modal.gen-float.mini {
+  width: 380px;
+  max-height: none;
+  overflow: hidden;
+}
+.modal.gen-float.mini > *:not(h2) {
+  display: none;
+}
+.hand-win-layer .gen-zoom {
+  pointer-events: auto;
+}
 .hand-win-bar {
   cursor: move;
   user-select: none;

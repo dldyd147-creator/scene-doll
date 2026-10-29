@@ -9,7 +9,7 @@ import { estimateRemaining, estimateTotal, loadTimeHistory, perBatchSeconds, rec
 import { isDesktop } from '../native';
 import { disposeBatches, disposeOutcomes, prepareBatches, runBatches, type BatchOutcome, type PreparedBatch, type Progress } from '../generate/runner';
 import type { Cut } from '../model/types';
-import type { GenDetail, GenPreset, GenSizeMode } from '../state/settings';
+import type { GenDetail, GenGridRef, GenPreset, GenSizeMode } from '../state/settings';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
 import { paths } from '../storage/repository';
@@ -70,6 +70,8 @@ const SIZE_LABEL: Record<GenSizeMode, string> = { custom: '격자 비율', fixed
  * [묶음 생성] 탭: 대상 컷·프리셋·묶음 상한 → [묶음 준비](렌더·격자·프롬프트, 네트워크 없음) → 프롬프트 확인·수정 → [보내기] → 진행률·취소.
  * [후보 비교] 탭: 컷별 후보 썸네일, 대표 선택, 실패 표시, 실패 컷만 재생성(단독/재묶음), 컷 단독 생성.
  */
+const WIN_POS_KEY = 'scene-doll.generateWin.pos';
+
 export function GenerateDialog({ engine }: { engine: Engine }) {
   const open = useStore((s) => s.generateOpen);
   const setOpen = useStore((s) => s.setGenerateOpen);
@@ -88,6 +90,21 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const [tab, setTab] = useState<Tab>('generate');
   const [phase, setPhase] = useState<Phase>('setup');
   const [scope, setScope] = useState<Scope>('all');
+  // 떠 있는 창: 제목줄로 옮기고, 접어 둘 수 있다. 바깥(조작뷰)을 눌러도 닫히거나 생성이 취소되지 않는다
+  const [winPos, setWinPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const raw = localStorage.getItem(WIN_POS_KEY);
+      if (raw) {
+        const p = JSON.parse(raw) as { x: number; y: number };
+        if (Number.isFinite(p.x) && Number.isFinite(p.y)) return p;
+      }
+    } catch {
+      /* 저장 불가 환경 */
+    }
+    return { x: Math.max(16, Math.round((window.innerWidth - 760) / 2)), y: 48 };
+  });
+  const winDrag = useRef<{ dx: number; dy: number } | null>(null);
+  const [mini, setMini] = useState(false);
   const [single, setSingle] = useState(false);
   // 크게 보기: 새 탭(blob 주소)은 브라우저가 about:blank#blocked로 막는 일이 있어 앱 안 덮개로 연다
   const [zoom, setZoom] = useState<{ url: string; prompt?: string; title?: string } | null>(null);
@@ -282,12 +299,42 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const totalWidth = (b: PreparedBatch) => b.size === 'auto' ? `${b.layout.width}×${b.layout.height} → 자동` : b.size.replace('x', '×');
 
   return (
-    <div className="modal-backdrop" onClick={close}>
-      <div className="modal wide gen" onClick={(e) => e.stopPropagation()}>
-        <h2>
+    <div className="hand-win-layer">
+      <div className={`modal wide gen gen-float${mini ? ' mini' : ''}`} style={{ left: winPos.x, top: winPos.y }}>
+        <h2
+          className="hand-win-bar"
+          title="제목줄을 끌어 창을 옮깁니다. 생성 중에도 뒤의 조작뷰를 만질 수 있습니다"
+          onPointerDown={(e) => {
+            if ((e.target as HTMLElement).closest('button')) return;
+            winDrag.current = { dx: e.clientX - winPos.x, dy: e.clientY - winPos.y };
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            const d = winDrag.current;
+            if (!d) return;
+            setWinPos({ x: Math.min(window.innerWidth - 120, Math.max(-600, e.clientX - d.dx)), y: Math.min(window.innerHeight - 40, Math.max(0, e.clientY - d.dy)) });
+          }}
+          onPointerUp={() => {
+            if (!winDrag.current) return;
+            winDrag.current = null;
+            try {
+              localStorage.setItem(WIN_POS_KEY, JSON.stringify(winPos));
+            } catch {
+              /* 저장 불가 환경 */
+            }
+          }}
+        >
           <Icon name="sparkles" /> 이미지 생성 <span className="muted small">{gen.label} · 생성/{work.code}/{pad3(episode.number)}/</span>
+          {mini && (phase === 'preparing' || phase === 'running') && progress && (
+            <span className="small">
+              {progress.done}/{progress.total}
+            </span>
+          )}
           <span className="grow" />
-          <button className="icon close-x" onClick={close} title="닫기">
+          <button className="icon ghost" onClick={() => setMini(!mini)} title={mini ? '창 펼치기' : '창 접기(생성은 계속됩니다)'}>
+            <Icon name={mini ? 'plus' : 'minus'} />
+          </button>
+          <button className="icon close-x" onClick={close} title={busy ? '닫기(생성 중이면 취소됩니다)' : '닫기'}>
             <Icon name="close" />
           </button>
         </h2>
@@ -328,6 +375,14 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
               <span className="gen-row">
                 <Segmented value={settings.genPreset} options={PRESET_ORDER} onChange={(v: GenPreset) => update({ genPreset: v })} labels={{ doll: PRESETS.doll.label, balanced: PRESETS.balanced.label, prompt: PRESETS.prompt.label }} />
                 <span className="small muted">{PRESETS[settings.genPreset].short}</span>
+              </span>
+              <span />
+            </div>
+            <div className="setting">
+              <span>투시 격자(AI 참조)</span>
+              <span className="gen-row">
+                <Segmented value={settings.genGridRef} options={['off', 'floor', 'both'] as const} onChange={(v: GenGridRef) => update({ genGridRef: v })} labels={{ off: '끔', floor: '바닥', both: '바닥+벽' }} />
+                <span className="small muted">앵글·쇼트를 읽게 첨부 렌더에 옅은 격자를 넣음(그림에는 그리지 않게 지시)</span>
               </span>
               <span />
             </div>
