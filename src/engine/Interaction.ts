@@ -11,6 +11,7 @@ type DragState =
   | { kind: 'direct'; rig: DollRig; bone: string; pivot: Vector3; lever: Vector3; plane: Plane; moved: boolean }
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
   | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; moved: boolean }
+  | { kind: 'shoulder'; rig: DollRig; side: 'left' | 'right'; lastX: number; lastY: number; moved: boolean }
   | { kind: 'hipmove'; rig: DollRig; plane: Plane; startHit: Vector3; startPos: Vector3; feet: Map<string, Vector3>; joints: ReturnType<DollRig['getJoints']>; moved: boolean }
   | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean }
   | { kind: 'propmove'; prop: PropObject; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
@@ -299,6 +300,15 @@ export class Interaction {
           this.beginHipMove(p.rig, p.pos);
           break;
         }
+        // 어깨(쇄골·어깨 관절점)는 화면 위아래 = 어깨 올림·내림, 좌우 = 앞·뒤로 민다(시점과 무관하게 앞뒤도 된다)
+        const sh = /^(Left|Right)(Shoulder|Arm)$/.exec(p.bone);
+        if (sh) {
+          const side = sh[1] === 'Left' ? 'left' : 'right';
+          sel({ dollId: p.rig.id, bone: `${sh[1]}Shoulder` });
+          this.state = { kind: 'shoulder', rig: p.rig, side, lastX: e.clientX, lastY: e.clientY, moved: false };
+          this.el.style.cursor = 'grabbing';
+          break;
+        }
         // 관절점을 끌면 그 위 뼈를 돌려 관절이 커서를 따라간다
         const parent = p.rig.skel.parents.get(p.bone) ?? p.bone;
         // 허리 점의 위 뼈는 골반(루트)이라 몸 전체가 돌아간다: 잡아 돌리지 않고 선택만. 몸 전체 회전은 R 키(골반 기준)
@@ -400,6 +410,22 @@ export class Interaction {
         this.engine.clampAfterChange(s.rig, [s.bone]);
         return;
       }
+      case 'shoulder': {
+        const dx = e.clientX - s.lastX;
+        const dy = e.clientY - s.lastY;
+        if (!s.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+        s.lastX = e.clientX;
+        s.lastY = e.clientY;
+        // 돌의 앞쪽이 화면 오른쪽을 향하면 오른쪽으로 끌 때 앞으로, 왼쪽을 향하면 뒤로
+        const forward = new Vector3(0, 0, 1).applyQuaternion(s.rig.root.quaternion);
+        const right = new Vector3().setFromMatrixColumn(this.engine.workCamera.matrixWorld, 0);
+        const sign = forward.dot(right) >= 0 ? 1 : -1;
+        const speed = 0.4 * this.engine.settings.directDragSpeed;
+        this.engine.nudgeBodyPose(s.rig, { part: 'shoulderUp', side: s.side }, -dy * speed);
+        this.engine.nudgeBodyPose(s.rig, { part: 'shoulderFwd', side: s.side }, dx * speed * sign);
+        s.moved = true;
+        return;
+      }
       case 'ik': {
         const target = this.rayOnPlane(e, s.plane);
         if (!target) return;
@@ -479,7 +505,7 @@ export class Interaction {
   private finish(commit: boolean): void {
     const s = this.state;
     if (s.kind === 'ik') s.rig.setEffectorState(s.effector, 'normal');
-    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'hipmove';
+    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'hipmove' || s.kind === 'shoulder';
     if (commit && dollDrag && s.moved) this.engine.commitDoll(s.rig.id);
     if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
     if (s.kind === 'propmove') {

@@ -1179,15 +1179,18 @@ export class Engine {
     const rig = this.handDummy;
     rig.resetAll();
     rig.root.updateMatrixWorld(true);
+    const side = hand === 'right' ? 'Right' : 'Left';
+    const tipBone = `${side}HandMiddle3`;
+    const restLen = rig.skel.bones.has(tipBone) ? rig.worldPos(`${side}Hand`).distanceTo(rig.worldPos(tipBone)) : undefined;
     this.setWrist(rig, hand, wrist);
     const joints = fingerJointsForCurl(rig, hand, curl);
     if (joints) rig.setJoints({ ...rig.getJoints(), ...joints });
     rig.setShading(true);
     rig.setOutline(true);
-    return this.renderHandOf(rig, hand, 0, 0, width, height);
+    return this.renderHandOf(rig, hand, 0, 0, width, height, restLen);
   }
 
-  private renderHandOf(rig: DollRig, hand: Hand, yaw: number, pitch: number, width: number, height: number): HTMLCanvasElement | null {
+  private renderHandOf(rig: DollRig, hand: Hand, yaw: number, pitch: number, width: number, height: number, restLen?: number): HTMLCanvasElement | null {
     const side = hand === 'right' ? 'Right' : 'Left';
     const handBone = `${side}Hand`;
     if (!rig.skel.bones.has(handBone)) return null;
@@ -1197,8 +1200,10 @@ export class Engine {
     const tipName = `${side}HandMiddle3`;
     const knuckle = rig.skel.bones.has(midName) ? rig.worldPos(midName) : wrist.clone().add(rig.boneWorldDirection(handBone, rig.skel.rest.get(handBone)!.dir).multiplyScalar(0.09 * rig.root.scale.x));
     const tip = rig.skel.bones.has(tipName) ? rig.worldPos(tipName) : knuckle;
-    const center = wrist.clone().lerp(tip, 0.5);
-    const span = Math.max(0.14, wrist.distanceTo(tip) * 1.9);
+    // 가상 손은 손가락을 굽혀도 화면 크기·위치가 변하지 않게, 펴진 손 길이로 고정한다
+    const len = restLen ?? wrist.distanceTo(tip);
+    const center = restLen ? wrist.clone().addScaledVector(knuckle.clone().sub(wrist).normalize(), len / 2) : wrist.clone().lerp(tip, 0.5);
+    const span = Math.max(0.14, len * (restLen ? 1.5 : 1.9));
     const indexDir = rig.skel.rest.get(`${side}HandIndex1`)?.dir ?? new Vector3(side === 'Right' ? -1 : 1, 0, 0);
     const thumbDir = rig.skel.rest.get(`${side}HandThumb1`)?.dir ?? new Vector3(0, 0, 1);
     const normalW = rig.boneWorldDirection(handBone, palmNormal(side, indexDir, thumbDir)).normalize();
