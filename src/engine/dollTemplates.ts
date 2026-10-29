@@ -1,4 +1,4 @@
-import { Box3, Object3D } from 'three';
+import { Box3, type BufferGeometry, type Mesh, Object3D, type SkinnedMesh } from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { DollAsset } from '../model/types';
@@ -24,8 +24,31 @@ function normalizeFbx(scene: Object3D): Object3D {
   scene.updateMatrixWorld(true);
   const h = new Box3().setFromObject(scene);
   if (h.max.y - h.min.y > 10) {
-    scene.scale.multiplyScalar(0.01);
+    // 루트 배율로 줄이면 뼈대의 돌 공간 좌표가 cm로 남으므로, 모든 노드의 위치와 메시 좌표에 0.01을 직접 굽는다
+    const c = 0.01;
+    const geos = new Set<BufferGeometry>();
+    scene.traverse((o) => {
+      if (o !== scene) o.position.multiplyScalar(c);
+      const m = o as Mesh;
+      if (m.isMesh && !geos.has(m.geometry)) {
+        geos.add(m.geometry);
+        m.geometry.scale(c, c, c);
+        m.geometry.computeBoundingBox();
+        m.geometry.computeBoundingSphere();
+      }
+    });
     scene.updateMatrixWorld(true);
+    scene.traverse((o) => {
+      const sm = o as SkinnedMesh;
+      if (sm.isSkinnedMesh) {
+        sm.skeleton.calculateInverses();
+        sm.bind(sm.skeleton, sm.matrixWorld);
+        // 스킨 메시는 자기 경계상자를 따로 캐시한다(키 계산이 cm로 남지 않게 다시 계산)
+        (sm as unknown as { boundingBox: unknown }).boundingBox = null;
+        (sm as unknown as { boundingSphere: unknown }).boundingSphere = null;
+        sm.computeBoundingBox();
+      }
+    });
   }
   return scene;
 }
