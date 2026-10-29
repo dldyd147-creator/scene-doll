@@ -9,7 +9,7 @@ const r = (v: Vector3): number[] => v.toArray().map((x) => (Math.abs(x) < 1e-9 ?
 describe('손가락 프리셋', () => {
   it('프리셋 목록과 뼈 이름', () => {
     expect(FINGER_PRESETS.map((p) => p.id)).toEqual(['open', 'relaxed', 'grip', 'fist', 'point', 'thumbsUp']);
-    expect(fingerPreset('grip')?.curl.Index).toEqual([55, 75, 45]);
+    expect(fingerPreset('grip')?.curl.Index).toEqual([46, 66, 40]);
     expect(fingerPreset('point')?.curl.Index).toEqual([0, 0, 0]);
     expect(fingerBoneName('Right', 'Thumb', 1)).toBe('RightHandThumb1');
     expect(fingerBoneName('Left', 'Pinky', 4)).toBe('LeftHandPinky4');

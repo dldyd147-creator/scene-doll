@@ -14,8 +14,3 @@ doll-src/makehuman/**/*.blend1
 # 7단계 데스크톱 빌드 산출물(GitHub Releases로 배포)
 electron-dist
 release
-
-# 시험용 돌(구매·무료 모델, 재배포 금지)
-public/dolls/trial/*
-!public/dolls/trial/README.txt
-!public/dolls/trial/manifest.json

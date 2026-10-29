@@ -19,6 +19,7 @@ type DragState =
 type Pick =
   | { kind: 'ik'; rig: DollRig; effector: string; pos: Vector3 }
   | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
+  | { kind: 'toe'; rig: DollRig; foot: string; pos: Vector3 }
   | { kind: 'camera'; point: Vector3 }
   | { kind: 'prop'; prop: PropObject; point: Vector3 }
   | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
@@ -180,7 +181,23 @@ export class Interaction {
     }
     if (best) return best;
 
-    // 2) 관절점(선택한 돌만)
+    // 2) 발끝 제어점(선택한 돌만)
+    if (selected) {
+      let td = 10 * scale;
+      const s = selected.heightCm / 175;
+      let toe: Pick = null;
+      for (const t of selected.toeDots) {
+        const pos = selected.worldPos(t.tip);
+        const d = this.screenDist(e, pos);
+        if (d < td && !this.occluded(pos, 0.06 * s, targets)) {
+          td = d;
+          toe = { kind: 'toe', rig: selected, foot: t.foot, pos };
+        }
+      }
+      if (toe) return toe;
+    }
+
+    // 3) 관절점(선택한 돌만)
     if (selected) {
       let bd = 10 * scale;
       const s = selected.heightCm / 175;
@@ -196,19 +213,19 @@ export class Interaction {
       if (best) return best;
     }
 
-    // 3) 원고 카메라 아이콘
+    // 4) 원고 카메라 아이콘
     this.setRay(e);
     if (this.engine.manu.icon.visible) {
       const hits = _ray.intersectObjects(this.engine.manu.iconMeshes, false);
       if (hits.length) return { kind: 'camera', point: hits[0].point.clone() };
     }
 
-    // 4) 소품(손에 쥔 것은 몸과 겹치므로 더 가까운 쪽)
+    // 5) 소품(손에 쥔 것은 몸과 겹치므로 더 가까운 쪽)
     const propTargets: Object3D[] = [];
     for (const p of this.engine.props.values()) propTargets.push(...p.pickTargets);
     const propHit = propTargets.length ? _ray.intersectObjects(propTargets, false)[0] : undefined;
 
-    // 5) 몸 부위
+    // 6) 몸 부위
     const hits: Intersection[] = _ray.intersectObjects(targets, false);
     for (const hit of hits) {
       if (propHit && propHit.distance <= hit.distance) break;
@@ -316,6 +333,11 @@ export class Interaction {
         this.state = { kind: 'pending', rig: p.rig, bone: parent, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
       }
+      case 'toe':
+        // 발끝을 끌면 발목 관절이 돌아 발끝이 커서를 따라간다(발 방향·발목 꺾기)
+        sel({ dollId: p.rig.id, bone: p.foot });
+        this.state = { kind: 'pending', rig: p.rig, bone: p.foot, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
+        break;
       case 'camera': {
         sel({ dollId: null, bone: null, camera: true });
         this.state = { kind: 'camera', plane: this.viewPlaneAt(p.point), startHit: p.point, startPos: this.engine.manu.camera.position.clone(), moved: false };
@@ -747,6 +769,10 @@ export class Interaction {
         hint(isRoot(p) ? '골반 · 끌면 발을 바닥에 둔 채 몸통이 움직입니다(아래로 끌면 앉음) · 회전은 R' : waist ? '허리 · 몸 전체 회전은 R 키(골반을 축으로) 또는 회전 기즈모(E)' : `${boneLabel(p.bone)} 관절 · 끌면 관절이 커서를 따라갑니다 · E: 회전 링`);
         return;
       }
+      case 'toe':
+        this.el.style.cursor = 'grab';
+        hint('발끝 · 끌면 발목이 돌아 발 방향이 바뀝니다(시점을 돌리면 다른 방향으로도 꺾임) · 발 전체 이동은 발 IK 핸들');
+        return;
       case 'camera':
         this.el.style.cursor = 'move';
         hint('원고 카메라 · 끌어서 이동 · G: 이동 · R: 회전 · W/E: 기즈모');

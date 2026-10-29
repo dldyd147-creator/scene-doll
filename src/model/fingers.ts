@@ -15,8 +15,8 @@ const four = (c: Curl): Record<Exclude<FingerName, 'Thumb'>, Curl> => ({ Index: 
 
 export const FINGER_PRESETS: FingerPreset[] = [
   { id: 'open', label: '펴기', hint: '손가락을 모두 편다(휴식)', curl: { Thumb: [0, 0, 0], ...four([0, 0, 0]) } },
-  { id: 'relaxed', label: '자연스럽게', hint: '힘 뺀 손', curl: { Thumb: [8, 10, 5], ...four([15, 22, 15]) } },
-  { id: 'grip', label: '쥐기', hint: '검·컵 같은 물건을 쥔 손(소품을 쥐어 주면 자동)', curl: { Thumb: [25, 35, 10], ...four([55, 75, 45]) } },
+  { id: 'relaxed', label: '자연스럽게', hint: '힘 뺀 손', curl: { Thumb: [8, 10, 5], Index: [10, 18, 12], Middle: [15, 22, 15], Ring: [20, 27, 18], Pinky: [26, 32, 20] } },
+  { id: 'grip', label: '쥐기', hint: '검·컵 같은 물건을 쥔 손(소품을 쥐어 주면 자동)', curl: { Thumb: [25, 35, 10], Index: [46, 66, 40], Middle: [55, 75, 45], Ring: [62, 82, 50], Pinky: [68, 88, 56] } },
   { id: 'fist', label: '주먹', hint: '꽉 쥔 주먹', curl: { Thumb: [45, 60, 55], ...four([85, 95, 65]) } },
   { id: 'point', label: '가리키기', hint: '검지만 펴고 나머지는 쥠', curl: { Thumb: [30, 40, 15], Index: [0, 0, 0], Middle: [85, 95, 65], Ring: [85, 95, 65], Pinky: [85, 95, 65] } },
   { id: 'thumbsUp', label: '엄지 척', hint: '엄지만 펴고 나머지는 쥠', curl: { Thumb: [0, 0, 0], ...four([85, 95, 65]) } },

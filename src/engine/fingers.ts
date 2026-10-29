@@ -24,6 +24,15 @@ export function curlQuaternion(dir: Vector3, normal: Vector3, angleDeg: number):
   return new Quaternion().setFromAxisAngle(axis.normalize(), MathUtils.degToRad(angleDeg));
 }
 
+/** 손가락을 쥘수록 손바닥 위에서 엄지 쪽으로 모이는 회전(휴식 돌 공간). 첫 마디 굽힘이 클수록 많이 모인다 */
+function convergeQuaternion(dir: Vector3, normal: Vector3, thumbSide: Vector3, finger: FingerName, firstCurl: number): Quaternion {
+  const deg = CONVERGE[finger] * Math.min(1, firstCurl / CURL_MAX[finger][0]);
+  if (!deg) return new Quaternion();
+  // 법선 둘레로 돌려 손가락이 엄지 쪽으로 가는 부호를 정한다
+  const sign = new Vector3().crossVectors(normal, dir).dot(thumbSide) >= 0 ? 1 : -1;
+  return new Quaternion().setFromAxisAngle(normal, MathUtils.degToRad(deg) * sign);
+}
+
 /** 돌에 손가락 뼈가 있는지 */
 export function hasFingerBones(rig: DollRig, hand: Hand): boolean {
   const side = hand === 'right' ? 'Right' : 'Left';
@@ -42,13 +51,18 @@ export function thumbBendTarget(normal: Vector3, indexDir: Vector3, thumbDir: Ve
   return across.multiplyScalar(0.75).addScaledVector(normal, 0.45).normalize();
 }
 
-function handFrame(rig: DollRig, hand: Hand): { side: 'Left' | 'Right'; normal: Vector3; thumb: Vector3; handQ: Quaternion } | null {
+/** 손가락을 쥘수록 엄지 쪽으로 모이는 각(도, 완전히 쥘 때). 새끼쪽 손가락일수록 많이 모인다 */
+const CONVERGE: Record<FingerName, number> = { Thumb: 0, Index: 0, Middle: 2, Ring: 6, Pinky: 10 };
+
+function handFrame(rig: DollRig, hand: Hand): { side: 'Left' | 'Right'; normal: Vector3; thumb: Vector3; thumbSide: Vector3; handQ: Quaternion } | null {
   if (!hasFingerBones(rig, hand)) return null;
   const side = hand === 'right' ? 'Right' : 'Left';
   const indexDir = rig.skel.rest.get(fingerBoneName(side, 'Index', 1))!.dir;
   const thumbDir = rig.skel.rest.get(fingerBoneName(side, 'Thumb', 1))!.dir;
   const normal = palmNormal(side, indexDir, thumbDir);
-  return { side, normal, thumb: thumbBendTarget(normal, indexDir, thumbDir), handQ: rig.jointDelta(`${side}Hand`) };
+  const index = indexDir.clone().normalize();
+  const thumbSide = thumbDir.clone().addScaledVector(index, -thumbDir.dot(index)).normalize();
+  return { side, normal, thumb: thumbBendTarget(normal, indexDir, thumbDir), thumbSide, handQ: rig.jointDelta(`${side}Hand`) };
 }
 
 /** 손가락별 굽힘각 → 그 손의 손가락 관절값(현재 손 회전을 따라감). 손가락 뼈가 없으면 null */
@@ -63,7 +77,7 @@ export function fingerJointsForCurl(rig: DollRig, hand: Hand, curl: Record<Finge
       const rest = rig.skel.rest.get(name);
       if (!rest) continue;
       sum += curl[finger][joint - 1];
-      const rel = f.handQ.clone().multiply(curlQuaternion(rest.dir, finger === 'Thumb' ? f.thumb : f.normal, sum));
+      const rel = f.handQ.clone().multiply(convergeQuaternion(rest.dir, f.normal, f.thumbSide, finger, curl[finger][0])).multiply(curlQuaternion(rest.dir, finger === 'Thumb' ? f.thumb : f.normal, sum));
       if (rel.w < 0) rel.set(-rel.x, -rel.y, -rel.z, -rel.w);
       out[name] = toQuat(rel);
     }

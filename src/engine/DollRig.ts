@@ -3,7 +3,7 @@ import type { DollInstance, Gender, JointRotations, Quat } from '../model/types'
 import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkeleton } from './skeleton';
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
 import { mirrorJoints } from './mirror';
-import { circleTexture, MarkerPoints, ringTexture } from './overlays';
+import { circleTexture, MarkerPoints, ringTexture, triangleTexture } from './overlays';
 import { clampJointRotation, hingeCompose, hingeDecompose, limitFor, swingTwist } from './limits';
 import { fromQuat, roundTo, toQuat } from './three-utils';
 
@@ -63,6 +63,8 @@ const MARKER_PULL: Record<string, number> = {
   RightFoot: 0.05,
   LeftToeBase: 0.04,
   RightToeBase: 0.04,
+  LeftToe_End: 0.03,
+  RightToe_End: 0.03,
 };
 
 export type MarkerState = 'normal' | 'hover' | 'active';
@@ -102,6 +104,9 @@ export abstract class DollRig {
   private ikMarkers: MarkerPoints;
   private jointMarkers: MarkerPoints;
   private torsoMarkers: MarkerPoints;
+  private toeMarkers: MarkerPoints;
+  /** 발끝 제어점: 발(발목 관절)과 발끝 뼈. 끌면 발목이 돌아 발끝이 커서를 따라간다 */
+  readonly toeDots: { foot: string; tip: string }[];
   private torsoLine: Line;
   private readonly torsoLineBones: string[];
   private selectedMarker: MarkerPoints;
@@ -150,6 +155,12 @@ export abstract class DollRig {
     this.jointMarkers = new MarkerPoints(Math.max(1, this.limbDotBones.length), 8, circleTexture(), 20);
     this.torsoMarkers = new MarkerPoints(Math.max(1, this.torsoDotBones.length), 8, circleTexture(), 21, false);
     this.selectedMarker = new MarkerPoints(1, 20, ringTexture(), 23);
+    this.toeDots = ['Left', 'Right']
+      .filter((s) => skel.bones.has(`${s}Foot`))
+      .map((s) => ({ foot: `${s}Foot`, tip: skel.bones.has(`${s}Toe_End`) ? `${s}Toe_End` : skel.bones.has(`${s}ToeBase`) ? `${s}ToeBase` : `${s}Foot` }));
+    this.toeMarkers = new MarkerPoints(Math.max(1, this.toeDots.length), 11, triangleTexture(), 22);
+    for (let i = 0; i < this.toeDots.length; i++) this.toeMarkers.setColor(i, HANDLE_COLOR);
+    this.toeMarkers.points.visible = false;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, HANDLE_COLOR);
     for (let i = 0; i < this.limbDotBones.length; i++) this.jointMarkers.setColor(i, JOINT_COLOR);
     for (let i = 0; i < this.torsoDotBones.length; i++) this.torsoMarkers.setColor(i, JOINT_COLOR);
@@ -157,7 +168,7 @@ export abstract class DollRig {
     this.jointMarkers.points.visible = false;
     this.torsoMarkers.points.visible = false;
     this.selectedMarker.points.visible = false;
-    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.selectedMarker.points);
+    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.toeMarkers.points, this.selectedMarker.points);
 
     // 몸통 흐름선(선택한 돌만, 몸에 가려져도 보임)
     this.torsoLineBones = TORSO_CHAIN.filter((n) => skel.bones.has(n));
@@ -231,6 +242,7 @@ export abstract class DollRig {
     this.ikMarkers.setSize(15 * mult);
     this.jointMarkers.setSize(8 * mult);
     this.torsoMarkers.setSize(8 * mult);
+    this.toeMarkers.setSize(11 * mult);
     this.selectedMarker.setSize(20 * mult);
   }
 
@@ -250,6 +262,7 @@ export abstract class DollRig {
     this.groundRing.visible = on;
     this.jointMarkers.points.visible = on;
     this.torsoMarkers.points.visible = on;
+    this.toeMarkers.points.visible = on && this.toeDots.length > 0;
     this.torsoLine.visible = on && this.torsoLineBones.length >= 2;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
@@ -568,6 +581,7 @@ export abstract class DollRig {
     if (this.selected) {
       this.limbDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
       this.torsoDotBones.forEach((name, i) => place(this.torsoMarkers, i, name));
+      this.toeDots.forEach((t, i) => place(this.toeMarkers, i, t.tip));
       const attr = this.torsoLine.geometry.getAttribute('position') as BufferAttribute;
       this.torsoLineBones.forEach((name, i) => {
         this.worldPos(name, _v);
@@ -617,6 +631,7 @@ export abstract class DollRig {
     this.ikMarkers.dispose();
     this.jointMarkers.dispose();
     this.torsoMarkers.dispose();
+    this.toeMarkers.dispose();
     this.torsoLine.geometry.dispose();
     (this.torsoLine.material as LineBasicMaterial).dispose();
     this.selectedMarker.dispose();

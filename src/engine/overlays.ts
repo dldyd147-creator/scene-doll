@@ -75,6 +75,7 @@ function markerTexture(draw: (ctx: CanvasRenderingContext2D, s: number) => void)
 let circleTex: CanvasTexture | null = null;
 let squareTex: CanvasTexture | null = null;
 let ringTex: CanvasTexture | null = null;
+let triangleTex: CanvasTexture | null = null;
 
 /** 흰 원 + 짙은 테두리(IK 핸들·관절점). 흰 부분은 정점 색으로 물든다 */
 export function circleTexture(): CanvasTexture {
@@ -114,6 +115,26 @@ export function squareTexture(): CanvasTexture {
     });
   }
   return squareTex;
+}
+
+/** 둥근 삼각형(발끝 제어점: 발 방향·발목 조작) */
+export function triangleTexture(): CanvasTexture {
+  if (!triangleTex) {
+    triangleTex = markerTexture((ctx, s) => {
+      ctx.beginPath();
+      ctx.moveTo(s * 0.5, s * 0.16);
+      ctx.lineTo(s * 0.86, s * 0.8);
+      ctx.lineTo(s * 0.14, s * 0.8);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = s * 0.11;
+      ctx.strokeStyle = '#1d1f26';
+      ctx.stroke();
+    });
+  }
+  return triangleTex;
 }
 
 /** 속이 빈 링(선택 관절 표시) */
