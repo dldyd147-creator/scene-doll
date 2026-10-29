@@ -5,6 +5,8 @@ import { DEFAULT_SITUATION_TAGS } from '../model/library';
 export type GenEngineKind = 'mock' | 'remote';
 /** 강도 프리셋: 돌 우선 / 균형 / 프롬프트 우선 */
 export type GenPreset = 'doll' | 'balanced' | 'prompt';
+/** 그림 디테일: 기본 / 디테일 줄임 / 흑백 선화 */
+export type GenDetail = 'normal' | 'simple' | 'lineart';
 /** 출력 크기: 격자 비율대로(gpt-image-2 계열) / 고정 3종 중 가까운 것(gpt-image-1.5) / API 자동 */
 export type GenSizeMode = 'custom' | 'fixed' | 'auto';
 export type GenQuality = 'auto' | 'low' | 'medium' | 'high';
@@ -71,6 +73,7 @@ export interface Settings {
   /** 묶음 상한(4·6·8컷) */
   genMaxPerBatch: number;
   genPreset: GenPreset;
+  genDetail: GenDetail;
   genSizeMode: GenSizeMode;
   /** 격자 한 칸(컷 하나)의 목표 가로 px */
   genCellPx: number;
@@ -121,6 +124,7 @@ export const DEFAULT_SETTINGS: Settings = {
   nttToken: '',
   genMaxPerBatch: 4,
   genPreset: 'balanced',
+  genDetail: 'normal',
   genSizeMode: 'custom',
   genCellPx: 1024,
   genCandidates: 1,

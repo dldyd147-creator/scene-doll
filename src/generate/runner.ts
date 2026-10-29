@@ -45,7 +45,7 @@ export interface PrepareOptions {
   single: boolean;
   /** 선택한 API의 첨부 상한(없으면 MAX_INPUT_IMAGES) */
   maxImages?: number;
-  settings: Pick<Settings, 'genMaxPerBatch' | 'genPreset' | 'genCellPx' | 'genSizeMode' | 'genAttachLine' | 'genAttachMask' | 'genRefsPerCharacter' | 'genStyle'>;
+  settings: Pick<Settings, 'genMaxPerBatch' | 'genPreset' | 'genCellPx' | 'genSizeMode' | 'genAttachLine' | 'genAttachMask' | 'genRefsPerCharacter' | 'genStyle' | 'genDetail'>;
 }
 
 export interface Progress {
@@ -177,7 +177,7 @@ export async function prepareBatches(engine: Engine, opts: PrepareOptions, onPro
       }
       if (truncated) warnings.push(`첨부 상한 ${maxImages}장(여유 ${room}장)을 넘어 레퍼런스 ${truncated}장을 뺐습니다`);
       const size = requestSize(layout, st.genSizeMode);
-      const prompt = buildBatchPrompt({ work: { code: work.code, name: work.name }, episode: episode.number, layout, packages, preset: st.genPreset, attachments, outputSize: size, style: st.genStyle });
+      const prompt = buildBatchPrompt({ work: { code: work.code, name: work.name }, episode: episode.number, layout, packages, preset: st.genPreset, attachments, outputSize: size, style: st.genStyle, detail: st.genDetail });
       out.push({ id: `b${++batchSeq}`, key: group.key, cuts: group.cuts, layout, packages, images, gridUrl: URL.createObjectURL(gridBlob), prompt, size, inputFidelity: preset.fidelity, warnings });
     }
   } finally {

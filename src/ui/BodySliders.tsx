@@ -58,6 +58,8 @@ export function BodySliders({ engine }: { engine: Engine }) {
 
   const onDown = (kind: Kind) => (e: React.PointerEvent) => {
     e.stopPropagation();
+    // 휠클릭·오른쪽 클릭으로는 조작되지 않는다(시점 조작용)
+    if (e.button !== 0) return;
     e.preventDefault();
     const rig = engine.dolls.get(dollId);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -107,7 +109,9 @@ export function BodySliders({ engine }: { engine: Engine }) {
           onPointerUp={onUp}
           onPointerCancel={onUp}
           title="골반 · 누른 채 아래로: 다리는 그대로 두고 상체 전체를 숙임 · 위로: 젖힘"
-        />
+        >
+          <i />
+        </button>
       </div>
     </>
   );

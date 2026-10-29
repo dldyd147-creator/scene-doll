@@ -167,26 +167,9 @@ export class Interaction {
       targets.push(...rig.pickTargets);
     }
 
-    // 1) IK 핸들(모든 돌, 가려진 것 제외) — 선택한 돌을 우선
-    let best: Pick = null;
-    let bestD = 14 * scale;
-    const ordered = selected ? [selected, ...rigs.filter((r) => r !== selected)] : rigs;
-    for (const rig of ordered) {
-      const s = rig.heightCm / 175;
-      for (const eff of rig.effectors) {
-        const pos = rig.worldPos(IK_CHAINS[eff].end);
-        const d = this.screenDist(e, pos);
-        if (d < bestD && !this.occluded(pos, 0.05 * s, targets)) {
-          bestD = d;
-          best = { kind: 'ik', rig, effector: eff, pos };
-        }
-      }
-    }
-    if (best) return best;
-
-    // 2) 발끝 제어점(선택한 돌만)
+    // 0) 특수 제어점(머리끝·손끝·발끝, 선택한 돌만): 다른 제어점보다 먼저, 넓은 인식 영역으로 잡는다
     if (selected) {
-      let td = 10 * scale;
+      let td = 18 * scale;
       const s = selected.heightCm / 175;
       let toe: Pick = null;
       for (const t of selected.toeDots) {
@@ -215,7 +198,24 @@ export class Interaction {
       }
     }
 
-    // 3) 관절점(선택한 돌만)
+    // 1) IK 핸들(모든 돌, 가려진 것 제외) — 선택한 돌을 우선
+    let best: Pick = null;
+    let bestD = 14 * scale;
+    const ordered = selected ? [selected, ...rigs.filter((r) => r !== selected)] : rigs;
+    for (const rig of ordered) {
+      const s = rig.heightCm / 175;
+      for (const eff of rig.effectors) {
+        const pos = rig.worldPos(IK_CHAINS[eff].end);
+        const d = this.screenDist(e, pos);
+        if (d < bestD && !this.occluded(pos, 0.05 * s, targets)) {
+          bestD = d;
+          best = { kind: 'ik', rig, effector: eff, pos };
+        }
+      }
+    }
+    if (best) return best;
+
+    // 2) 관절점(선택한 돌만)
     if (selected) {
       let bd = 10 * scale;
       const s = selected.heightCm / 175;
@@ -557,7 +557,13 @@ export class Interaction {
     else if (p?.kind === 'part') bone = p.bone;
     else if (p?.kind === 'tip') bone = p.wrist;
     const m = bone ? /^(Left|Right)Hand/.exec(bone) : null;
-    if (m) this.engine.callbacks.openHand(m[1] === 'Left' ? 'left' : 'right');
+    if (m) {
+      this.engine.callbacks.openHand(m[1] === 'Left' ? 'left' : 'right');
+      return;
+    }
+    // 일반 제어점을 더블클릭하면 그 관절 값을 초기화한다. 발끝 제어점은 발 방향(발목)을 초기화한다
+    if (p?.kind === 'joint') this.engine.resetJoints(p.rig, [p.bone]);
+    else if (p?.kind === 'toe') this.engine.resetJoints(p.rig, [p.foot, p.foot.replace('Foot', 'ToeBase')]);
   };
 
   private onUp = (e: PointerEvent): void => {

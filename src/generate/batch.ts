@@ -1,5 +1,5 @@
 import type { Cut } from '../model/types';
-import type { GenPreset, GenSizeMode } from '../state/settings';
+import type { GenDetail, GenPreset, GenSizeMode } from '../state/settings';
 import { pad3 } from '../storage/backend';
 import type { CutPackage } from '../ui/packager';
 import type { GenImageRole } from './engine';
@@ -339,6 +339,31 @@ export const PRESETS: Record<GenPreset, PresetDef> = {
 
 export const PRESET_ORDER: GenPreset[] = ['doll', 'balanced', 'prompt'];
 
+// ---------- 디테일 ----------
+
+export const DETAIL_ORDER: GenDetail[] = ['normal', 'simple', 'lineart'];
+
+export const DETAILS: Record<GenDetail, { label: string; short: string; lines: string[] }> = {
+  normal: { label: '기본', short: '화풍 문구만 따름', lines: [] },
+  simple: {
+    label: '디테일 줄임',
+    short: '배경·옷 주름·질감을 단순하게',
+    lines: [
+      '디테일을 절제한다: 배경은 꼭 필요한 요소만 단순한 형태로, 옷 주름·머리카락 결·질감 표현은 최소한의 굵은 선과 큰 덩어리로 정리한다.',
+      '인물과 연기(표정·손짓·자세)가 한눈에 읽히는 것을 우선하고, 잔선·잔 무늬·사실적인 질감 묘사는 넣지 않는다.',
+    ],
+  },
+  lineart: {
+    label: '흑백 선화',
+    short: '선화가 돋보이는 흑백 · 톤 없음',
+    lines: [
+      '완전한 흑백 선화로 그린다: 흰 바탕에 검은 펜선만 쓰고, 컬러·회색 채색·그라데이션·스크린톤·사진 같은 질감은 넣지 않는다.',
+      '선의 굵기에 강약을 주어(외곽선은 굵게, 안쪽 선은 가늘게) 선화 자체가 돋보이게 하고, 면은 흰색으로 두거나 꼭 필요한 곳만 검게 칠한다.',
+      '디테일은 절제한다: 배경은 단순한 선으로, 옷 주름·머리카락은 핵심 선만 그린다.',
+    ],
+  },
+};
+
 // ---------- 프롬프트 ----------
 
 export interface PromptAttachment {
@@ -362,6 +387,8 @@ export interface BatchPromptInput {
   outputSize: string;
   /** 화풍 문구(선택) */
   style?: string;
+  /** 그림 디테일(기본이면 문구를 더하지 않는다) */
+  detail?: GenDetail;
 }
 
 const GENDER_LABEL = { male: '남', female: '여', other: '기타' } as const;
@@ -457,10 +484,12 @@ export function buildBatchPrompt(inp: BatchPromptInput): string {
   L.push('');
   L.push(`## 강도: ${preset.label}`);
   for (const line of preset.lines) L.push(`- ${line}`);
-  if (inp.style?.trim()) {
+  const detailLines = DETAILS[inp.detail ?? 'normal'].lines;
+  if (inp.style?.trim() || detailLines.length) {
     L.push('');
     L.push('## 화풍');
-    L.push(`- ${inp.style.trim()}`);
+    if (inp.style?.trim()) L.push(`- ${inp.style.trim()}`);
+    for (const line of detailLines) L.push(`- ${line}`);
   }
   L.push('');
   L.push('## 규칙');

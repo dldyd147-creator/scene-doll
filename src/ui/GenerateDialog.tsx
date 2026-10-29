@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Engine } from '../engine/Engine';
-import { PRESET_ORDER, PRESETS } from '../generate/batch';
+import { DETAIL_ORDER, DETAILS, PRESET_ORDER, PRESETS } from '../generate/batch';
 import { availableOnWeb, keyState, maxImagesFor, selectedApi } from '../generate/apiList';
 import { currentApi, engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
 import { normalizeApiList } from '../generate/apiList';
@@ -9,7 +9,7 @@ import { estimateRemaining, estimateTotal, loadTimeHistory, perBatchSeconds, rec
 import { isDesktop } from '../native';
 import { disposeBatches, disposeOutcomes, prepareBatches, runBatches, type BatchOutcome, type PreparedBatch, type Progress } from '../generate/runner';
 import type { Cut } from '../model/types';
-import type { GenPreset, GenSizeMode } from '../state/settings';
+import type { GenDetail, GenPreset, GenSizeMode } from '../state/settings';
 import { useStore } from '../state/store';
 import { storage } from '../storage';
 import { paths } from '../storage/repository';
@@ -328,6 +328,14 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
               <span className="gen-row">
                 <Segmented value={settings.genPreset} options={PRESET_ORDER} onChange={(v: GenPreset) => update({ genPreset: v })} labels={{ doll: PRESETS.doll.label, balanced: PRESETS.balanced.label, prompt: PRESETS.prompt.label }} />
                 <span className="small muted">{PRESETS[settings.genPreset].short}</span>
+              </span>
+              <span />
+            </div>
+            <div className="setting">
+              <span>그림 디테일</span>
+              <span className="gen-row">
+                <Segmented value={settings.genDetail} options={DETAIL_ORDER} onChange={(v: GenDetail) => update({ genDetail: v })} labels={{ normal: DETAILS.normal.label, simple: DETAILS.simple.label, lineart: DETAILS.lineart.label }} />
+                <span className="small muted">{DETAILS[settings.genDetail].short}</span>
               </span>
               <span />
             </div>

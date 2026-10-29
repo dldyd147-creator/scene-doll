@@ -1052,7 +1052,10 @@ export class Engine {
     if (!deltaDeg) return;
     const q = new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), MathUtils.degToRad(deltaDeg));
     rig.root.updateMatrixWorld(true);
+    const before = rig.getJoints();
+    const beforePos = rig.root.position.clone();
     const orig = rig.jointDeltas();
+    const footBefore = ['LeftFoot', 'RightFoot'].filter((f) => rig.skel.bones.has(f)).map((f) => [f, orig.get(f)!.clone()] as const);
     const isLeg = (n: string) => /^(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End)$/.test(n);
     for (const name of rig.skel.order) {
       const d = orig.get(name)!;
@@ -1060,7 +1063,70 @@ export class Engine {
     }
     rig.root.updateMatrixWorld(true);
     this.keepFeet(rig, feet);
+    // 다리가 발에 닿지 못하는 곳까지 숙이면(발이 홱 돌아가는 원인) 이번 움직임은 받아들이지 않는다: 닿는 곳에서 멈춘다
+    const footFlip = footBefore.some(([f, qb]) => rig.jointDelta(f).angleTo(qb) > MathUtils.degToRad(8));
+    // 골반 앞뒤 기울기(X축 둘레 각)는 앞 100°·뒤 40°까지만: 넘는 쪽으로 더 가는 움직임은 받지 않는다
+    const root = rig.skel.order[0];
+    const pitch = (d: Quaternion) => MathUtils.radToDeg(2 * Math.atan2(d.x, d.w));
+    const p0 = pitch(orig.get(root)!);
+    const p1 = pitch(rig.jointDelta(root));
+    const overRange = (p1 > 100 && p1 > p0) || (p1 < -40 && p1 < p0);
+    if (overRange || (feet && (this.feetError(rig, feet) > 0.03 || footFlip))) {
+      rig.root.position.copy(beforePos);
+      rig.root.updateMatrixWorld(true);
+      rig.setJoints(before);
+      return;
+    }
     this.enforceFloor(rig);
+  }
+
+  /** 관절 값을 휴식으로 되돌린다(제어점 더블클릭) */
+  resetJoints(rig: DollRig, bones: string[]): void {
+    for (const b of bones) rig.resetJoint(b, false);
+    rig.root.updateMatrixWorld(true);
+    this.enforceFloor(rig);
+    this.commitDoll(rig.id);
+  }
+
+  /**
+   * 발가락 자동 꺾임: 발끝이 바닥 아래로 들어가면(뒤꿈치를 들거나 발을 앞으로 기울일 때) 발가락(발끝 뼈)이 위로 꺾여 바닥에 얹힌다.
+   * 바닥에서 떨어져 있으면 발과 같은 방향(꺾임 없음)이다. 발가락 다섯은 한 뼈로 묶여 있다
+   */
+  private autoToes(rig: DollRig): void {
+    const s = rig.root.scale.x;
+    for (const side of ['Left', 'Right']) {
+      const foot = `${side}Foot`;
+      const tb = `${side}ToeBase`;
+      const te = `${side}Toe_End`;
+      if (!rig.skel.bones.has(foot) || !rig.skel.bones.has(tb) || !rig.skel.bones.has(te)) continue;
+      const base = rig.jointDelta(foot);
+      const axis = new Vector3(1, 0, 0).applyQuaternion(base);
+      const tipMin = (rig.skel.rest.get(te)?.pos.y ?? 0.01) * s;
+      const setBend = (ang: number): number => {
+        rig.setJointDelta(tb, new Quaternion().setFromAxisAngle(axis, ang).multiply(base));
+        return rig.worldPos(te).y;
+      };
+      let y = setBend(0);
+      if (y >= tipMin - 0.001) continue;
+      const max = MathUtils.degToRad(50);
+      const up = setBend(max);
+      const down = setBend(-max);
+      const sign = up >= down ? 1 : -1;
+      if (Math.max(up, down) < tipMin) {
+        setBend(sign * max);
+        continue;
+      }
+      let lo = 0;
+      let hi = max;
+      for (let i = 0; i < 9; i++) {
+        const mid = (lo + hi) / 2;
+        y = setBend(sign * mid);
+        if (y < tipMin) lo = mid;
+        else hi = mid;
+      }
+      setBend(sign * hi);
+    }
+    rig.root.updateMatrixWorld(true);
   }
 
   /**
@@ -1637,10 +1703,14 @@ export class Engine {
   /** 바닥 뚫기 금지: 몸의 가장 낮은 점이 바닥 아래면 돌 전체를 올린다 */
   enforceFloor(rig: DollRig): void {
     if (!this.settings.floorLock) return;
-    const y = rig.lowestPointY();
-    if (y < -0.002) {
-      rig.root.position.y -= y;
-      rig.root.updateMatrixWorld(true);
+    // 발가락을 꺾고 → 그래도 바닥 아래면 몸을 올리고 → 올린 자리에서 다시 꺾어 필요한 만큼만 꺾는다
+    for (let pass = 0; pass < 2; pass++) {
+      this.autoToes(rig);
+      const y = rig.lowestPointY();
+      if (y < -0.002) {
+        rig.root.position.y -= y;
+        rig.root.updateMatrixWorld(true);
+      }
     }
   }
 
