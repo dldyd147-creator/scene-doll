@@ -66,6 +66,7 @@ const MARKER_PULL: Record<string, number> = {
   RightToeBase: 0.04,
   LeftToe_End: 0.03,
   RightToe_End: 0.03,
+  HeadTop_End: 0.08,
 };
 
 export type MarkerState = 'normal' | 'hover' | 'active';
@@ -107,6 +108,9 @@ export abstract class DollRig {
   private torsoMarkers: MarkerPoints;
   private toeMarkers: MarkerPoints;
   private handMarkers: MarkerPoints;
+  private headMarkers: MarkerPoints;
+  /** 머리끝 제어점 위치 뼈(정수리). 끌면 발은 두고 목·허리·골반이 따라온다 */
+  readonly headTip: string | null;
   /** 손끝 제어점: 손목 관절과 가운뎃손가락 마디. 끌면 손목이 돌아 손 방향이 바뀌고, 더블클릭하면 핸드 오퍼레이터 */
   readonly handDots: { hand: 'left' | 'right'; wrist: string; joint: string; prev: string }[];
   /** 발끝 제어점: 발(발목 관절)과 발끝 뼈. 끌면 발목이 돌아 발끝이 커서를 따라간다 */
@@ -165,6 +169,10 @@ export abstract class DollRig {
     this.handDots = (['Left', 'Right'] as const)
       .filter((s) => skel.bones.has(`${s}Hand`) && skel.bones.has(fingerBoneName(s, 'Middle', 3)) && skel.bones.has(fingerBoneName(s, 'Middle', 2)))
       .map((s) => ({ hand: s === 'Left' ? ('left' as const) : ('right' as const), wrist: `${s}Hand`, joint: fingerBoneName(s, 'Middle', 3), prev: fingerBoneName(s, 'Middle', 2) }));
+    this.headTip = skel.bones.has('HeadTop_End') ? 'HeadTop_End' : skel.bones.has('Head') ? 'Head' : null;
+    this.headMarkers = new MarkerPoints(1, 11, circleTexture(), 22);
+    this.headMarkers.setColor(0, HANDLE_COLOR);
+    this.headMarkers.points.visible = false;
     this.handMarkers = new MarkerPoints(Math.max(1, this.handDots.length), 11, triangleTexture(), 22);
     for (let i = 0; i < this.handDots.length; i++) this.handMarkers.setColor(i, HANDLE_COLOR);
     this.handMarkers.points.visible = false;
@@ -178,7 +186,7 @@ export abstract class DollRig {
     this.jointMarkers.points.visible = false;
     this.torsoMarkers.points.visible = false;
     this.selectedMarker.points.visible = false;
-    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.toeMarkers.points, this.handMarkers.points, this.selectedMarker.points);
+    this.helpers.add(this.ikMarkers.points, this.jointMarkers.points, this.torsoMarkers.points, this.toeMarkers.points, this.handMarkers.points, this.headMarkers.points, this.selectedMarker.points);
 
     // 몸통 흐름선(선택한 돌만, 몸에 가려져도 보임)
     this.torsoLineBones = TORSO_CHAIN.filter((n) => skel.bones.has(n));
@@ -254,6 +262,7 @@ export abstract class DollRig {
     this.torsoMarkers.setSize(8 * mult);
     this.toeMarkers.setSize(11 * mult);
     this.handMarkers.setSize(11 * mult);
+    this.headMarkers.setSize(11 * mult);
     this.selectedMarker.setSize(20 * mult);
   }
 
@@ -275,6 +284,7 @@ export abstract class DollRig {
     this.torsoMarkers.points.visible = on;
     this.toeMarkers.points.visible = on && this.toeDots.length > 0;
     this.handMarkers.points.visible = on && this.handDots.length > 0;
+    this.headMarkers.points.visible = on && !!this.headTip;
     this.torsoLine.visible = on && this.torsoLineBones.length >= 2;
     for (let i = 0; i < this.effectors.length; i++) this.ikMarkers.setColor(i, on ? HANDLE_COLOR : HANDLE_DIM_COLOR);
   }
@@ -300,7 +310,7 @@ export abstract class DollRig {
       const bone = this.skel.bones.get(name)!;
       const parent = this.skel.parents.get(name) ?? null;
       const pq = parent ? out.get(parent)! : IDENTITY;
-      out.set(name, pq.clone().multiply(bone.quaternion));
+      out.set(name, pq.clone().multiply(bone.quaternion).normalize());
     }
     return out;
   }
@@ -327,8 +337,9 @@ export abstract class DollRig {
       const dq = this.dollSpaceQuats();
       pq = dq.get(parent)!;
     }
-    const desired = R.clone().multiply(this.skel.rest.get(name)!.quat);
-    bone.quaternion.copy(pq.clone().invert().multiply(desired));
+    // 단위 쿼터니언이 아니면 invert()(켤레)가 크기를 키워 깊은 뼈(손가락)에서 단계마다 배로 불어난다: 정규화해서 쓴다
+    const desired = R.clone().normalize().multiply(this.skel.rest.get(name)!.quat);
+    bone.quaternion.copy(pq.clone().normalize().invert().multiply(desired)).normalize();
     bone.updateWorldMatrix(false, true);
   }
 
@@ -594,6 +605,7 @@ export abstract class DollRig {
       this.limbDotBones.forEach((name, i) => place(this.jointMarkers, i, name));
       this.torsoDotBones.forEach((name, i) => place(this.torsoMarkers, i, name));
       this.toeDots.forEach((t, i) => place(this.toeMarkers, i, t.tip));
+      if (this.headTip) place(this.headMarkers, 0, this.headTip);
       this.handDots.forEach((h, i) => {
         this.fingerTipPos(h, _v);
         if (cameraPos) {
@@ -663,6 +675,7 @@ export abstract class DollRig {
     this.torsoMarkers.dispose();
     this.toeMarkers.dispose();
     this.handMarkers.dispose();
+    this.headMarkers.dispose();
     this.torsoLine.geometry.dispose();
     (this.torsoLine.material as LineBasicMaterial).dispose();
     this.selectedMarker.dispose();

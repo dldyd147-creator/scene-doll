@@ -1063,6 +1063,57 @@ export class Engine {
     this.enforceFloor(rig);
   }
 
+  /**
+   * 머리끝 잡아당기기: 발은 그대로 두고, 머리끝이 target(월드)을 따라오게 목·허리를 휘고 골반까지 딸려 오게 한다.
+   * 시작 자세(start)에서 매번 다시 풀어 떨림·누적을 막는다. 관절 한계가 켜져 있으면 목·허리는 한계까지만 휘고,
+   * 골반은 다리가 닿는 곳까지만 따라오므로 한계를 넘으면 더 움직이지 않는다
+   */
+  pullHead(rig: DollRig, start: { joints: ReturnType<DollRig['getJoints']>; pos: Vector3; feet: Map<string, Vector3> }, target: Vector3): void {
+    const chain = ['Head', 'Neck', 'Spine2', 'Spine1', 'Spine'].filter((b) => rig.skel.bones.has(b));
+    const weight: Record<string, number> = { Head: 0.4, Neck: 0.5, Spine2: 0.4, Spine1: 0.35, Spine: 0.35 };
+    const tipBone = rig.skel.bones.has('HeadTop_End') ? 'HeadTop_End' : 'Head';
+    rig.root.position.copy(start.pos);
+    rig.root.updateMatrixWorld(true);
+    rig.setJoints(start.joints);
+    const tip = new Vector3();
+    const pivot = new Vector3();
+    const identity = new Quaternion();
+    for (let it = 0; it < 6; it++) {
+      for (const b of chain) {
+        rig.worldPos(tipBone, tip);
+        rig.worldPos(b, pivot);
+        const v0 = tip.clone().sub(pivot);
+        const v1 = target.clone().sub(pivot);
+        if (v0.lengthSq() < 1e-8 || v1.lengthSq() < 1e-8) continue;
+        const q = new Quaternion().setFromUnitVectors(v0.normalize(), v1.normalize()).slerp(identity, 1 - weight[b]);
+        rotateObjectWorld(rig.skel.bones.get(b)!, q);
+        this.clampAfterChange(rig, [b]);
+      }
+    }
+    // 남은 만큼 골반이 딸려 온다(발은 기억해 둔 자리에 다시 푼다). 다리가 못 닿거나 바닥을 뚫으면 되는 곳까지만
+    const joints = rig.getJoints();
+    const resid = target.clone().sub(rig.worldPos(tipBone, tip));
+    const apply = (k: number): number => {
+      rig.root.position.copy(start.pos).addScaledVector(resid, k);
+      rig.root.updateMatrixWorld(true);
+      rig.setJoints(joints);
+      this.keepFeet(rig, start.feet);
+      return this.feetError(rig, start.feet);
+    };
+    const bad = (k: number) => apply(k) > 0.003 || this.belowFloor(rig);
+    if (bad(1)) {
+      let lo = 0;
+      let hi = 1;
+      for (let i = 0; i < 10; i++) {
+        const mid = (lo + hi) / 2;
+        if (bad(mid)) hi = mid;
+        else lo = mid;
+      }
+      apply(lo);
+    }
+    this.enforceFloor(rig);
+  }
+
   private wristRestLocal(rig: DollRig, bone: string): Quaternion {
     const rest = rig.skel.rest.get(bone)!.quat;
     const parent = rig.skel.parents.get(bone);

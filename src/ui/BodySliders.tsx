@@ -21,6 +21,7 @@ export function BodySliders({ engine }: { engine: Engine }) {
   const [active, setActive] = useState<Kind | null>(null);
   const [offset, setOffset] = useState(0);
   const box = useRef<HTMLDivElement>(null);
+  const hipBox = useRef<HTMLDivElement>(null);
   const drag = useRef<{ kind: Kind; startY: number; lastY: number; feet: Map<string, Vector3> | null } | null>(null);
 
   useEffect(() => {
@@ -33,18 +34,21 @@ export function BodySliders({ engine }: { engine: Engine }) {
   useEffect(() => {
     if (!dollId) return;
     let raf = 0;
-    const tick = () => {
-      raf = requestAnimationFrame(tick);
-      const el = box.current;
-      const rig = engine.dolls.get(dollId);
+    const place = (el: HTMLDivElement | null, rig: NonNullable<ReturnType<typeof engine.dolls.get>>, bone: string) => {
       const parent = el?.parentElement;
-      if (!el || !rig || !parent) return;
-      const bone = rig.skel.bones.has('Spine1') ? 'Spine1' : rig.skel.order[0];
+      if (!el || !parent) return;
       const p = rig.worldPos(bone).project(engine.workCamera);
       const x = ((p.x + 1) / 2) * parent.clientWidth;
       const y = ((1 - p.y) / 2) * parent.clientHeight;
       el.style.transform = `translate(${Math.round(x) + 26}px, ${Math.round(y)}px)`;
       el.style.visibility = p.z > 1 ? 'hidden' : 'visible';
+    };
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const rig = engine.dolls.get(dollId);
+      if (!rig) return;
+      place(box.current, rig, rig.skel.bones.has('Spine1') ? 'Spine1' : rig.skel.order[0]);
+      place(hipBox.current, rig, rig.skel.order[0]);
     };
     tick();
     return () => cancelAnimationFrame(raf);
@@ -82,25 +86,29 @@ export function BodySliders({ engine }: { engine: Engine }) {
   const move = (kind: Kind) => ({ transform: active === kind ? `translateY(${offset}px)` : undefined });
 
   return (
-    <div className="spine-handle" ref={box} onPointerDown={(e) => e.stopPropagation()}>
-      <button
-        className={`spine-dot${active === 'spine' ? ' active' : ''}`}
-        style={move('spine')}
-        onPointerDown={onDown('spine')}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        title="누른 채 위로: 허리 젖힘 · 아래로: 숙임"
-      />
-      <button
-        className={`spine-hip${active === 'hip' ? ' active' : ''}`}
-        style={move('hip')}
-        onPointerDown={onDown('hip')}
-        onPointerMove={onMove}
-        onPointerUp={onUp}
-        onPointerCancel={onUp}
-        title="누른 채 아래로: 다리는 그대로 두고 상체 전체를 숙임 · 위로: 젖힘"
-      />
-    </div>
+    <>
+      <div className="spine-handle" ref={box} onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          className={`spine-dot${active === 'spine' ? ' active' : ''}`}
+          style={move('spine')}
+          onPointerDown={onDown('spine')}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          title="누른 채 위로: 허리 젖힘 · 아래로: 숙임"
+        />
+      </div>
+      <div className="spine-handle" ref={hipBox} onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          className={`spine-hip${active === 'hip' ? ' active' : ''}`}
+          style={move('hip')}
+          onPointerDown={onDown('hip')}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+          title="골반 · 누른 채 아래로: 다리는 그대로 두고 상체 전체를 숙임 · 위로: 젖힘"
+        />
+      </div>
+    </>
   );
 }

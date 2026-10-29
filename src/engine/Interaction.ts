@@ -12,6 +12,7 @@ type DragState =
   | { kind: 'twist'; rig: DollRig; bone: string; lastX: number; moved: boolean }
   | { kind: 'ik'; rig: DollRig; effector: string; plane: Plane; moved: boolean }
   | { kind: 'shoulder'; rig: DollRig; side: 'left' | 'right'; lastX: number; lastY: number; moved: boolean }
+  | { kind: 'headpull'; rig: DollRig; plane: Plane; startHit: Vector3; startTip: Vector3; start: { joints: ReturnType<DollRig['getJoints']>; pos: Vector3; feet: Map<string, Vector3> }; moved: boolean }
   | { kind: 'hipmove'; rig: DollRig; plane: Plane; startHit: Vector3; startPos: Vector3; feet: Map<string, Vector3>; joints: ReturnType<DollRig['getJoints']>; moved: boolean }
   | { kind: 'camera'; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean }
   | { kind: 'propmove'; prop: PropObject; plane: Plane; startHit: Vector3; startPos: Vector3; moved: boolean };
@@ -21,6 +22,7 @@ type Pick =
   | { kind: 'joint'; rig: DollRig; bone: string; pos: Vector3 }
   | { kind: 'toe'; rig: DollRig; foot: string; pos: Vector3 }
   | { kind: 'tip'; rig: DollRig; wrist: string; hand: 'left' | 'right'; pos: Vector3 }
+  | { kind: 'headtop'; rig: DollRig; pos: Vector3 }
   | { kind: 'camera'; point: Vector3 }
   | { kind: 'prop'; prop: PropObject; point: Vector3 }
   | { kind: 'part'; rig: DollRig; bone: string; point: Vector3 }
@@ -206,6 +208,11 @@ export class Interaction {
         }
       }
       if (toe) return toe;
+      // 머리끝 제어점
+      if (selected.headTip) {
+        const pos = selected.worldPos(selected.headTip);
+        if (this.screenDist(e, pos) < td && !this.occluded(pos, 0.06 * s, targets)) return { kind: 'headtop', rig: selected, pos };
+      }
     }
 
     // 3) 관절점(선택한 돌만)
@@ -354,6 +361,20 @@ export class Interaction {
         sel({ dollId: p.rig.id, bone: p.wrist });
         this.state = { kind: 'pending', rig: p.rig, bone: p.wrist, point: p.pos, x: e.clientX, y: e.clientY, alt: e.altKey };
         break;
+      case 'headtop':
+        // 머리끝을 끌면 발은 그대로 두고 목·허리가 휘며 몸이 딸려 온다
+        sel({ dollId: p.rig.id, bone: null });
+        this.state = {
+          kind: 'headpull',
+          rig: p.rig,
+          plane: this.viewPlaneAt(p.pos),
+          startHit: p.pos.clone(),
+          startTip: p.pos.clone(),
+          start: { joints: p.rig.getJoints(), pos: p.rig.root.position.clone(), feet: this.engine.capturePlantedFeet(p.rig) },
+          moved: false,
+        };
+        this.el.style.cursor = 'grabbing';
+        break;
       case 'camera': {
         sel({ dollId: null, bone: null, camera: true });
         this.state = { kind: 'camera', plane: this.viewPlaneAt(p.point), startHit: p.point, startPos: this.engine.manu.camera.position.clone(), moved: false };
@@ -464,6 +485,14 @@ export class Interaction {
         s.moved = true;
         return;
       }
+      case 'headpull': {
+        const hit = this.rayOnPlane(e, s.plane);
+        if (!hit) return;
+        if (!s.moved && hit.distanceTo(s.startHit) < 0.004) return;
+        this.engine.pullHead(s.rig, s.start, s.startTip.clone().add(hit.sub(s.startHit)));
+        s.moved = true;
+        return;
+      }
       case 'ik': {
         const target = this.rayOnPlane(e, s.plane);
         if (!target) return;
@@ -544,7 +573,7 @@ export class Interaction {
   private finish(commit: boolean): void {
     const s = this.state;
     if (s.kind === 'ik') s.rig.setEffectorState(s.effector, 'normal');
-    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'hipmove' || s.kind === 'shoulder';
+    const dollDrag = s.kind === 'direct' || s.kind === 'twist' || s.kind === 'ik' || s.kind === 'hipmove' || s.kind === 'shoulder' || s.kind === 'headpull';
     if (commit && dollDrag && s.moved) this.engine.commitDoll(s.rig.id);
     if (commit && s.kind === 'camera' && s.moved) this.engine.commitCamera();
     if (s.kind === 'propmove') {
@@ -793,6 +822,10 @@ export class Interaction {
       case 'tip':
         this.el.style.cursor = 'grab';
         hint('손끝 · 끌면 손목이 돌아 손 방향이 바뀝니다 · 더블클릭: 핸드 오퍼레이터(손가락·손목)');
+        return;
+      case 'headtop':
+        this.el.style.cursor = 'grab';
+        hint('머리끝 · 끌면 발은 그대로 두고 목·허리가 휘며 몸이 딸려 옵니다(한계를 넘으면 더 움직이지 않음)');
         return;
       case 'camera':
         this.el.style.cursor = 'move';
