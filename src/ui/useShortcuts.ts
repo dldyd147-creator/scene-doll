@@ -120,8 +120,20 @@ export function useShortcuts(engine: Engine): void {
           return;
       }
       switch (key) {
+        case 'h':
+          if (s.selection.dollId) {
+            e.preventDefault();
+            s.setHandOperator(true);
+          }
+          return;
         case 'g':
         case 'm':
+          if (key === 'm' && e.shiftKey) {
+            // Shift+M: 포즈 좌우 반전
+            e.preventDefault();
+            engine.mirrorSelected();
+            return;
+          }
           if (e.altKey) {
             // Alt+G: 위치 초기화(블렌더식)
             e.preventDefault();

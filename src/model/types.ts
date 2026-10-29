@@ -116,10 +116,14 @@ export interface Cut {
   memo: string;
   /** 5단계 생성 결과 이미지 경로 */
   generatedImages: string[];
+  /** 생성 후보 경로 → 그 그림을 만들 때 보낸 프롬프트 */
+  generatedPrompts?: Record<string, string>;
   /** 글콘티 대사(NTT 엑셀 연동, 2단계 이후). position: 원고뷰 위/아래 */
   dialogue?: Array<{ speaker: string; text: string; position: 'top' | 'bottom' }>;
   /** 글콘티 지문(장면 설명, 사람이 쓴 것) */
   scriptNote?: string;
+  /** 빈 컷이 앞 컷의 씬(돌·소품·카메라)을 이미 이어받았다(다시 이어받지 않는다) */
+  inherited?: boolean;
   updatedAt: string;
 }
 

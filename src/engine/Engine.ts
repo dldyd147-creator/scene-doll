@@ -22,7 +22,7 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import type { CameraState, Cut, DollAsset, Hand, JointRotations, PropAsset, PropInstance, Vec3 } from '../model/types';
-import { dollAsset } from '../model/defaults';
+import { dollAsset, DOLL_ASSETS } from '../model/defaults';
 import { HAND_BONE } from '../model/props';
 import { fingerPreset, type Curl, type FingerName } from '../model/fingers';
 import { loadPropTemplate, PropObject, propTemplateIfLoaded } from './props';
@@ -110,6 +110,8 @@ export class Engine {
   private views: Record<ViewKind, HTMLElement | null> = { work: null, manuscript: null };
   private dollKeys = new Map<string, string>();
   private loadingTemplates = new Set<string>();
+  /** 핸드 오퍼레이터가 보여 주는 가상 손: 실제 돌과 무관한 기본 돌 하나(모든 돌이 같은 손 데이터를 쓴다) */
+  private handDummy: DollRig | null = null;
   private raf = 0;
   private savedWorkView: { position: Vector3; target: Vector3; fov: number } | null = null;
   private gizmoTarget: 'bone' | 'root' | 'rootRotate' | 'ik' | 'camera' | 'prop' | null = null;
@@ -1155,7 +1157,37 @@ export class Engine {
    */
   renderHandView(dollId: string, hand: Hand, yaw: number, pitch: number, width: number, height: number): HTMLCanvasElement | null {
     const rig = this.dolls.get(dollId);
-    if (!rig) return null;
+    return rig ? this.renderHandOf(rig, hand, yaw, pitch, width, height) : null;
+  }
+
+  /**
+   * 가상 손: 항상 같은 기본 돌(휴식 자세)의 손에 손목·손가락 값을 넣어 정면(손바닥 쪽)에서 그린다.
+   * 기본 돌을 아직 못 불러왔으면 null(불러오는 중, 잠시 뒤 다시 부르면 된다)
+   */
+  renderVirtualHand(hand: Hand, curl: Record<FingerName, Curl>, wrist: { flex: number; dev: number; twist: number }, width: number, height: number): HTMLCanvasElement | null {
+    if (!this.handDummy) {
+      const asset = DOLL_ASSETS.find((d) => !d.hidden && d.glbPath && d.gender === 'male') ?? DOLL_ASSETS[0];
+      const made = createDollRig('__hand', asset, '#e6c7a4', asset.baseHeightCm);
+      if (!made) {
+        this.ensureTemplate(asset);
+        return null;
+      }
+      made.root.visible = false;
+      this.scene.add(made.root);
+      this.handDummy = made;
+    }
+    const rig = this.handDummy;
+    rig.resetAll();
+    rig.root.updateMatrixWorld(true);
+    this.setWrist(rig, hand, wrist);
+    const joints = fingerJointsForCurl(rig, hand, curl);
+    if (joints) rig.setJoints({ ...rig.getJoints(), ...joints });
+    rig.setShading(true);
+    rig.setOutline(true);
+    return this.renderHandOf(rig, hand, 0, 0, width, height);
+  }
+
+  private renderHandOf(rig: DollRig, hand: Hand, yaw: number, pitch: number, width: number, height: number): HTMLCanvasElement | null {
     const side = hand === 'right' ? 'Right' : 'Left';
     const handBone = `${side}Hand`;
     if (!rig.skel.bones.has(handBone)) return null;
@@ -1183,17 +1215,26 @@ export class Engine {
     cam.up.copy(upV);
     cam.lookAt(center);
     cam.updateMatrixWorld(true);
-    const hidden: DollRig[] = [];
+    const hidden: Object3D[] = [];
     for (const r of this.dolls.values()) {
       if (r !== rig && r.root.visible) {
         r.root.visible = false;
-        hidden.push(r);
+        hidden.push(r.root);
       }
     }
+    for (const p of this.props.values()) {
+      if (p.root.visible) {
+        p.root.visible = false;
+        hidden.push(p.root);
+      }
+    }
+    const wasVisible = rig.root.visible;
+    rig.root.visible = true;
     try {
       return this.renderToCanvas(cam, width, height, { background: 'white' });
     } finally {
-      for (const r of hidden) r.root.visible = true;
+      rig.root.visible = wasVisible;
+      for (const r of hidden) r.visible = true;
     }
   }
 

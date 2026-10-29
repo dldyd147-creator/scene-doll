@@ -78,7 +78,7 @@ function CharacterTab() {
     <>
       <div className="row" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <span className="muted small grow" style={{ flex: 1 }}>
-          이 작품의 캐릭터 {characters.length}
+          캐릭터 {characters.length}
         </span>
         <button onClick={openManager} title="캐릭터 등록·설명·레퍼런스·돌 지정">
           <Icon name="user" /> 관리

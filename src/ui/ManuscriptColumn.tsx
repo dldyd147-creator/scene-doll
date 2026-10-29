@@ -108,14 +108,14 @@ export function ManuscriptColumn({ engine }: { engine: Engine }) {
       </div>
       <div className="camera-panel">
         <div className="row">
-          <button className={`primary confirm ${cut.confirmed ? 'done' : ''}`} onClick={() => void confirmCurrentCut(engine)} title="현재 컷을 확정하고 다음 컷으로 (Ctrl+Enter)">
+          <button className={`primary confirm ${cut.confirmed ? 'done' : ''}`} onClick={() => void confirmCurrentCut(engine)} title="(Ctrl+Enter) 현재 컷을 확정하고 다음 컷으로">
             <Icon name="check" /> {cut.confirmed ? '재확정' : '컷 확정'} <kbd>Ctrl+Enter</kbd>
           </button>
           <span className="muted small grow">{cut.confirmed ? '확정됨 · 고치면 재확정' : '작업 중'}</span>
           <button className="icon" onClick={() => setSceneSaveOpen(true)} title="씬 저장: 현재 씬(돌 배치·포즈·카메라·화면비)을 씬 라이브러리에 넣음. 인원·샷·앵글은 자동 태그, 상황 태그는 버튼으로">
             <Icon name="bookmarkPlus" />
           </button>
-          <button className="icon" onClick={() => openSceneBrowser()} title="씬 검색기 (`): 저장된 씬을 태그 버튼으로 걸러 불러오고 슬롯마다 캐릭터를 지정해 교체·추가">
+          <button className="icon" onClick={() => openSceneBrowser()} title="(`) 씬 검색기: 저장된 씬을 태그 버튼으로 걸러 불러오고 슬롯마다 캐릭터를 지정해 교체·추가">
             <Icon name="search" />
           </button>
         </div>

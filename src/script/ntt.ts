@@ -148,7 +148,7 @@ export function planApply(cutCount: number, scripts: CutScript[]): ApplyPlan {
 }
 
 function copyCut(src: Cut, number: number, now: string): Cut {
-  return { ...structuredClone(src), number, confirmed: false, desc: '', memo: '', generatedImages: [], dialogue: [], scriptNote: '', updatedAt: now };
+  return { ...structuredClone(src), number, confirmed: false, desc: '', memo: '', generatedImages: [], generatedPrompts: undefined, inherited: undefined, dialogue: [], scriptNote: '', updatedAt: now };
 }
 
 /** 메모에 비고를 붙인다(이미 있으면 그대로) */

@@ -1751,11 +1751,41 @@ button.script-import:hover {
   justify-content: center;
   cursor: zoom-out;
 }
+.gen-zoom {
+  gap: 16px;
+  padding: 3vh 2vw;
+}
 .gen-zoom img {
-  max-width: 94vw;
+  max-width: 62vw;
   max-height: 94vh;
   object-fit: contain;
   background: #fff;
+}
+.gen-zoom-prompt {
+  width: 32vw;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: auto;
+}
+.gen-zoom-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.gen-zoom-prompt pre {
+  margin: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+  line-height: 1.5;
+  user-select: text;
 }
 
 :root[data-theme='dark'] .brand-logo {

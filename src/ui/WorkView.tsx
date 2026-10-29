@@ -133,27 +133,27 @@ export function WorkView({ engine }: { engine: Engine }) {
       <BodySliders engine={engine} />
       <div className="work-toolbar">
         <div className="group" title="조작 모드">
-          <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="직접 드래그 (Q): 부위·관절점·핸들을 끌어 자세를 잡음">
+          <button className={mode === 'direct' ? 'active' : ''} onClick={() => setMode('direct')} title="(Q) 직접 드래그: 부위·관절점·핸들을 끌어 자세를 잡음">
             <Icon name="hand" /> 직접
           </button>
-          <button className={mode === 'translate' ? 'active' : ''} onClick={() => setMode('translate')} title="이동 기즈모 (W): 돌 전체 또는 손·발 IK 축 이동">
+          <button className={mode === 'translate' ? 'active' : ''} onClick={() => setMode('translate')} title="(W) 이동 기즈모: 돌 전체 또는 손·발 IK 축 이동">
             <Icon name="move" /> 이동
           </button>
-          <button className={mode === 'rotate' ? 'active' : ''} onClick={() => setMode('rotate')} title="회전 링 기즈모 (E): 선택 관절 또는 돌 전체">
+          <button className={mode === 'rotate' ? 'active' : ''} onClick={() => setMode('rotate')} title="(E) 회전 링 기즈모: 선택 관절 또는 돌 전체">
             <Icon name="rotate" /> 회전
           </button>
         </div>
         <div className="group" title="선택한 돌">
-          <button className="icon" disabled={!hasDoll} onClick={() => engine.mirrorSelected()} title="포즈 좌우 반전">
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.mirrorSelected()} title="(Shift+M) 포즈 좌우 반전">
             <Icon name="mirror" />
           </button>
           <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedJoint(true)} title={selection.bone ? '선택한 관절과 그 아래 초기화' : '모든 관절 초기화(T포즈)'}>
             <Icon name="reset" />
           </button>
-          <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedDoll('all')} title="돌 전체 초기화: 위치 원점·회전 정면·자세 T포즈 (Alt+G: 위치만, Alt+R: 회전만)">
+          <button className="icon" disabled={!hasDoll} onClick={() => engine.resetSelectedDoll('all')} title="(Alt+G·Alt+R) 돌 전체 초기화: 위치 원점·회전 정면·자세 T포즈 — Alt+G는 위치만, Alt+R은 회전만">
             <Icon name="resetAll" />
           </button>
-          <button disabled={!hasDoll} onClick={() => setHandOperator(true)} title="핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양(손 확대 보기·손가락별 슬라이더·프리셋 저장/불러오기)">
+          <button disabled={!hasDoll} onClick={() => setHandOperator(true)} title="(H) 핸드 오퍼레이터: 선택한 돌의 왼손·오른손 손가락 모양(손 확대 보기·손가락별 슬라이더·프리셋 저장/불러오기)">
             <Icon name="fingers" /> 손
           </button>
           <button className="icon" disabled={!hasDoll} onClick={() => engine.fixJoints()} title="관절을 사람 관절 한계 안으로 교정">
@@ -162,10 +162,10 @@ export function WorkView({ engine }: { engine: Engine }) {
           <button className="icon" disabled={!hasDoll} onClick={() => engine.snapSelectedToGround()} title="가장 낮은 점을 바닥에 붙이기">
             <Icon name="ground" />
           </button>
-          <button className="icon" disabled={!hasDoll && !hasProp} onClick={() => duplicateSelected()} title="선택한 돌·소품 복제 (Ctrl+C · Ctrl+V는 같은 자리)">
+          <button className="icon" disabled={!hasDoll && !hasProp} onClick={() => duplicateSelected()} title="(Ctrl+C · Ctrl+V) 선택한 돌·소품 복제 — Ctrl+V는 같은 자리">
             <Icon name="copy" />
           </button>
-          <button className="icon danger" disabled={!hasDoll && !hasProp} onClick={() => removeSelected()} title="선택한 돌·소품 삭제 (Delete)">
+          <button className="icon danger" disabled={!hasDoll && !hasProp} onClick={() => removeSelected()} title="(Delete) 선택한 돌·소품 삭제">
             <Icon name="trash" />
           </button>
           {limbKind && (
@@ -182,13 +182,13 @@ export function WorkView({ engine }: { engine: Engine }) {
           )}
         </div>
         <div className="group" title="시점">
-          <button className="icon" onClick={() => engine.fitAll()} title="전체 보기 (Shift+Z)">
+          <button className="icon" onClick={() => engine.fitAll()} title="(Shift+Z) 전체 보기">
             <Icon name="fitAll" />
           </button>
-          <button className="icon" onClick={() => engine.focusSelected()} title="선택한 돌로 시점 맞춤 (F)">
+          <button className="icon" onClick={() => engine.focusSelected()} title="(F) 선택한 돌로 시점 맞춤">
             <Icon name="focus" />
           </button>
-          <button className="icon" onClick={() => engine.toggleViewWithManuscript()} title="조작뷰 시점 ↔ 원고 카메라 시점 (Tab)">
+          <button className="icon" onClick={() => engine.toggleViewWithManuscript()} title="(Tab) 조작뷰 시점 ↔ 원고 카메라 시점">
             <Icon name="camera" />
           </button>
         </div>

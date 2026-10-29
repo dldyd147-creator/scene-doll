@@ -36,7 +36,8 @@ const JOINT_DOT_BONES = [
 /** 몸통 제어점: 몸에 가려져도 항상 보이고 잡힌다(팔다리 점은 가려지면 숨는다) */
 export const TORSO_DOT_BONES = new Set(['Head', 'Neck', 'Spine2', 'Spine1', 'Spine', 'Hips']);
 /** 몸통 흐름선: 골반에서 정수리까지 제어점을 잇는다 */
-const TORSO_CHAIN = ['Hips', 'Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'HeadTop_End'];
+// 척추 선에 양 어깨 선을 이어 십자 모양으로 그린다(한 줄로 이어 그리려고 어깨 쪽은 갔다가 되돌아온다)
+const TORSO_CHAIN = ['Hips', 'Spine', 'Spine1', 'Spine2', 'RightShoulder', 'RightArm', 'RightShoulder', 'Spine2', 'LeftShoulder', 'LeftArm', 'LeftShoulder', 'Spine2', 'Neck', 'Head', 'HeadTop_End'];
 
 /** 관절이 몸 안에 있으므로 제어점을 카메라 쪽으로 당길 거리(키 175cm 기준 m). 몸 두께의 절반 정도 */
 const MARKER_PULL: Record<string, number> = {

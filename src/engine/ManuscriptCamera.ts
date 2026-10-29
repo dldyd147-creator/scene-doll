@@ -104,8 +104,10 @@ export class ManuscriptCamera {
     this.updateFrustum();
   }
 
+  /** 화각 범위 선을 끄면 카메라 아이콘도 함께 숨긴다(눌러서 고를 수도 없다) */
   setFrustumVisible(v: boolean): void {
     this.frustum.visible = v;
+    this.icon.visible = v;
   }
 
   private updateFrustum(): void {

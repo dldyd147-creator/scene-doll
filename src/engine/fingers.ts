@@ -30,12 +30,25 @@ export function hasFingerBones(rig: DollRig, hand: Hand): boolean {
   return rig.skel.bones.has(fingerBoneName(side, 'Index', 1)) && rig.skel.bones.has(fingerBoneName(side, 'Thumb', 1));
 }
 
-function handFrame(rig: DollRig, hand: Hand): { side: 'Left' | 'Right'; normal: Vector3; handQ: Quaternion } | null {
+/**
+ * 엄지는 다른 손가락과 굽는 방향이 다르다: 손바닥 법선이 아니라 손바닥을 가로질러(새끼 쪽으로) 굽는다.
+ * 법선만 쓰면 엄지 뼈가 법선과 거의 나란한 돌에서 굽힘 축이 0이 되어 아예 굽지 않는다
+ */
+export function thumbBendTarget(normal: Vector3, indexDir: Vector3, thumbDir: Vector3): Vector3 {
+  const index = indexDir.clone().normalize();
+  const side = thumbDir.clone().addScaledVector(index, -thumbDir.dot(index));
+  if (side.lengthSq() < 1e-8) return normal.clone();
+  const across = side.normalize().negate();
+  return across.multiplyScalar(0.75).addScaledVector(normal, 0.45).normalize();
+}
+
+function handFrame(rig: DollRig, hand: Hand): { side: 'Left' | 'Right'; normal: Vector3; thumb: Vector3; handQ: Quaternion } | null {
   if (!hasFingerBones(rig, hand)) return null;
   const side = hand === 'right' ? 'Right' : 'Left';
   const indexDir = rig.skel.rest.get(fingerBoneName(side, 'Index', 1))!.dir;
   const thumbDir = rig.skel.rest.get(fingerBoneName(side, 'Thumb', 1))!.dir;
-  return { side, normal: palmNormal(side, indexDir, thumbDir), handQ: rig.jointDelta(`${side}Hand`) };
+  const normal = palmNormal(side, indexDir, thumbDir);
+  return { side, normal, thumb: thumbBendTarget(normal, indexDir, thumbDir), handQ: rig.jointDelta(`${side}Hand`) };
 }
 
 /** 손가락별 굽힘각 → 그 손의 손가락 관절값(현재 손 회전을 따라감). 손가락 뼈가 없으면 null */
@@ -50,7 +63,7 @@ export function fingerJointsForCurl(rig: DollRig, hand: Hand, curl: Record<Finge
       const rest = rig.skel.rest.get(name);
       if (!rest) continue;
       sum += curl[finger][joint - 1];
-      const rel = f.handQ.clone().multiply(curlQuaternion(rest.dir, f.normal, sum));
+      const rel = f.handQ.clone().multiply(curlQuaternion(rest.dir, finger === 'Thumb' ? f.thumb : f.normal, sum));
       if (rel.w < 0) rel.set(-rel.x, -rel.y, -rel.z, -rel.w);
       out[name] = toQuat(rel);
     }
@@ -84,7 +97,7 @@ export function estimateCurl(rig: DollRig, hand: Hand): Record<FingerName, Curl>
         curl.push(0);
         continue;
       }
-      const axis = new Vector3().crossVectors(rest.dir, f.normal);
+      const axis = new Vector3().crossVectors(rest.dir, finger === 'Thumb' ? f.thumb : f.normal);
       if (axis.lengthSq() < 1e-8) {
         curl.push(0);
         continue;

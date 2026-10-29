@@ -165,7 +165,7 @@ export interface StoreState extends Document {
   setGenerateOpen: (open: boolean) => void;
   setAssembleOpen: (open: boolean) => void;
   /** 생성 후보 경로를 컷에 더한다(첫 장이면 대표). 메모처럼 되돌리기 기록 없음 */
-  addGeneratedImages: (cutNumber: number, paths: string[]) => void;
+  addGeneratedImages: (cutNumber: number, paths: string[], prompt?: string) => void;
   /** 대표 후보 지정: generatedImages[0]으로 옮긴다 */
   setGeneratedMain: (cutNumber: number, path: string) => void;
   removeGeneratedImage: (cutNumber: number, path: string) => void;
@@ -191,9 +191,23 @@ function initialDocument(): Document {
   return { work, episode: createEpisode(work.code, 1), cuts: [createCut(1)], characters: [] };
 }
 
+/**
+ * 빈 컷(돌·소품이 없는 미확정 컷, 글콘티를 불러와 한꺼번에 만들어진 컷 등)에 들어가면 바로 앞 컷의 씬을 그대로 이어받는다.
+ * 연속된 컷을 돌부터 다시 배치하지 않게 한다. 이미 이어받았거나 앞 컷도 비었으면 그대로 둔다
+ */
+export function inheritBlankCut(cuts: Cut[], index: number): Cut[] {
+  const c = cuts[index];
+  const prev = cuts[index - 1];
+  if (!c || !prev || c.confirmed || c.inherited || c.dolls.length || c.props.length || (c.generatedImages ?? []).length) return cuts;
+  if (!prev.dolls.length && !prev.props.length) return cuts;
+  const next = cuts.slice();
+  next[index] = { ...c, aspect: prev.aspect, camera: structuredClone(prev.camera), light: structuredClone(prev.light), dolls: structuredClone(prev.dolls), props: structuredClone(prev.props), outline: prev.outline, crosshair: prev.crosshair, inherited: true, updatedAt: nowIso() };
+  return next;
+}
+
 /** 컷 복사본: 같은 씬, 새 번호, 미확정 */
 function copyCut(src: Cut, number: number): Cut {
-  return { ...structuredClone(src), number, confirmed: false, desc: '', memo: '', generatedImages: [], updatedAt: nowIso() };
+  return { ...structuredClone(src), number, confirmed: false, desc: '', memo: '', generatedImages: [], generatedPrompts: undefined, inherited: undefined, updatedAt: nowIso() };
 }
 
 /** 컷 번호를 1부터 다시 매기고 썸네일 키도 옮긴다 */
@@ -637,7 +651,7 @@ export const useStore = create<StoreState>()(
     setGenerateOpen: (open) => set({ generateOpen: open }),
     setAssembleOpen: (open) => set({ assembleOpen: open }),
 
-    addGeneratedImages: (cutNumber, paths) => {
+    addGeneratedImages: (cutNumber, paths, prompt) => {
       if (!paths.length) return;
       const s = get();
       const i = s.cuts.findIndex((c) => c.number === cutNumber);
@@ -645,7 +659,8 @@ export const useStore = create<StoreState>()(
       const cuts = s.cuts.slice();
       const prev = cuts[i].generatedImages ?? [];
       // 새로 만든 후보를 앞에 둔다 — 다시 생성했으면 방금 것이 대표(첫 장)가 되고 이전 후보는 뒤에 남는다
-      cuts[i] = { ...cuts[i], generatedImages: [...paths.filter((p) => !prev.includes(p)), ...prev], updatedAt: nowIso() };
+      const prompts = prompt ? { ...(cuts[i].generatedPrompts ?? {}), ...Object.fromEntries(paths.map((p) => [p, prompt])) } : cuts[i].generatedPrompts;
+      cuts[i] = { ...cuts[i], generatedImages: [...paths.filter((p) => !prev.includes(p)), ...prev], generatedPrompts: prompts, updatedAt: nowIso() };
       set({ cuts, dirty: true });
     },
 
@@ -665,7 +680,8 @@ export const useStore = create<StoreState>()(
       const i = s.cuts.findIndex((c) => c.number === cutNumber);
       if (i < 0) return;
       const cuts = s.cuts.slice();
-      cuts[i] = { ...cuts[i], generatedImages: (cuts[i].generatedImages ?? []).filter((p) => p !== path), updatedAt: nowIso() };
+      const { [path]: _gone, ...prompts } = cuts[i].generatedPrompts ?? {};
+      cuts[i] = { ...cuts[i], generatedImages: (cuts[i].generatedImages ?? []).filter((p) => p !== path), generatedPrompts: prompts, updatedAt: nowIso() };
       set({ cuts, dirty: true });
     },
 
@@ -688,6 +704,7 @@ export const useStore = create<StoreState>()(
       cuts[s.currentCutIndex] = cur;
       const idx = s.currentCutIndex + 1;
       if (idx >= cuts.length) cuts.push(copyCut(cur, cuts.length + 1));
+      cuts.splice(0, cuts.length, ...inheritBlankCut(cuts, idx));
       set({ cuts, currentCutIndex: idx, past: [], future: [], dirty: true, episode: { ...s.episode, cutOrder: cuts.map((c) => c.number) } });
     },
 
@@ -695,7 +712,8 @@ export const useStore = create<StoreState>()(
       const s = get();
       const i = Math.max(0, Math.min(s.cuts.length - 1, index));
       if (i === s.currentCutIndex) return;
-      set({ currentCutIndex: i, past: [], future: [], selection: validSelection(s.selection, s.cuts[i]) });
+      const cuts = inheritBlankCut(s.cuts, i);
+      set({ cuts, currentCutIndex: i, past: [], future: [], dirty: cuts !== s.cuts || s.dirty, selection: validSelection(s.selection, cuts[i]) });
     },
 
     nextCut: () => {

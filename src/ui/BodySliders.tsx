@@ -19,6 +19,17 @@ export function BodySliders({ engine }: { engine: Engine }) {
 
   useEffect(() => setOpen(false), [dollId]);
 
+  // 슬라이더 바깥(캔버스 등)을 누르면 슬라이더를 닫고 제어점을 다시 보인다
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (drag.current || box.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [open]);
+
   // 돌의 가슴께(화면 좌표)를 따라다닌다
   useEffect(() => {
     if (!dollId) return;
@@ -73,7 +84,7 @@ export function BodySliders({ engine }: { engine: Engine }) {
           <div className="spine-thumb" style={{ transform: `translate(-50%, calc(-50% + ${offset}px))` }} />
         </div>
       )}
-      <button className={`spine-dot ${open ? 'active' : ''}`} onClick={() => setOpen((v) => !v)} title="척추 슬라이더(허리 젖힘·숙임) 열기/닫기" />
+      {!open && <button className="spine-dot" onClick={() => setOpen(true)} title="척추 슬라이더(허리 젖힘·숙임) 열기 — 슬라이더 밖을 누르면 닫힙니다" />}
     </div>
   );
 }

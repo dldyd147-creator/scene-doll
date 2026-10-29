@@ -65,7 +65,7 @@ export function TopBar() {
         </span>
       )}
       <div className="sep" />
-      <button className="icon" onClick={() => void saveNow()} title="저장 (Ctrl+S)">
+      <button className="icon" onClick={() => void saveNow()} title="(Ctrl+S) 저장">
         <Icon name="save" />
       </button>
       <span className={`save-state ${saveError ? 'error' : dirty ? 'dirty' : ''}`} title={saveError ?? undefined}>

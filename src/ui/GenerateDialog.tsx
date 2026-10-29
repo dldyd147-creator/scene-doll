@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Engine } from '../engine/Engine';
 import { PRESET_ORDER, PRESETS } from '../generate/batch';
-import { availableOnWeb, keyState, maxImagesFor } from '../generate/apiList';
+import { availableOnWeb, keyState, maxImagesFor, selectedApi } from '../generate/apiList';
 import { currentApi, engineFor, formatUsage, GEN_ERROR_LABEL } from '../generate/engine';
+import { normalizeApiList } from '../generate/apiList';
 import { useKeyStatus } from '../generate/keyStatus';
 import { estimateRemaining, estimateTotal, loadTimeHistory, perBatchSeconds, recordDuration, roughDuration, saveTimeHistory } from '../generate/timeEstimate';
 import { isDesktop } from '../native';
@@ -24,7 +25,7 @@ const pad3 = (n: number) => String(n).padStart(3, '0');
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /** 후보 썸네일 하나: 클릭하면 대표, 도구 줄에 새 탭·삭제 */
-function Candidate({ path, main, onMain, onDelete, onZoom }: { path: string; main: boolean; onMain: () => void; onDelete: () => void; onZoom: (url: string) => void }) {
+function Candidate({ path, main, onMain, onDelete, onZoom }: { path: string; main: boolean; onMain: () => void; onDelete: () => void; onZoom: (url: string, path: string) => void }) {
   const url = useThumb(path);
   return (
     <div className={`cand ${main ? 'main' : ''}`} title={`${path}${main ? ' · 대표' : ' · 클릭하면 대표로'}`}>
@@ -38,7 +39,7 @@ function Candidate({ path, main, onMain, onDelete, onZoom }: { path: string; mai
           </button>
         )}
         {url && (
-          <button className="icon" onClick={() => onZoom(url)} title="크게 보기">
+          <button className="icon" onClick={() => onZoom(url, path)} title="크게 보기(이 그림을 만든 프롬프트도 함께)">
             <Icon name="external" size={12} />
           </button>
         )}
@@ -89,7 +90,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
   const [scope, setScope] = useState<Scope>('all');
   const [single, setSingle] = useState(false);
   // 크게 보기: 새 탭(blob 주소)은 브라우저가 about:blank#blocked로 막는 일이 있어 앱 안 덮개로 연다
-  const [zoom, setZoom] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ url: string; prompt?: string; title?: string } | null>(null);
   useEffect(() => {
     if (!zoom) return;
     const onKey = (e: KeyboardEvent) => {
@@ -127,6 +128,13 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
 
   const gen = useMemo(() => engineFor(settings), [settings]);
   const api = currentApi(settings);
+  // 수위 거부 때 자동으로 다시 보낼 대체 모델(고르지 않았거나 지금 모델과 같으면 없음)
+  const fallbackApi = useMemo(() => {
+    if (!settings.genFallbackApiId || settings.genFallbackApiId === api.id) return null;
+    const list = normalizeApiList(settings.genApis);
+    return list.some((e) => e.id === settings.genFallbackApiId) ? selectedApi(list, settings.genFallbackApiId) : null;
+  }, [settings.genFallbackApiId, settings.genApis, api.id]);
+  const fallback = useMemo(() => (fallbackApi ? { gen: engineFor({ ...settings, genApiId: fallbackApi.id }), maxImages: maxImagesFor(fallbackApi), label: fallbackApi.label } : undefined), [fallbackApi, settings]);
   const keyIds = useKeyStatus((k) => k.ids);
   const per = useMemo(() => perBatchSeconds(timeHistory, api), [timeHistory, api]);
   // 생성 중에는 1초마다 남은 시간을 다시 계산하고, 묶음이 하나 끝나면 그 묶음의 시작 시각을 새로 잡는다
@@ -213,6 +221,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
       quality: settings.genQuality,
       signal: ac.signal,
       onProgress: setProgress,
+      fallback,
       onBatch: (o) => {
         if (o.ok && o.seconds) {
           const next = recordDuration(loadTimeHistory(), api.id, o.seconds);
@@ -294,6 +303,10 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
 
         {tab === 'generate' && phase === 'setup' && (
           <>
+            <div className="small muted">
+              {fallbackApi ? `수위 거부 시 자동 재호출: ${fallbackApi.label}` : '수위 거부 시 자동 재호출 모델 없음 — 설정 > 이미지 생성에서 "수위 대체"를 고르면 거부된 묶음이 그 모델로 자동 재호출됩니다'}
+              {fallbackApi && isDesktop && keyState(fallbackApi, keyIds) === 'missing' && <span style={{ color: 'var(--danger)' }}> (키 없음)</span>}
+            </div>
             {remoteUnset && (
               <div className="small" style={{ color: 'var(--danger)' }}>
                 {setupProblem}{' '}
@@ -399,7 +412,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                 {outcomes.map((o) => (
                   <div key={o.batchId}>
                     컷 {o.cuts.map(pad3).join('·')}: {o.ok ? <span className="gen-status ok">완료</span> : <span className="gen-status fail">{GEN_ERROR_LABEL[o.errorKind ?? 'request']}</span>} {o.error && <span className="muted">{o.error}</span>}
-                    {o.ok && <span className="muted"> {[o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ')}</span>}
+                    {o.ok && <span className="muted"> {[o.viaFallback ? `수위 거부 → ${o.viaFallback}` : null, o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ')}</span>}
                   </div>
                 ))}
               </div>
@@ -467,7 +480,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
               <div className="small muted">
                 {outcomes.map((o) => (
                   <div key={o.batchId}>
-                    컷 {o.cuts.map(pad3).join('·')}: {o.ok ? [o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ') || '완료' : `${GEN_ERROR_LABEL[o.errorKind ?? 'request']}${o.error ? `: ${o.error}` : ''}`}
+                    컷 {o.cuts.map(pad3).join('·')}: {o.ok ? [o.viaFallback ? `수위 거부 → ${o.viaFallback}` : null, o.model, formatUsage(o.usage), o.boundary].filter(Boolean).join(' · ') || '완료' : `${GEN_ERROR_LABEL[o.errorKind ?? 'request']}${o.error ? `: ${o.error}` : ''}`}
                   </div>
                 ))}
               </div>
@@ -477,7 +490,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                 <summary className="small">결과 격자(자르기 전)</summary>
                 <div className="gen-results">
                   {outcomes.flatMap((o) => o.resultUrls.map((u, k) => (
-                    <img key={`${o.batchId}-${k}`} src={u} alt="" style={{ cursor: 'zoom-in' }} onClick={() => setZoom(u)} title={`컷 ${o.cuts.map(pad3).join('·')} · 후보 ${k + 1} · 클릭하면 크게`} />
+                    <img key={`${o.batchId}-${k}`} src={u} alt="" style={{ cursor: 'zoom-in' }} onClick={() => setZoom({ url: u, prompt: batches.find((x) => x.id === o.batchId)?.prompt, title: `컷 ${o.cuts.map(pad3).join('·')} · 후보 ${k + 1}` })} title={`컷 ${o.cuts.map(pad3).join('·')} · 후보 ${k + 1} · 클릭하면 크게`} />
                   )))}
                 </div>
               </details>
@@ -528,7 +541,7 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
                       </div>
                       <div className="cand-list">
                         {list.map((p, i) => (
-                          <Candidate key={p} path={p} main={i === 0} onMain={() => { setGeneratedMain(c.number, p); void saveNow(); }} onDelete={() => void deleteCandidate(c, p)} onZoom={setZoom} />
+                          <Candidate key={p} path={p} main={i === 0} onMain={() => { setGeneratedMain(c.number, p); void saveNow(); }} onDelete={() => void deleteCandidate(c, p)} onZoom={(url, path) => setZoom({ url, prompt: c.generatedPrompts?.[path], title: `컷 ${pad3(c.number)} · ${path.split('/').pop()}` })} />
                         ))}
                         {!list.length && <span className="small muted">아직 후보가 없습니다</span>}
                       </div>
@@ -550,8 +563,27 @@ export function GenerateDialog({ engine }: { engine: Engine }) {
         )}
       </div>
       {zoom && (
-        <div className="gen-zoom" onClick={() => setZoom(null)} title="누르면 닫힘">
-          <img src={zoom} alt="" />
+        <div
+          className="gen-zoom"
+          onClick={(e) => {
+            // 백드롭의 닫기로 번지지 않게: 미리보기만 닫는다
+            e.stopPropagation();
+            setZoom(null);
+          }}
+          title="누르면 닫힘"
+        >
+          <img src={zoom.url} alt="" />
+          <div className="gen-zoom-prompt" onClick={(e) => e.stopPropagation()}>
+            <div className="gen-zoom-head">
+              <b>프롬프트</b> <span className="muted small">{zoom.title}</span>
+              {zoom.prompt && (
+                <button className="icon" onClick={() => void navigator.clipboard?.writeText(zoom.prompt ?? '')} title="프롬프트 복사">
+                  <Icon name="copy" size={12} />
+                </button>
+              )}
+            </div>
+            <pre>{zoom.prompt ?? '이 그림의 프롬프트 기록이 없습니다(기록 기능 이전에 만든 그림)'}</pre>
+          </div>
         </div>
       )}
     </div>

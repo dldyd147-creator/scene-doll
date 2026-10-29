@@ -10,8 +10,6 @@ import { useLibrary } from './library';
 
 const VIEW = 380;
 const POS_KEY = 'scene-doll.handOperator.pos';
-/** 손 확대 보기는 손바닥 쪽 정면에 고정한다(돌려 보지 않는다) */
-const FRONT = { yaw: 0, pitch: 0 };
 
 function loadPos(): { x: number; y: number } {
   try {
@@ -43,7 +41,8 @@ export function HandOperator({ engine }: { engine: Engine }) {
   const [amounts, setAmounts] = useState<FingerAmounts>(OPEN_AMOUNTS);
   const [noFingers, setNoFingers] = useState(false);
   const [wrist, setWrist] = useState({ flex: 0, dev: 0, twist: 0 });
-  const view = FRONT;
+  const retry = useRef(0);
+  const scheduleRenderRef = useRef<() => void>(() => {});
   const [pos, setPos] = useState(loadPos);
   const winDrag = useRef<{ dx: number; dy: number } | null>(null);
   const [name, setName] = useState('');
@@ -66,18 +65,22 @@ export function HandOperator({ engine }: { engine: Engine }) {
 
   const render = useCallback(() => {
     const cv = canvasRef.current;
-    if (!cv || !dollId) return;
-    const src = engine.renderHandView(dollId, hand, view.yaw, view.pitch, cv.width, cv.height);
+    if (!cv) return;
+    // 실제 캐릭터의 손이 아니라 모든 돌이 같이 쓰는 가상의 손을 그린다(손목·손가락 값만 넣는다)
+    const src = engine.renderVirtualHand(hand, curlFromAmounts(amounts), wrist, cv.width, cv.height);
     const ctx = cv.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, cv.width, cv.height);
     if (src) ctx.drawImage(src, 0, 0);
-  }, [engine, dollId, hand, view]);
+    else retry.current = window.setTimeout(() => scheduleRenderRef.current(), 400); // 기본 돌을 아직 불러오는 중
+  }, [engine, hand, amounts, wrist]);
 
   const scheduleRender = useCallback(() => {
     cancelAnimationFrame(raf.current);
+    window.clearTimeout(retry.current);
     raf.current = requestAnimationFrame(render);
   }, [render]);
+  scheduleRenderRef.current = scheduleRender;
 
   useEffect(() => {
     if (!open) return;
@@ -87,8 +90,9 @@ export function HandOperator({ engine }: { engine: Engine }) {
     return () => {
       unsub();
       cancelAnimationFrame(raf.current);
+      window.clearTimeout(retry.current);
     };
-  }, [open, scheduleRender, amounts]);
+  }, [open, scheduleRender]);
 
   useEffect(() => {
     if (!open) return;
@@ -207,7 +211,7 @@ export function HandOperator({ engine }: { engine: Engine }) {
                 height={VIEW}
                 title="손바닥 쪽 정면에 고정된 보기"
               />
-              <div className="muted small">손바닥 정면 고정 · 손은 조작뷰에서 더블클릭해도 열립니다 · 제목줄을 끌어 창을 옮기세요</div>
+              <div className="muted small">가상의 손(모든 돌이 같은 손 모양 데이터) · 손은 조작뷰에서 더블클릭해도 열립니다 · 제목줄을 끌어 창을 옮기세요</div>
             </div>
             <div className="hand-controls">
               <h3>손목</h3>

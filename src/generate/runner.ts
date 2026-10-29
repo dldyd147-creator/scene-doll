@@ -204,6 +204,8 @@ export interface BatchOutcome {
   model?: string;
   /** 경계선 검출 요약(결과마다 한 줄, 묶음이 2칸 이상일 때) */
   boundary?: string;
+  /** 수위 거부로 대체 모델이 만든 결과면 그 이름 */
+  viaFallback?: string;
 }
 
 export interface RunOptions {
@@ -213,6 +215,8 @@ export interface RunOptions {
   onProgress?: (p: Progress) => void;
   /** 묶음 하나가 끝날 때마다 */
   onBatch?: (outcome: BatchOutcome) => void;
+  /** 생성 거부(수위)가 나면 같은 묶음을 이 엔진으로 자동 재호출(첨부는 maxImages장까지) */
+  fallback?: { gen: GenEngine; maxImages: number; label: string };
 }
 
 /** 묶음들을 차례로 엔진에 보내고 결과를 잘라 저장한다. 실패한 묶음은 건너뛰고 계속, 취소되면 멈춘다 */
@@ -234,7 +238,17 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
     try {
       opts.onProgress?.({ done: i, total: batches.length, current: `${label} 보내는 중…` });
       const sentAt = Date.now();
-      const result = await gen.generate({ prompt: b.prompt, images: b.images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, signal: opts.signal });
+      const call = (engine: GenEngine, images: GenInputImage[]) => engine.generate({ prompt: b.prompt, images, size: b.size, n: opts.n, quality: opts.quality, inputFidelity: b.inputFidelity, signal: opts.signal });
+      let result;
+      try {
+        result = await call(gen, b.images);
+      } catch (e) {
+        // 수위 거부: 대체 모델로 같은 묶음을 자동으로 다시 보낸다(자는 동안에도 끝까지 가게)
+        if (!(e instanceof GenError && e.kind === 'refused') || !opts.fallback || opts.signal.aborted) throw e;
+        opts.onProgress?.({ done: i, total: batches.length, current: `${label} 생성 거부 → ${opts.fallback.label}로 다시 보내는 중…` });
+        result = await call(opts.fallback.gen, b.images.slice(0, Math.max(1, opts.fallback.maxImages)));
+        outcome.viaFallback = opts.fallback.label;
+      }
       outcome.seconds = (Date.now() - sentAt) / 1000;
       outcome.usage = result.usage;
       outcome.model = result.model;
@@ -261,7 +275,7 @@ export async function runBatches(gen: GenEngine, batches: PreparedBatch[], opts:
           (outcome.saved[cut.number] ??= []).push(path);
         }
       }
-      for (const cut of b.cuts) useStore.getState().addGeneratedImages(cut.number, outcome.saved[cut.number] ?? []);
+      for (const cut of b.cuts) useStore.getState().addGeneratedImages(cut.number, outcome.saved[cut.number] ?? [], b.prompt);
       if (notes.length) outcome.boundary = notes.length === 1 ? notes[0] : notes.map((n, k) => `${k + 1}: ${n}`).join(' / ');
       outcome.ok = Object.keys(outcome.saved).length > 0;
       if (!outcome.ok) {

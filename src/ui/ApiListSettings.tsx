@@ -96,6 +96,7 @@ export function ApiListSettings() {
   const rawApis = useStore((s) => s.settings.genApis);
   const apis = useMemo(() => normalizeApiList(rawApis), [rawApis]);
   const selectedId = useStore((s) => s.settings.genApiId);
+  const fallbackId = useStore((s) => s.settings.genFallbackApiId);
   const update = useStore((s) => s.updateSettings);
   const { ids, available, loaded, refresh, clear } = useKeyStatus();
   const [editing, setEditing] = useState<string | null>(null);
@@ -121,7 +122,7 @@ export function ApiListSettings() {
 
   return (
     <div className="api-list">
-      <div className="small muted">쓸 서비스를 한 번 눌러 고릅니다. 키는 윈도우 계정으로 암호화해 이 PC에만 저장하며, 한 번 저장하면 화면에 다시 보이지 않습니다.</div>
+      <div className="small muted">쓸 서비스를 한 번 눌러 고르고, '수위 대체'로 생성이 거부될 때 자동으로 다시 보낼 모델을 따로 고릅니다. 키는 윈도우 계정으로 암호화해 이 PC에만 저장하며, 한 번 저장하면 화면에 다시 보이지 않습니다.</div>
       {isDesktop && loaded && !available && <div className="small" style={{ color: 'var(--danger)' }}>이 PC에서 윈도우 계정 암호화를 쓸 수 없어 키를 저장할 수 없습니다.</div>}
       {apis.map((e) => {
         const selected = e.id === selectedId;
@@ -132,6 +133,9 @@ export function ApiListSettings() {
             <div className="api-main">
               <button className={selected ? 'active' : ''} onClick={() => update({ genApiId: e.id })} disabled={webBlocked} title={webBlocked ? '설치형 프로그램에서만 쓸 수 있습니다' : '이 항목으로 이미지를 생성합니다'}>
                 {selected ? '● 사용 중' : '○ 사용'}
+              </button>
+              <button className={e.id === fallbackId ? 'active' : ''} onClick={() => update({ genFallbackApiId: e.id === fallbackId ? '' : e.id })} disabled={webBlocked || selected} title={selected ? '지금 쓰는 항목은 대체로 쓸 수 없습니다' : '수위 문제로 생성이 거부된 묶음을 이 항목으로 자동으로 다시 보냅니다(자는 동안에도 끝까지 가게)'}>
+                {e.id === fallbackId ? '↻ 수위 대체 중' : '↻ 수위 대체'}
               </button>
               <div className="api-title">
                 <b>{e.label}</b>

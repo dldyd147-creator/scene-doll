@@ -53,6 +53,8 @@ export interface Settings {
   /** 7단계 API 목록과 현재 선택한 항목 id. 키는 설정이 아니라 데스크톱의 암호화 저장소에 있다 */
   genApis: ApiEntry[];
   genApiId: string;
+  /** 수위 문제로 생성이 거부되면 같은 묶음을 자동으로 다시 보낼 대체 API 항목 id(비우면 대체 없음) */
+  genFallbackApiId: string;
   /** 서버리스 함수 주소(원격 엔진). OpenAI 키가 아니라 함수 URL */
   genEndpoint: string;
   /** 함수 접근 토큰(함수 배포 때 정한 값). OpenAI API 키는 절대 여기 넣지 않는다 */
@@ -110,6 +112,7 @@ export const DEFAULT_SETTINGS: Settings = {
   genEngine: 'remote',
   genApis: DEFAULT_API_LIST.map((e) => ({ ...e })),
   genApiId: DEFAULT_API_ID,
+  genFallbackApiId: '',
   genEndpoint: 'https://scene-doll-image.dldyd147.workers.dev/',
   genToken: '',
   genProvider: 'openai',

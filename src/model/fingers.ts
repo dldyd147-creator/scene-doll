@@ -17,7 +17,7 @@ export const FINGER_PRESETS: FingerPreset[] = [
   { id: 'open', label: '펴기', hint: '손가락을 모두 편다(휴식)', curl: { Thumb: [0, 0, 0], ...four([0, 0, 0]) } },
   { id: 'relaxed', label: '자연스럽게', hint: '힘 뺀 손', curl: { Thumb: [8, 10, 5], ...four([15, 22, 15]) } },
   { id: 'grip', label: '쥐기', hint: '검·컵 같은 물건을 쥔 손(소품을 쥐어 주면 자동)', curl: { Thumb: [25, 35, 10], ...four([55, 75, 45]) } },
-  { id: 'fist', label: '주먹', hint: '꽉 쥔 주먹', curl: { Thumb: [40, 45, 20], ...four([85, 95, 65]) } },
+  { id: 'fist', label: '주먹', hint: '꽉 쥔 주먹', curl: { Thumb: [45, 60, 55], ...four([85, 95, 65]) } },
   { id: 'point', label: '가리키기', hint: '검지만 펴고 나머지는 쥠', curl: { Thumb: [30, 40, 15], Index: [0, 0, 0], Middle: [85, 95, 65], Ring: [85, 95, 65], Pinky: [85, 95, 65] } },
   { id: 'thumbsUp', label: '엄지 척', hint: '엄지만 펴고 나머지는 쥠', curl: { Thumb: [0, 0, 0], ...four([85, 95, 65]) } },
 ];
@@ -33,7 +33,7 @@ export function fingerBoneName(side: 'Left' | 'Right', finger: FingerName, joint
 export const FINGER_LABEL: Record<FingerName, string> = { Thumb: '엄지', Index: '검지', Middle: '중지', Ring: '약지', Pinky: '새끼' };
 
 /** 손가락별 최대 굽힘(주먹) 프로필. 핸드 오퍼레이터 슬라이더 100%가 이 값 */
-export const CURL_MAX: Record<FingerName, Curl> = { Thumb: [40, 45, 20], Index: [85, 95, 65], Middle: [85, 95, 65], Ring: [85, 95, 65], Pinky: [85, 95, 65] };
+export const CURL_MAX: Record<FingerName, Curl> = { Thumb: [45, 60, 55], Index: [85, 95, 65], Middle: [85, 95, 65], Ring: [85, 95, 65], Pinky: [85, 95, 65] };
 
 /** 손가락별 굽힘 정도 0~1 */
 export type FingerAmounts = Record<FingerName, number>;
