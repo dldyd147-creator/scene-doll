@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { DollAsset } from '../model/types';
 import { DollRig } from './DollRig';
 import { GlbDollRig } from './GlbDollRig';
+import { adaptHumanRig, isHumanRigScene } from './humanRigAdapter';
 import { MannequinRig } from './MannequinRig';
 
 export interface DollTemplate {
@@ -62,7 +63,7 @@ export function loadDollTemplate(asset: DollAsset): Promise<DollTemplate> {
   if (!p) {
     const url = `${import.meta.env.BASE_URL}${asset.glbPath}`;
     // 시험용 돌은 FBX(믹사모 등)도 받는다. FBX는 보통 cm 단위라 키가 10을 넘으면 m로 맞춘다
-    const load: Promise<Object3D> = /\.fbx$/i.test(asset.glbPath) ? new FBXLoader().loadAsync(url).then(normalizeFbx) : new GLTFLoader().loadAsync(url).then((gltf) => gltf.scene);
+    const load: Promise<Object3D> = /\.fbx$/i.test(asset.glbPath) ? new FBXLoader().loadAsync(url).then(normalizeFbx) : new GLTFLoader().loadAsync(url).then((gltf) => (isHumanRigScene(gltf.scene) ? adaptHumanRig(gltf.scene) : gltf.scene));
     p = load.then((scene) => {
       scene.updateMatrixWorld(true);
       const box = new Box3().setFromObject(scene);
