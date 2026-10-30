@@ -11,12 +11,14 @@ const props = read('props/props.json', []);
 const grips = read('props/grips.json', {});
 const poses = read('poses/poses.json', []);
 const handPoses = read('handPoses.json', []);
+const scenes = read('scenes/scenes.json', []);
 
 const manifest = {
   version: 1,
   props: props.map((p) => ({ id: p.id, name: p.name, tags: p.tags, grip: grips[p.id] ?? {}, thumb: existsSync(join(root, `props/${p.id}.png`)) })),
   poses: poses.map((p) => ({ ...p, thumb: existsSync(join(root, `poses/${p.id}.png`)) })),
   handPoses,
+  scenes: scenes.map((s) => ({ ...s, thumb: existsSync(join(root, `scenes/${s.id}.png`)) })),
 };
 writeFileSync(join(root, 'manifest.json'), JSON.stringify(manifest));
-console.log(`props ${manifest.props.length} · poses ${manifest.poses.length} · handPoses ${manifest.handPoses.length}`);
+console.log(`props ${manifest.props.length} · poses ${manifest.poses.length} · handPoses ${manifest.handPoses.length} · scenes ${manifest.scenes.length}`);

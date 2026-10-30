@@ -13,12 +13,12 @@ function StarterPackSetting() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const reinstall = async () => {
-    if (!window.confirm('기본 프리셋 팩(소품·포즈·손 모양)을 다시 설치할까요?\n고쳐 쓴 기본 항목은 원래 모양으로 되돌아갑니다. 내가 만든 항목은 그대로입니다.')) return;
+    if (!window.confirm('기본 프리셋 팩(소품·포즈·손 모양·씬)을 다시 설치할까요?\n고쳐 쓴 기본 항목은 원래 모양으로 되돌아갑니다. 내가 만든 항목은 그대로입니다.')) return;
     setBusy(true);
     try {
       const r = await installStarterPack(true);
       useLibrary.getState().reset();
-      setMsg(`설치 완료: 소품 ${r.props} · 포즈 ${r.poses} · 손 모양 ${r.handPoses}`);
+      setMsg(`설치 완료: 소품 ${r.props} · 포즈 ${r.poses} · 손 모양 ${r.handPoses} · 씬 ${r.scenes}`);
     } catch (e) {
       setMsg(`설치 실패: ${e instanceof Error ? e.message : String(e)}`);
     } finally {

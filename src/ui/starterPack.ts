@@ -1,6 +1,6 @@
-import type { Pose, PropAsset } from '../model/types';
+import type { Pose, PropAsset, SceneLibraryItem } from '../model/types';
 import { normalizeHandPose, type HandPose } from '../model/fingers';
-import { normalizePose } from '../model/library';
+import { normalizePose, normalizeScene } from '../model/library';
 import { storage } from '../storage';
 
 /**
@@ -24,6 +24,7 @@ interface Manifest {
   props: ManifestProp[];
   poses: ManifestPose[];
   handPoses: Array<Partial<HandPose>>;
+  scenes?: Array<Omit<SceneLibraryItem, 'thumbnail'> & { thumb: boolean }>;
 }
 
 const base = (): string => import.meta.env.BASE_URL;
@@ -45,8 +46,8 @@ function bufferToDataUrl(buf: ArrayBuffer): string {
 }
 
 /** 설치할 항목이 있으면 설치한다. 설치한(또는 건너뛴) 개수를 돌려준다 */
-export async function installStarterPack(force = false): Promise<{ props: number; poses: number; handPoses: number }> {
-  const done = { props: 0, poses: 0, handPoses: 0 };
+export async function installStarterPack(force = false): Promise<{ props: number; poses: number; handPoses: number; scenes: number }> {
+  const done = { props: 0, poses: 0, handPoses: 0, scenes: 0 };
   const buf = await fetchBuffer('manifest.json');
   if (!buf) return done;
   const manifest = JSON.parse(new TextDecoder().decode(buf)) as Manifest;
@@ -87,6 +88,17 @@ export async function installStarterPack(force = false): Promise<{ props: number
     done.handPoses++;
   }
 
-  if (done.props + done.poses + done.handPoses > 0 || force) await repo.writeStarterPackState({ installed: [...installed] });
+  for (const [i, sc] of (manifest.scenes ?? []).entries()) {
+    if (installed.has(sc.id)) continue;
+    const thumbBuf = sc.thumb ? await fetchBuffer(`scenes/${sc.id}.png`) : null;
+    const { thumb: _thumb, ...rest } = sc;
+    void _thumb;
+    const item = normalizeScene({ ...rest, thumbnail: '', createdAt: new Date(stamp + ((manifest.scenes?.length ?? 0) - i) * 1000).toISOString() });
+    await repo.saveScene(item, thumbBuf ? bufferToDataUrl(thumbBuf) : null);
+    installed.add(sc.id);
+    done.scenes++;
+  }
+
+  if (done.props + done.poses + done.handPoses + done.scenes > 0 || force) await repo.writeStarterPackState({ installed: [...installed] });
   return done;
 }

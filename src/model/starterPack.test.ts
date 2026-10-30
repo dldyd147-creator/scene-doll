@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizePose } from './library';
+import { normalizePose, normalizeScene } from './library';
 import { normalizeProp } from './props';
 import { normalizeHandPose } from './fingers';
 
@@ -10,11 +10,12 @@ const manifest = JSON.parse(manifestText) as {
   props: Array<{ id: string; name: string; tags: string[]; grip: Record<string, unknown> }>;
   poses: Array<{ id: string; name: string; category: string; joints: Record<string, unknown> }>;
   handPoses: Array<{ id: string; name: string; curl: Record<string, number[]> }>;
+  scenes: Array<{ id: string; name: string; slots: Array<{ dollId: string; joints: Record<string, unknown> }>; props: Array<{ propId: string }>; situationTags: string[] }>;
 };
 
 describe('기본 프리셋 팩', () => {
   it('항목 id가 겹치지 않는다', () => {
-    const ids = [...manifest.props, ...manifest.poses, ...manifest.handPoses].map((x) => x.id);
+    const ids = [...manifest.props, ...manifest.poses, ...manifest.handPoses, ...manifest.scenes].map((x) => x.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -40,6 +41,19 @@ describe('기본 프리셋 팩', () => {
     for (const h of manifest.handPoses) {
       expect(Object.keys(h.curl).sort(), h.id).toEqual(['Index', 'Middle', 'Pinky', 'Ring', 'Thumb']);
       expect(normalizeHandPose(h as never).name).toBe(h.name);
+    }
+  });
+});
+
+describe('기본 씬 팩', () => {
+  it('씬은 돌 슬롯과 상황 태그가 있고 쓰는 소품은 팩에 있다', () => {
+    expect(manifest.scenes.length).toBeGreaterThan(10);
+    const propIds = new Set(manifest.props.map((p) => p.id));
+    for (const sc of manifest.scenes) {
+      expect(sc.slots.length, sc.id).toBeGreaterThan(0);
+      expect(sc.situationTags.length, sc.id).toBeGreaterThan(0);
+      for (const p of sc.props) expect(propIds.has(p.propId), `${sc.id}: ${p.propId}`).toBe(true);
+      expect(normalizeScene(sc as never).slots.length).toBe(sc.slots.length);
     }
   });
 });

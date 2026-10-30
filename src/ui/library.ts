@@ -74,8 +74,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   loadScenes: (force = false) => {
     if (!force && get().scenes) return Promise.resolve();
     if (sceneLoad) return sceneLoad;
-    sceneLoad = storage.repository
-      .loadScenes()
+    sceneLoad = ensurePack()
+      .then(() => storage.repository.loadScenes())
       .then((scenes) => set({ scenes, error: null }))
       .catch((e: unknown) => set({ scenes: get().scenes ?? [], error: `씬 라이브러리를 읽지 못했습니다: ${message(e)}` }))
       .finally(() => {
