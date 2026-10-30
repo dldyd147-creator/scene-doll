@@ -17,7 +17,7 @@ const elbow = (side: 'Left' | 'Right'): JointLimit => ({
   hinge: { axis: [0, 1, 0], min: side === 'Left' ? -148 : 0, max: side === 'Left' ? 0 : 148 },
   twist: 85,
 });
-const knee: JointLimit = { hinge: { axis: [1, 0, 0], min: 0, max: 150 }, twist: 10 };
+const knee: JointLimit = { hinge: { axis: [1, 0, 0], min: 0, max: 162 }, twist: 10 };
 
 const COMMON: Record<string, JointLimit> = {
   Spine: { cone: 25, twist: 20 },

@@ -1,9 +1,9 @@
-import { Box3, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, Line, LineBasicMaterial, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection } from 'three';
+import { Box3, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, Line, LineBasicMaterial, MathUtils, Matrix4, Mesh, MeshBasicMaterial, MeshToonMaterial, Object3D, Quaternion, RingGeometry, Vector3, type Intersection, type Material } from 'three';
 import type { DollInstance, Gender, JointRotations, Quat } from '../model/types';
 import { drivenParent, EFFECTOR_NAMES, IK_CHAINS, isDrivenBone, type BuiltSkeleton } from './skeleton';
 import { createDollMaterials, createLineUniforms, HANDLE_COLOR, HANDLE_DIM_COLOR, JOINT_COLOR, LAYER_HELPERS, SELECTED_JOINT_COLOR, TOON_FLAT, TOON_TWO_STEP, type LineParams, type LineUniforms } from './materials';
 import { mirrorJoints } from './mirror';
-import { circleTexture, MarkerPoints, ringTexture, triangleTexture } from './overlays';
+import { circleTexture, MarkerPoints, ringTexture, setOutlineHighlight, triangleTexture } from './overlays';
 import { clampJointRotation, hingeCompose, hingeDecompose, limitFor, swingTwist } from './limits';
 import { fromQuat, roundTo, toQuat } from './three-utils';
 import { fingerBoneName } from '../model/fingers';
@@ -277,8 +277,19 @@ export abstract class DollRig {
     this.selectedMarker.points.visible = !!bone && this.skel.bones.has(bone);
   }
 
+  /** 선택 표시를 바꿀 외곽선 재질들 */
+  protected outlineMats(): Material[] {
+    return [];
+  }
+
+  /** 출력 렌더 동안 주황 선택 외곽선을 잠시 끈다 */
+  setOutlineShown(on: boolean): void {
+    for (const m of this.outlineMats()) setOutlineHighlight(m, on && this.selected);
+  }
+
   setSelected(on: boolean): void {
     this.selected = on;
+    this.setOutlineShown(true);
     this.groundRing.visible = on;
     this.jointMarkers.points.visible = on;
     this.torsoMarkers.points.visible = on;
@@ -438,6 +449,10 @@ export abstract class DollRig {
     const dP = dDoll.clone().applyQuaternion(Rp.clone().invert());
     const dPerp = dP.clone().sub(a0.clone().multiplyScalar(dP.dot(a0)));
     if (dPerp.lengthSq() < 1e-6) return false;
+    // 거의 펴진 방향(목표가 위 뼈 축 근처)에서는 경첩 평면이 불안정해 위 뼈가 휙 돈다: 굽힘이 작을수록 비틀기를 줄인다
+    const bendSin = dPerp.length();
+    const settle = Math.min(1, Math.max(0, (bendSin - 0.1) / 0.35));
+    const twistWeight = settle * settle * (3 - 2 * settle);
     const u = dPerp.normalize();
     const n = new Vector3().crossVectors(a0, u).normalize();
     // 경첩 굽힘각은 아래 뼈의 휴식 방향(경첩 축에 수직인 성분)을 기준으로 잰다
@@ -457,12 +472,13 @@ export abstract class DollRig {
       const twist = new Quaternion().setFromAxisAngle(a0, tau);
       const theta = hingeAngle(dP.clone().applyQuaternion(twist.clone().invert()));
       if (theta === null) continue;
-      const score = (inRange(theta) ? 0 : 10) + Math.abs(tau);
+      // 굽힘이 범위 안이어도 위 뼈를 한 번에 크게(~86° 넘게) 돌려야 하면 그쪽은 버린다: 목표가 닿지 않는 쪽으로 넘어갈 때 팔이 반대편 한계로 휙 튀는 것을 막는다
+      const score = (inRange(theta) && Math.abs(tau) < 1.5 ? 0 : 10) + Math.abs(tau);
       if (!best || score < best.score) best = { tau, score };
     }
     if (!best) return false;
     // 위 뼈 비틀기(한계 안에서)
-    this.setJointDelta(parent, Rp.clone().multiply(new Quaternion().setFromAxisAngle(a0, best.tau)));
+    this.setJointDelta(parent, Rp.clone().multiply(new Quaternion().setFromAxisAngle(a0, best.tau * twistWeight)));
     this.clampJoint(parent);
     // 비틀린 뒤 실제 경첩 평면에서 굽힘각을 다시 재서 적용
     const Rp2 = this.jointDelta(parent);

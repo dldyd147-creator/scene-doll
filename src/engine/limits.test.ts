@@ -54,7 +54,7 @@ describe('관절 한계', () => {
   });
 
   it('경첩 축에 비스듬한 실제 무릎 뼈: 순수 경첩 굽힘은 그대로 두고 비틀림만 한계로', () => {
-    const limit = limitFor('LeftLeg')!; // 경첩 X [0,150], 비틀림 10
+    const limit = limitFor('LeftLeg')!; // 경첩 X [0,162], 비틀림 10
     const s0 = new Vector3(0.1075, -0.9938, -0.0292).normalize();
     const axis = new Vector3(1, 0, 0);
     const bent = hingeCompose(s0, axis, deg(92), deg(5));

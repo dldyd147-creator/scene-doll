@@ -5,7 +5,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { PropAsset, PropInstance } from '../model/types';
 import { DEFAULT_PROP_COLOR } from '../model/props';
 import { TOON_FLAT, TOON_TWO_STEP } from './materials';
-import { outlineForMesh, outlineMaterial } from './overlays';
+import { outlineForMesh, outlineMaterial, setOutlineHighlight } from './overlays';
 
 /** GLB 소품 템플릿(파싱된 씬). 저장소 바이트는 콜백으로 받아 한 번만 파싱한다 */
 const templates = new Map<string, Object3D>();
@@ -117,8 +117,18 @@ export class PropObject {
     this.root.add(clone);
   }
 
+  private selected = false;
+
   setSelected(on: boolean): void {
+    this.selected = on;
     for (const m of this.materials) m.emissive.copy(on ? SELECT_EMISSIVE : NO_EMISSIVE);
+    setOutlineHighlight(this.outlineMat, on);
+  }
+
+  /** 출력 렌더 동안 주황 선택 표시를 잠시 끈다 */
+  setOutlineShown(on: boolean): void {
+    setOutlineHighlight(this.outlineMat, on && this.selected);
+    for (const m of this.materials) m.emissive.copy(on && this.selected ? SELECT_EMISSIVE : NO_EMISSIVE);
   }
 
   /** 출력 패스용: 색을 잠시 바꾼다(null이면 원래 색으로) */

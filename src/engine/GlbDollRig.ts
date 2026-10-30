@@ -1,4 +1,4 @@
-import { Bone, Box3, BufferAttribute, Object3D, SkinnedMesh, Vector3, type Intersection, type Sphere } from 'three';
+import { Bone, Box3, BufferAttribute, Object3D, SkinnedMesh, Vector3, type Intersection, type Material, type Sphere } from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import type { DollAsset } from '../model/types';
 import { DollRig } from './DollRig';
@@ -166,6 +166,10 @@ export class GlbDollRig extends DollRig {
 
   protected highlightParts(): void {
     /* 스킨 메시는 부위별 재질 교체가 없다. 선택 관절 링으로 대신한다 */
+  }
+
+  protected override outlineMats(): Material[] {
+    return [this.outlineMat];
   }
 
   override dispose(): void {

@@ -327,6 +327,10 @@ export class Engine {
       if (opts.perspectiveGrid === 'both') wall = this.makeWallGrid(camera);
     }
     const linePx = Math.max(2.5, w / 400);
+    if (!opts.helpers) {
+      for (const rig of this.dolls.values()) rig.setOutlineShown(false);
+      for (const p of this.props.values()) p.setOutlineShown(false);
+    }
     for (const rig of this.dolls.values()) {
       rig.updateHelpers();
       rig.setLinePx(linePx);
@@ -346,6 +350,10 @@ export class Engine {
     r.setRenderTarget(null);
     rt.dispose();
     for (const rig of this.dolls.values()) rig.setLinePx(2.5);
+    if (!opts.helpers) {
+      for (const rig of this.dolls.values()) rig.setOutlineShown(true);
+      for (const p of this.props.values()) p.setOutlineShown(true);
+    }
     this.grid.visible = gridWasVisible;
     if (opts.perspectiveGrid && !gridHadBase) this.grid.layers.disable(0);
     if (wall) {

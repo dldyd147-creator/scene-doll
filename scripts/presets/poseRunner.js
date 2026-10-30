@@ -56,6 +56,9 @@ export async function run(sd, opts = {}) {
       const Tn = sh.clone().addScaledVector(dir, dist);
       c.aim(S0 + 'Arm', E.clone().sub(sh).toArray());
       c.aim(S0 + 'ForeArm', Tn.clone().sub(E).toArray());
+      // 팔을 다시 겨냥하면 IK가 남긴 손 회전이 팔뚝과 어긋나 손목이 돌아간다: 손은 팔뚝과 일직선으로 되돌린다
+      rig.setJointDelta(S0 + 'Hand', rig.jointDelta(S0 + 'ForeArm').clone());
+      rig.root.updateMatrixWorld(true);
     },
     foot(side, out, y, z, keep = true) {
       const sx = side === 'R' ? -1 : 1;

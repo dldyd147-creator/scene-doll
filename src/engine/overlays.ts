@@ -24,14 +24,26 @@ import { LAYER_HELPERS } from './materials';
  */
 export function outlineMaterial(thickness: number): MeshBasicMaterial {
   const m = new MeshBasicMaterial({ color: 0x000000, side: BackSide });
+  const uniform = { value: thickness };
+  m.userData.outline = { uniform, base: thickness };
   m.onBeforeCompile = (shader: WebGLProgramParametersWithUniforms) => {
-    shader.uniforms.uOutline = { value: thickness };
+    shader.uniforms.uOutline = uniform;
     shader.vertexShader = shader.vertexShader
       .replace('void main() {', 'uniform float uOutline;\nvoid main() {')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n\ttransformed += normal * uOutline;');
   };
   m.customProgramCacheKey = () => `outline`;
   return m;
+}
+
+const SELECT_OUTLINE = new Color('#ff8a00');
+
+/** 선택 표시: 외곽선을 주황색으로 굵게(해제하면 검정 원래 두께) */
+export function setOutlineHighlight(material: Material, on: boolean): void {
+  const o = material.userData.outline as { uniform: { value: number }; base: number } | undefined;
+  if (!o) return;
+  (material as MeshBasicMaterial).color.set(on ? SELECT_OUTLINE : 0x000000);
+  o.uniform.value = o.base * (on ? 2.2 : 1);
 }
 
 /** 강체 부위용 외곽선: 같은 지오메트리를 자식으로 */

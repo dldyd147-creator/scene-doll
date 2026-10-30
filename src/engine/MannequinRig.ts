@@ -1,4 +1,4 @@
-import { Box3, BoxGeometry, BufferAttribute, BufferGeometry, CapsuleGeometry, Matrix4, Mesh, MeshToonMaterial, Object3D, SphereGeometry, type Intersection } from 'three';
+import { Box3, BoxGeometry, BufferAttribute, BufferGeometry, CapsuleGeometry, Matrix4, Mesh, MeshToonMaterial, Object3D, SphereGeometry, type Intersection, type Material } from 'three';
 import type { DollAsset } from '../model/types';
 import { DollRig } from './DollRig';
 import { outlineForMesh, outlineMaterial } from './overlays';
@@ -136,6 +136,10 @@ export class MannequinRig extends DollRig {
       const mats = this.partMats.get(part.userData.bone)!;
       part.material = part.userData.bone === bone ? mats.hi : mats.base;
     }
+  }
+
+  protected override outlineMats(): Material[] {
+    return [this.outlineMat];
   }
 
   override dispose(): void {
