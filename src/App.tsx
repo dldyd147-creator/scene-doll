@@ -22,6 +22,7 @@ import { HandOperator } from './ui/HandOperator';
 import { GenerateDialog } from './ui/GenerateDialog';
 import { PoseEditor } from './ui/PoseEditor';
 import { PropEditor } from './ui/PropEditor';
+import { SceneEditor } from './ui/SceneEditor';
 import { AssembleDialog } from './ui/AssembleDialog';
 import { useThumbnailRepair, useThumbnailSync } from './ui/cuts';
 import { useStore } from './state/store';
@@ -62,6 +63,7 @@ export default function App() {
           <GenerateDialog engine={engine} />
           <PoseEditor engine={engine} />
           <PropEditor engine={engine} />
+          <SceneEditor engine={engine} />
           <AssembleDialog />
         </div>
       )}
