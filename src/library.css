@@ -213,7 +213,8 @@ button.small {
 .recent-grid .pose-card .img {
   height: 84px;
 }
-.pose-card .rm {
+.pose-card .rm,
+.pose-card .ed {
   position: absolute;
   top: 3px;
   right: 3px;
@@ -228,7 +229,11 @@ button.small {
   justify-content: center;
   display: none;
 }
-.pose-card:hover .rm {
+.pose-card .ed {
+  right: 26px;
+}
+.pose-card:hover .rm,
+.pose-card:hover .ed {
   display: inline-flex;
 }
 .pose-form {
@@ -446,3 +451,6 @@ button.small {
 .welcome-path { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 6%, transparent); word-break: break-all; }
 .api-model-pick { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
 .api-model-pick select { max-width: 420px; }
+.modal.pose-edit {
+  width: 340px;
+}

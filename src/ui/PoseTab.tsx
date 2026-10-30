@@ -6,6 +6,7 @@ import { useStore } from '../state/store';
 import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
 import { useLibrary, useThumb } from './library';
+import { startPoseEdit } from './poseEdit';
 import { applyPose, savePoseFromSelected } from './scenes';
 
 /** 에셋 패널 포즈 탭: 선택한 돌의 자세를 공용/포즈에 저장하고, 카드를 누르면 선택한 돌에 적용한다(체형과 무관) */
@@ -58,6 +59,7 @@ export function PoseTab({ engine }: { engine: Engine }) {
             pose={p}
             disabled={!hasDoll}
             onApply={() => applyPose(engine, p)}
+            onEdit={() => startPoseEdit(engine, p)}
             onDelete={() => {
               if (window.confirm(`포즈 '${p.name}'을(를) 지울까요?`)) void deletePose(p.id);
             }}
@@ -116,7 +118,7 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
   );
 }
 
-function PoseCard({ pose, disabled, onApply, onDelete }: { pose: Pose; disabled: boolean; onApply: () => void; onDelete: () => void }) {
+function PoseCard({ pose, disabled, onApply, onEdit, onDelete }: { pose: Pose; disabled: boolean; onApply: () => void; onEdit?: () => void; onDelete: () => void }) {
   const url = useThumb(pose.thumbnail);
   return (
     <div
@@ -131,6 +133,18 @@ function PoseCard({ pose, disabled, onApply, onDelete }: { pose: Pose; disabled:
       <div className="cap">
         <b>{pose.name}</b> <span className="muted">{pose.category}</span>
       </div>
+      {onEdit && (
+        <button
+          className="ed"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          title={disabled ? "포즈 수정: 먼저 돌을 선택하세요" : "포즈 수정: 선택한 돌에 입혀 미세수정한 뒤 다시 저장"}
+        >
+          <Icon name="edit" size={12} />
+        </button>
+      )}
       <button
         className="rm"
         onClick={(e) => {
