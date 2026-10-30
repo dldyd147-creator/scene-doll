@@ -78,6 +78,8 @@ const THEME = {
 };
 const MANU_BG = new Color('#ffffff');
 const Y_AXIS = new Vector3(0, 1, 0);
+/** 포즈 썸네일 돌 색(기본 노랑) */
+const POSE_THUMB_COLOR = '#f5b800';
 const _v = new Vector3();
 const _q = new Quaternion();
 
@@ -1649,6 +1651,9 @@ export class Engine {
         hidden.push(r);
       }
     }
+    const ownColor = rig.color;
+    // 포즈 썸네일은 돌 색과 상관없이 한 색으로 통일한다
+    if (ownColor.toLowerCase() !== POSE_THUMB_COLOR) rig.setColor(POSE_THUMB_COLOR);
     try {
       const box = rig.worldBounds();
       const center = box.getCenter(new Vector3());
@@ -1662,6 +1667,7 @@ export class Engine {
       return this.renderToCanvas(cam, width, height, { background: 'white' });
     } finally {
       for (const r of hidden) r.root.visible = true;
+      if (rig.color.toLowerCase() !== ownColor.toLowerCase()) rig.setColor(ownColor);
     }
   }
 

@@ -43,7 +43,7 @@ export function setOutlineHighlight(material: Material, on: boolean): void {
   const o = material.userData.outline as { uniform: { value: number }; base: number } | undefined;
   if (!o) return;
   (material as MeshBasicMaterial).color.set(on ? SELECT_OUTLINE : 0x000000);
-  o.uniform.value = o.base * (on ? 2.2 : 1);
+  o.uniform.value = o.base * (on ? 1.45 : 1);
 }
 
 /** 강체 부위용 외곽선: 같은 지오메트리를 자식으로 */

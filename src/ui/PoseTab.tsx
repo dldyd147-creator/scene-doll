@@ -94,13 +94,15 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
   return (
     <div className="card pose-form">
       <input type="text" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void save()} placeholder="포즈 이름" autoFocus spellCheck={false} />
+      <div className="tag-row">
+        {options.map((c) => (
+          <button key={c} type="button" className={`tag ${category === c ? 'active' : ''}`} onClick={() => setCategory(c)}>
+            {c}
+          </button>
+        ))}
+      </div>
       <div className="row">
-        <input type="text" className="grow" list="pose-categories" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="분류" title="분류(서기·앉기·동작 …). 자유 입력" spellCheck={false} />
-        <datalist id="pose-categories">
-          {options.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
+        <input type="text" className="grow" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="분류(위에서 고르거나 직접 입력)" title="분류(서기·앉기·동작 …). 자유 입력" spellCheck={false} />
       </div>
       <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="태그(쉼표로 구분)" spellCheck={false} />
       {error && <div className="small" style={{ color: 'var(--danger)' }}>{error}</div>}
