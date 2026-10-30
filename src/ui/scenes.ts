@@ -47,7 +47,7 @@ export async function savePoseFromSelected(engine: Engine, name: string, categor
 
 /** 포즈를 선택한 돌에 적용(체형과 무관). 선택이 없으면 상태 바에 안내 */
 export function applyPose(engine: Engine, pose: Pose): boolean {
-  const ok = engine.applyPoseToSelected(pose.joints);
+  const ok = engine.applyPoseToSelected(pose.joints, pose.groundOnApply);
   useStore.getState().setStatusHint(ok ? `포즈 '${pose.name}' 적용 (Ctrl+Z로 되돌림)` : '포즈를 적용할 돌을 먼저 선택하세요');
   return ok;
 }

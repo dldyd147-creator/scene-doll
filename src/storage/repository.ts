@@ -17,6 +17,7 @@ export const paths = {
   poseDir: () => '공용/포즈',
   pose: (id: string) => `공용/포즈/${id}.json`,
   poseThumb: (id: string) => `공용/포즈/${id}.png`,
+  starterPack: () => '공용/기본팩.json',
   handPoseDir: () => '공용/손포즈',
   handPose: (id: string) => `공용/손포즈/${id}.json`,
   propDir: () => '공용/소품',
@@ -355,6 +356,23 @@ export class Repository {
   async deletePose(id: string): Promise<void> {
     await this.backend.remove(paths.pose(id));
     await this.backend.remove(paths.poseThumb(id));
+  }
+
+  // ---------- 공용: 기본 프리셋 팩 설치 기록 ----------
+
+  async readStarterPackState(): Promise<{ installed: string[] } | null> {
+    const t = await this.backend.readText(paths.starterPack());
+    if (!t) return null;
+    try {
+      const v = JSON.parse(t) as { installed?: unknown };
+      return { installed: Array.isArray(v.installed) ? v.installed.filter((x): x is string => typeof x === 'string') : [] };
+    } catch {
+      return null;
+    }
+  }
+
+  async writeStarterPackState(state: { installed: string[] }): Promise<void> {
+    await this.backend.writeText(paths.starterPack(), json(state));
   }
 
   // ---------- 공용: 손 모양(핸드 오퍼레이터 프리셋) ----------

@@ -123,7 +123,7 @@ export function WorkView({ engine }: { engine: Engine }) {
       return;
     }
     if (rig) s.select({ dollId: rig.id, bone: null });
-    engine.applyPoseToDoll(target.id, pose.joints);
+    engine.applyPoseToDoll(target.id, pose.joints, pose.groundOnApply);
     s.setStatusHint(`포즈 '${pose.name}' 적용 (Ctrl+Z로 되돌림)`);
   };
 

@@ -1584,16 +1584,21 @@ export class Engine {
   }
 
   /** 포즈 라이브러리의 관절값을 선택한 돌에 적용(돌 공간 회전이라 체형과 무관). 바닥 아래로 내려가면 올린다 */
-  applyPoseToSelected(joints: JointRotations): boolean {
+  applyPoseToSelected(joints: JointRotations, ground = false): boolean {
     const rig = this.selectedRig();
-    return !!rig && this.applyPoseToDoll(rig.id, joints);
+    return !!rig && this.applyPoseToDoll(rig.id, joints, ground);
   }
 
-  applyPoseToDoll(id: string, joints: JointRotations): boolean {
+  /** ground가 true면 포즈를 적용한 뒤 가장 낮은 점이 바닥에 닿게 돌의 높이를 맞춘다(앉기·눕기) */
+  applyPoseToDoll(id: string, joints: JointRotations, ground = false): boolean {
     const rig = this.dolls.get(id);
     if (!rig) return false;
     rig.setJoints(joints);
     rig.root.updateMatrixWorld(true);
+    if (ground) {
+      rig.root.position.y -= rig.lowestPointY();
+      rig.root.updateMatrixWorld(true);
+    }
     this.enforceFloor(rig);
     this.commitDoll(rig.id);
     return true;

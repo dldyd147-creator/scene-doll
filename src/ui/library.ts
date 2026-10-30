@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { Pose, PropAsset, SceneLibraryItem } from '../model/types';
 import type { HandPose } from '../model/fingers';
 import { storage } from '../storage';
+import { installStarterPack } from './starterPack';
 
 /**
  * 공용 라이브러리(씬·포즈·소품) 캐시. 저장소에서 한 번 읽어 두고, 저장·삭제는 저장소에 쓴 뒤 목록을 고친다.
@@ -40,6 +41,9 @@ const pendingThumbs = new Set<string>();
 let sceneLoad: Promise<void> | null = null;
 let poseLoad: Promise<void> | null = null;
 let propLoad: Promise<void> | null = null;
+/** 기본 프리셋 팩 설치(저장소당 한 번). 목록을 읽기 전에 끝낸다 */
+let packReady: Promise<unknown> | null = null;
+const ensurePack = (): Promise<unknown> => (packReady ??= installStarterPack().catch(() => null));
 
 export const useLibrary = create<LibraryState>()((set, get) => ({
   scenes: null,
@@ -51,8 +55,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
 
   loadHandPoses: (force = false) => {
     if (!force && get().handPoses) return Promise.resolve();
-    return storage.repository
-      .loadHandPoses()
+    return ensurePack()
+      .then(() => storage.repository.loadHandPoses())
       .then((handPoses) => set({ handPoses }))
       .catch((e: unknown) => set({ handPoses: get().handPoses ?? [], error: `손 모양 목록을 읽지 못했습니다: ${message(e)}` }));
   },
@@ -83,8 +87,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   loadPoses: (force = false) => {
     if (!force && get().poses) return Promise.resolve();
     if (poseLoad) return poseLoad;
-    poseLoad = storage.repository
-      .loadPoses()
+    poseLoad = ensurePack()
+      .then(() => storage.repository.loadPoses())
       .then((poses) => set({ poses, error: null }))
       .catch((e: unknown) => set({ poses: get().poses ?? [], error: `포즈 라이브러리를 읽지 못했습니다: ${message(e)}` }))
       .finally(() => {
@@ -135,8 +139,8 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
   loadProps: (force = false) => {
     if (!force && get().props) return Promise.resolve();
     if (propLoad) return propLoad;
-    propLoad = storage.repository
-      .loadProps()
+    propLoad = ensurePack()
+      .then(() => storage.repository.loadProps())
       .then((props) => set({ props, error: null }))
       .catch((e: unknown) => set({ props: get().props ?? [], error: `소품 목록을 읽지 못했습니다: ${message(e)}` }))
       .finally(() => {
@@ -161,6 +165,7 @@ export const useLibrary = create<LibraryState>()((set, get) => ({
 
   reset: () => {
     pendingThumbs.clear();
+    packReady = null;
     set({ scenes: null, poses: null, props: null, handPoses: null, thumbs: {}, error: null });
   },
 }));

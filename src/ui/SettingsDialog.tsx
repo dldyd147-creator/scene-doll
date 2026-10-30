@@ -4,7 +4,40 @@ import { DEFAULT_SITUATION_TAGS, parseTagList } from '../model/library';
 import { isDesktop } from '../native';
 import { useStore } from '../state/store';
 import { ApiListSettings } from './ApiListSettings';
+import { useLibrary } from './library';
+import { installStarterPack } from './starterPack';
 import type { Settings } from '../state/settings';
+
+/** 기본 프리셋 팩(소품·포즈·손 모양)을 이 저장소에 다시 설치한다. 같은 id의 항목은 원래 모양으로 덮어쓴다 */
+function StarterPackSetting() {
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const reinstall = async () => {
+    if (!window.confirm('기본 프리셋 팩(소품·포즈·손 모양)을 다시 설치할까요?\n고쳐 쓴 기본 항목은 원래 모양으로 되돌아갑니다. 내가 만든 항목은 그대로입니다.')) return;
+    setBusy(true);
+    try {
+      const r = await installStarterPack(true);
+      useLibrary.getState().reset();
+      setMsg(`설치 완료: 소품 ${r.props} · 포즈 ${r.poses} · 손 모양 ${r.handPoses}`);
+    } catch (e) {
+      setMsg(`설치 실패: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="setting">
+      <span>기본 프리셋 팩</span>
+      <span>
+        <button onClick={() => void reinstall()} disabled={busy} title="앱에 들어 있는 기본 소품·포즈·손 모양을 다시 설치합니다">
+          다시 설치
+        </button>{' '}
+        <span className="small muted">{msg}</span>
+      </span>
+      <span />
+    </div>
+  );
+}
 
 function Range({ label, k, min, max, step, fmt }: { label: string; k: keyof Settings; min: number; max: number; step: number; fmt?: (v: number) => string }) {
   const value = useStore((s) => s.settings[k]) as number;
@@ -173,6 +206,7 @@ export function SettingsDialog() {
 
         <h3>씬 라이브러리</h3>
         <SituationTagsSetting />
+        <StarterPackSetting />
 
         <h3>이미지 생성(5단계)</h3>
         <GenerateSettings />

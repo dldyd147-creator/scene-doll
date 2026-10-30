@@ -231,6 +231,7 @@ export function normalizePose(raw: Partial<Pose>): Pose {
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     joints: raw.joints ?? {},
     thumbnail: raw.thumbnail,
+    ...(raw.groundOnApply ? { groundOnApply: true } : {}),
     createdAt: raw.createdAt,
   };
 }

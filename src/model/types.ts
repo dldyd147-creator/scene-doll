@@ -195,6 +195,8 @@ export interface Pose {
   joints: JointRotations;
   /** 썸네일 PNG 경로(공용/포즈/{ID}.png). 없을 수 있다 */
   thumbnail?: string;
+  /** 적용할 때 돌을 바닥에 맞춘다(기본 팩의 앉기·눕기 같은 포즈는 골반 높이가 포즈에 들어 있지 않아서) */
+  groundOnApply?: boolean;
   createdAt?: string;
 }
 

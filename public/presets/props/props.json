@@ -1,0 +1,347 @@
+[
+  {
+    "id": "sword1",
+    "name": "한손검",
+    "tags": [
+      "무기",
+      "검"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "sword2",
+    "name": "양손검",
+    "tags": [
+      "무기",
+      "검"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "katana",
+    "name": "직도",
+    "tags": [
+      "무기",
+      "검"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "saber",
+    "name": "곡도",
+    "tags": [
+      "무기",
+      "검"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "tanto",
+    "name": "단도",
+    "tags": [
+      "무기",
+      "칼"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "dagger",
+    "name": "단검",
+    "tags": [
+      "무기",
+      "칼"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "spear",
+    "name": "창",
+    "tags": [
+      "무기",
+      "장병기"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "axe",
+    "name": "도끼",
+    "tags": [
+      "무기",
+      "장병기"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "hammer",
+    "name": "전투 망치",
+    "tags": [
+      "무기",
+      "장병기"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "bat",
+    "name": "곤봉(방망이)",
+    "tags": [
+      "무기",
+      "도구"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "shield",
+    "name": "방패",
+    "tags": [
+      "무기",
+      "방어"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "bow",
+    "name": "활",
+    "tags": [
+      "무기",
+      "원거리"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "pistol",
+    "name": "권총",
+    "tags": [
+      "무기",
+      "총"
+    ],
+    "kind": "gun"
+  },
+  {
+    "id": "rifle",
+    "name": "소총",
+    "tags": [
+      "무기",
+      "총"
+    ],
+    "kind": "gun"
+  },
+  {
+    "id": "shotgun",
+    "name": "산탄총",
+    "tags": [
+      "무기",
+      "총"
+    ],
+    "kind": "gun"
+  },
+  {
+    "id": "bazooka",
+    "name": "바주카",
+    "tags": [
+      "무기",
+      "총",
+      "중화기"
+    ],
+    "kind": "gun"
+  },
+  {
+    "id": "phone",
+    "name": "스마트폰",
+    "tags": [
+      "생활",
+      "전자기기"
+    ],
+    "kind": "flat"
+  },
+  {
+    "id": "mug",
+    "name": "머그컵",
+    "tags": [
+      "생활",
+      "컵"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "papercup",
+    "name": "종이컵",
+    "tags": [
+      "생활",
+      "컵"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "glass",
+    "name": "유리잔",
+    "tags": [
+      "생활",
+      "컵"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "bottle",
+    "name": "병",
+    "tags": [
+      "생활",
+      "컵"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "book",
+    "name": "책",
+    "tags": [
+      "생활"
+    ],
+    "kind": "flat"
+  },
+  {
+    "id": "laptop",
+    "name": "노트북",
+    "tags": [
+      "생활",
+      "전자기기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "glasses",
+    "name": "안경",
+    "tags": [
+      "생활"
+    ],
+    "kind": "flat"
+  },
+  {
+    "id": "umbrella",
+    "name": "우산",
+    "tags": [
+      "생활"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "pen",
+    "name": "펜",
+    "tags": [
+      "생활"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "bag",
+    "name": "서류가방",
+    "tags": [
+      "생활",
+      "가방"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "backpack",
+    "name": "백팩",
+    "tags": [
+      "생활",
+      "가방"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "cane",
+    "name": "지팡이",
+    "tags": [
+      "생활",
+      "도구"
+    ],
+    "kind": "rod"
+  },
+  {
+    "id": "chair",
+    "name": "의자",
+    "tags": [
+      "가구",
+      "앉기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "stool",
+    "name": "스툴",
+    "tags": [
+      "가구",
+      "앉기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "desk",
+    "name": "책상",
+    "tags": [
+      "가구"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "table",
+    "name": "식탁",
+    "tags": [
+      "가구"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "bed",
+    "name": "침대",
+    "tags": [
+      "가구",
+      "눕기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "sofa",
+    "name": "소파",
+    "tags": [
+      "가구",
+      "앉기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "bench",
+    "name": "벤치",
+    "tags": [
+      "가구",
+      "앉기"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "door",
+    "name": "문",
+    "tags": [
+      "가구",
+      "배경"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "stairs",
+    "name": "계단",
+    "tags": [
+      "가구",
+      "배경"
+    ],
+    "kind": "none"
+  },
+  {
+    "id": "bicycle",
+    "name": "자전거",
+    "tags": [
+      "탈것"
+    ],
+    "kind": "none"
+  }
+]
