@@ -5,6 +5,8 @@ import { useStore } from '../state/store';
 import { Icon } from './icons';
 import { useLibrary } from './library';
 import { cancelPoseEdit, usePoseEdit } from './poseEdit';
+import { PosePropsPicker } from './PosePropsPicker';
+import { collectPoseProps, posePropCandidates } from './scenes';
 
 const THUMB = { width: 160, height: 200 };
 
@@ -21,6 +23,8 @@ export function PoseEditor({ engine }: { engine: Engine }) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('일반');
   const [tags, setTags] = useState('');
+  const [propIds, setPropIds] = useState<string[]>([]);
+  const placed = usePoseEdit((s) => s.placedPropIds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mini, setMini] = useState(false);
@@ -35,6 +39,12 @@ export function PoseEditor({ engine }: { engine: Engine }) {
     setError(null);
     setMini(false);
   }, [pose]);
+
+  // 소품 체크 기본값: 이 돌이 쥔 소품 + 포즈를 입히며 놓인 소품
+  useEffect(() => {
+    if (!dollId) return;
+    setPropIds(posePropCandidates(dollId).filter((c) => c.held || placed.includes(c.id)).map((c) => c.id));
+  }, [dollId, placed, pose]);
 
   if (!pose || !dollId) return null;
 
@@ -55,6 +65,9 @@ export function PoseEditor({ engine }: { engine: Engine }) {
       const base = overwrite
         ? { ...pose, name: finalName, category: category.trim() || '일반', tags: parseTagList(tags), joints }
         : { ...createPose(finalName, category, parseTagList(tags), joints), groundOnApply: pose.groundOnApply };
+      const props = collectPoseProps(engine, dollId, propIds);
+      if (props.length) base.props = props;
+      else delete base.props;
       const canvas = engine.renderDollSnapshot(dollId, THUMB.width, THUMB.height);
       const stored = await savePose(base, canvas ? canvas.toDataURL('image/png') : null);
       useStore.getState().setStatusHint(`포즈 '${stored.name}'을(를) ${overwrite ? '수정해 저장' : '새로 저장'}했습니다 (공용/포즈)`);
@@ -112,6 +125,7 @@ export function PoseEditor({ engine }: { engine: Engine }) {
           </div>
           <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="분류(위에서 고르거나 직접 입력)" spellCheck={false} />
           <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="태그(쉼표로 구분)" spellCheck={false} />
+          <PosePropsPicker dollId={dollId} checked={propIds} onChange={setPropIds} />
           {error && <div className="small" style={{ color: 'var(--danger)' }}>{error}</div>}
           <div className="row" style={{ display: 'flex', gap: 6 }}>
             <button className="primary" disabled={busy} onClick={() => void save(true)} title="이 포즈를 지금 자세로 덮어씁니다">

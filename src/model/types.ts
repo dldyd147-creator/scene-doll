@@ -94,6 +94,8 @@ export interface PropInstance {
   position: Vec3;
   rotation: Quat;
   attachedTo?: { dollInstanceId: string; hand: Hand };
+  /** 크기 배율(X·Y·Z). 없으면 1 */
+  scale?: Vec3;
 }
 
 /** 컷 = 그 순간의 씬 전체 스냅샷 */
@@ -186,6 +188,15 @@ export interface DollAsset {
 }
 
 /** 포즈(2단계). 관절 회전값만 담아 체형과 무관하게 어떤 돌에도 적용한다. 파일은 공용/포즈/{ID}.json */
+/** 포즈에 딸린 소품: hand가 있으면 그 손의 쥐기 오프셋, 없으면 돌 기준(돌 정면·바닥 기준)의 자리 */
+export interface PoseProp {
+  propId: string;
+  position: Vec3;
+  rotation: Quat;
+  scale?: Vec3;
+  hand?: Hand;
+}
+
 export interface Pose {
   id: string;
   name: string;
@@ -197,6 +208,8 @@ export interface Pose {
   thumbnail?: string;
   /** 적용할 때 돌을 바닥에 맞춘다(기본 팩의 앉기·눕기 같은 포즈는 골반 높이가 포즈에 들어 있지 않아서) */
   groundOnApply?: boolean;
+  /** 함께 놓을 소품(소품 정의가 지워졌으면 적용 때 건너뛴다) */
+  props?: PoseProp[];
   createdAt?: string;
 }
 

@@ -10,6 +10,7 @@ import { BodySliders } from './BodySliders';
 import { DragNumber } from './DragNumber';
 import { Icon } from './icons';
 import { useLibrary } from './library';
+import { applyPoseToDollWithProps } from './scenes';
 
 const clampFloor = (v: number): number => Math.max(-50, Math.min(50, Math.round(v * 100) / 100));
 
@@ -123,8 +124,9 @@ export function WorkView({ engine }: { engine: Engine }) {
       return;
     }
     if (rig) s.select({ dollId: rig.id, bone: null });
-    engine.applyPoseToDoll(target.id, pose.joints, pose.groundOnApply);
-    s.setStatusHint(`포즈 '${pose.name}' 적용 (Ctrl+Z로 되돌림)`);
+    void applyPoseToDollWithProps(engine, pose, target.id).then((ids) => {
+      s.setStatusHint(`포즈 '${pose.name}' 적용${ids.length ? ` · 소품 ${ids.length}개 함께 놓음` : ''} (Ctrl+Z로 되돌림)`);
+    });
   };
 
   return (

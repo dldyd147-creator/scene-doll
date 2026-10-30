@@ -1,7 +1,7 @@
 // 씬 라이브러리·포즈 라이브러리의 순수 로직(엔진·저장소와 무관).
 // 기획서 '씬 검색기(` 키)'·'씬 태그: 자동 + 상황 버튼'·'데이터 구조'(포즈·씬 라이브러리) 절.
 
-import type { AngleTag, Character, Cut, DollInstance, JointRotations, Pose, PropInstance, Quat, SceneLibraryItem, SceneSlot, ShotSize, Vec3 } from './types';
+import type { AngleTag, Character, Cut, DollInstance, JointRotations, Pose, PoseProp, PropInstance, Quat, SceneLibraryItem, SceneSlot, ShotSize, Vec3 } from './types';
 import type { CutAnalysis } from '../describe/analyze';
 import { ANGLE_LABEL, SHOT_LABEL } from '../describe/analyze';
 import { placementLabel } from '../describe/placement';
@@ -232,8 +232,28 @@ export function normalizePose(raw: Partial<Pose>): Pose {
     joints: raw.joints ?? {},
     thumbnail: raw.thumbnail,
     ...(raw.groundOnApply ? { groundOnApply: true } : {}),
+    ...(normalizePoseProps(raw.props) ? { props: normalizePoseProps(raw.props) } : {}),
     createdAt: raw.createdAt,
   };
+}
+
+const isNums = (v: unknown, n: number): v is number[] => Array.isArray(v) && v.length === n && v.every((x) => typeof x === 'number' && Number.isFinite(x));
+
+/** 저장 파일의 소품 목록 정리(깨진 항목은 버린다). 비었으면 undefined */
+export function normalizePoseProps(raw: unknown): PoseProp[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: PoseProp[] = [];
+  for (const r of raw as Array<Partial<PoseProp>>) {
+    if (!r || typeof r.propId !== 'string' || !isNums(r.position, 3) || !isNums(r.rotation, 4)) continue;
+    out.push({
+      propId: r.propId,
+      position: [...r.position] as Vec3,
+      rotation: [...r.rotation] as Quat,
+      ...(isNums(r.scale, 3) ? { scale: [...r.scale] as Vec3 } : {}),
+      ...(r.hand === 'left' || r.hand === 'right' ? { hand: r.hand } : {}),
+    });
+  }
+  return out.length ? out : undefined;
 }
 
 /** 쉼표·줄바꿈으로 적은 태그 문자열 → 목록 */

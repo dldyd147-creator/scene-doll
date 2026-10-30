@@ -200,3 +200,24 @@ describe('저장 파일 정규화', () => {
     expect(parseTagList(' 대화, 일상,, 대화\n전투 ')).toEqual(['대화', '일상', '전투']);
   });
 });
+
+describe('포즈에 딸린 소품', () => {
+  it('소품 목록을 정리하고 깨진 항목은 버린다', () => {
+    const p = normalizePose({
+      id: 'p',
+      props: [
+        { propId: 'rifle', position: [0, 1, 2], rotation: [0, 0, 0, 1], scale: [2, 1, 1], hand: 'left' },
+        { propId: 'bad', position: [0, 1], rotation: [0, 0, 0, 1] },
+        { propId: 'chair', position: [0.3, 0, 0.5], rotation: [0, 0, 0, 1], hand: 'foot' as never },
+      ],
+    } as never);
+    expect(p.props).toEqual([
+      { propId: 'rifle', position: [0, 1, 2], rotation: [0, 0, 0, 1], scale: [2, 1, 1], hand: 'left' },
+      { propId: 'chair', position: [0.3, 0, 0.5], rotation: [0, 0, 0, 1] },
+    ]);
+  });
+
+  it('소품이 없으면 props 키를 두지 않는다', () => {
+    expect('props' in normalizePose({ id: 'p', props: [] } as never)).toBe(false);
+  });
+});

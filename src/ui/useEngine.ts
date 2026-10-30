@@ -13,6 +13,7 @@ export function useEngine(): Engine {
       select: (sel) => useStore.getState().select(sel),
       hint: (text) => useStore.getState().setStatusHint(text),
       openHand: (hand) => useStore.getState().setHandOperator(true, hand),
+      openProp: (id) => useStore.getState().setPropEdit(id),
       setCutCamera: (n, camera) => useStore.getState().setCutCamera(n, camera),
       propModel: (asset) => storage.repository.readPropModel(asset.id),
     });

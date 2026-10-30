@@ -52,6 +52,8 @@ export interface EngineCallbacks {
   hint: (text: string) => void;
   /** 손(손 IK 핸들·손 부위)을 더블클릭했을 때: 핸드 오퍼레이터를 연다 */
   openHand?: (hand: Hand) => void;
+  /** 소품을 더블클릭했을 때: 소품 편집 창을 연다 */
+  openProp?: (propInstanceId: string) => void;
   /** 다른 컷(번호)의 카메라를 기록 없이 바꾼다: 컷을 옮긴 뒤에 끝난 원고뷰 휠 조작을 원래 컷에 쓰기 위해 */
   setCutCamera?: (cutNumber: number, camera: CameraState) => void;
   /** GLB 소품의 파일 바이트(저장소에서). 없으면 null */
@@ -539,11 +541,13 @@ export class Engine {
         const w = gripToWorld(bone.matrixWorld, { position: obj.inst.position, rotation: obj.inst.rotation });
         obj.root.position.copy(w.position);
         obj.root.quaternion.copy(w.quaternion);
+        obj.root.scale.fromArray(obj.inst.scale ?? [1, 1, 1]);
         obj.root.updateMatrixWorld(true);
         obj.dirty = false;
       } else if (obj.dirty) {
         obj.root.position.fromArray(obj.inst.position);
         obj.root.quaternion.fromArray(obj.inst.rotation);
+        obj.root.scale.fromArray(obj.inst.scale ?? [1, 1, 1]);
         obj.root.updateMatrixWorld(true);
         obj.dirty = false;
       }
@@ -603,7 +607,7 @@ export class Engine {
     obj.root.updateMatrixWorld(true);
     const p = obj.root.position;
     const q = obj.root.quaternion;
-    const next: PropInstance = { id: inst.id, propId: inst.propId, position: [roundTo(p.x, 4), roundTo(p.y, 4), roundTo(p.z, 4)], rotation: [roundTo(q.x, 5), roundTo(q.y, 5), roundTo(q.z, 5), roundTo(q.w, 5)] };
+    const next: PropInstance = { id: inst.id, propId: inst.propId, ...(inst.scale ? { scale: inst.scale } : {}), position: [roundTo(p.x, 4), roundTo(p.y, 4), roundTo(p.z, 4)], rotation: [roundTo(q.x, 5), roundTo(q.y, 5), roundTo(q.z, 5), roundTo(q.w, 5)] };
     this.callbacks.commit((c) => {
       const i = c.props.findIndex((x) => x.id === id);
       if (i >= 0) c.props[i] = next;

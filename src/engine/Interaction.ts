@@ -550,8 +550,13 @@ export class Interaction {
 
   /** 손을 더블클릭하면 핸드 오퍼레이터(손가락·손목)를 연다 */
   private onDouble = (e: MouseEvent): void => {
-    if (this.modal || !this.engine.callbacks.openHand) return;
+    if (this.modal) return;
     const p = this.pick(e as PointerEvent);
+    if (p?.kind === 'prop') {
+      this.engine.callbacks.openProp?.(p.prop.id);
+      return;
+    }
+    if (!this.engine.callbacks.openHand) return;
     let bone: string | null = null;
     if (p?.kind === 'ik') bone = IK_CHAINS[p.effector].end;
     else if (p?.kind === 'part') bone = p.bone;

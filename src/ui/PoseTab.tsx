@@ -7,7 +7,8 @@ import { endDrag, startDrag } from './dragdrop';
 import { Icon } from './icons';
 import { useLibrary, useThumb } from './library';
 import { startPoseEdit } from './poseEdit';
-import { applyPose, savePoseFromSelected } from './scenes';
+import { PosePropsPicker } from './PosePropsPicker';
+import { applyPose, posePropCandidates, savePoseFromSelected } from './scenes';
 
 /** 에셋 패널 포즈 탭: 선택한 돌의 자세를 공용/포즈에 저장하고, 카드를 누르면 선택한 돌에 적용한다(체형과 무관) */
 export function PoseTab({ engine }: { engine: Engine }) {
@@ -74,6 +75,8 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
   const [name, setName] = useState('');
   const [category, setCategory] = useState('일반');
   const [tags, setTags] = useState('');
+  const dollId = useStore((s) => s.selection.dollId);
+  const [propIds, setPropIds] = useState<string[]>(() => (dollId ? posePropCandidates(dollId).filter((c) => c.held).map((c) => c.id) : []));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const options = [...new Set([...categories, ...DEFAULT_POSE_CATEGORIES])];
@@ -83,7 +86,7 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
     setBusy(true);
     setError(null);
     try {
-      const p = await savePoseFromSelected(engine, name, category, parseTagList(tags));
+      const p = await savePoseFromSelected(engine, name, category, parseTagList(tags), propIds);
       if (!p) setError('돌을 먼저 선택하세요');
       else onDone();
     } catch (e) {
@@ -107,6 +110,7 @@ function PoseSaveForm({ engine, categories, onDone }: { engine: Engine; categori
         <input type="text" className="grow" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="분류(위에서 고르거나 직접 입력)" title="분류(서기·앉기·동작 …). 자유 입력" spellCheck={false} />
       </div>
       <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="태그(쉼표로 구분)" spellCheck={false} />
+      {dollId && <PosePropsPicker dollId={dollId} checked={propIds} onChange={setPropIds} />}
       {error && <div className="small" style={{ color: 'var(--danger)' }}>{error}</div>}
       <div className="row" style={{ justifyContent: 'flex-end' }}>
         <button onClick={onDone}>취소</button>

@@ -72,6 +72,8 @@ export interface StoreState extends Document {
   outputCount: number;
   /** 핸드 오퍼레이터(손가락 모양) 대화상자 */
   handOperatorOpen: boolean;
+  /** 소품 편집 창이 열려 있는 소품 인스턴스 ID */
+  propEditId: string | null;
   handOperatorHand: Hand;
   /** 씬 검색기(` 키) 열림. 열 때 미리 고를 씬 ID */
   sceneBrowserOpen: boolean;
@@ -132,6 +134,7 @@ export interface StoreState extends Document {
   setCutCamera: (cutNumber: number, camera: CameraState) => void;
   setOutputCount: (n: number) => void;
   setHandOperator: (open: boolean, hand?: Hand) => void;
+  setPropEdit: (id: string | null) => void;
 
   // 소품(3단계)
   /** 등록 소품을 현재 컷에 자유 배치. position이 없으면 앞쪽에 비켜 놓는다 */
@@ -251,6 +254,7 @@ export const useStore = create<StoreState>()(
     characterManagerFor: null,
     outputCount: 0,
     handOperatorOpen: false,
+    propEditId: null,
     handOperatorHand: 'right',
     sceneBrowserOpen: false,
     sceneBrowserSelectId: null,
@@ -545,6 +549,7 @@ export const useStore = create<StoreState>()(
       if (get().outputCount !== n) set({ outputCount: n });
     },
 
+    setPropEdit: (id) => set({ propEditId: id }),
     setHandOperator: (open, hand) => set({ handOperatorOpen: open, handOperatorHand: hand ?? get().handOperatorHand }),
 
     // ---------- 소품 ----------
