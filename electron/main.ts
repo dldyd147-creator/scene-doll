@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, safeStorage, session, shell } from 'electron';
 import { promises as fs } from 'node:fs';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cancelGeneration, runGeneration } from './generate';
@@ -16,6 +16,10 @@ protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: 
 
 if (process.env.SCENEDOLL_USER_DATA) app.setPath('userData', process.env.SCENEDOLL_USER_DATA);
 app.setName('씬 돌');
+// 그래픽 프로세스 오류(멈춤·장치 초기화 등)는 크로미움이 따로 적는다: 사용자 데이터 폴더의 logs/chromium.log
+mkdirSync(path.join(app.getPath('userData'), 'logs'), { recursive: true });
+app.commandLine.appendSwitch('enable-logging', 'file');
+app.commandLine.appendSwitch('log-file', path.join(app.getPath('userData'), 'logs', 'chromium.log'));
 
 const configFile = (): string => path.join(app.getPath('userData'), 'config.json');
 let workRoot: string | null = null;
