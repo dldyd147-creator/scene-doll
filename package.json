@@ -1,7 +1,7 @@
 {
   "name": "scene-doll",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,8 +12,8 @@
     "deploy": "npm run build && gh-pages -d dist",
     "electron:build": "node scripts/build-electron.mjs",
     "desktop:dev": "node scripts/desktop-dev.mjs",
-    "desktop:start": "npm run build && npm run electron:build && electron .",
-    "desktop:dist": "npm run build && npm run electron:build && electron-builder --win nsis --publish never"
+    "desktop:start": "tsc -b && vite build --mode desktop && npm run electron:build && electron .",
+    "desktop:dist": "tsc -b && vite build --mode desktop && npm run electron:build && electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.118.0",

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { cancelGeneration, runGeneration } from './generate';
 import { createKeyStore } from './keystore';
+import { installDiagnostics } from './diagnostics';
 import { createWorkFs, PathError, type WorkFs } from './workFs';
 import { cleanKeyInput } from '../src/generate/keys';
 
@@ -179,6 +180,7 @@ function createWindow(): void {
   mainWindow.webContents.on('will-navigate', (e, url) => {
     if (!url.startsWith(`${SCHEME}://`) && !(DEV_URL && url.startsWith(DEV_URL))) e.preventDefault();
   });
+  installDiagnostics(mainWindow);
   void mainWindow.loadURL(DEV_URL ?? `${SCHEME}://app/index.html`);
   mainWindow.on('closed', () => {
     mainWindow = null;
