@@ -95,8 +95,8 @@ def parse_args():
             i += 2
         else:
             raise SystemExit("unknown argument: " + args[i])
-    if opts["gender"] not in ("male", "female"):
-        raise SystemExit("--gender must be male or female")
+    if opts["gender"] not in ("male", "female", "neutral"):
+        raise SystemExit("--gender must be male, female or neutral (neutral = macro 0.5, for children/SD)")
     if opts["height"] is None:
         opts["height"] = 1.75 if opts["gender"] == "male" else 1.62
     opts["height"] = float(opts["height"])
@@ -288,7 +288,7 @@ def signed_angle_about_axis(u, v, axis):
 # 1. create human (same macro settings as v1)
 # ----------------------------------------------------------------------------------------------------------------------
 macro = TargetService.get_default_macro_info_dict()
-macro["gender"] = 1.0 if OPTS["gender"] == "male" else 0.0
+macro["gender"] = {"male": 1.0, "female": 0.0, "neutral": 0.5}[OPTS["gender"]]
 macro["age"] = OPTS["age"]
 macro["muscle"] = OPTS["muscle"]
 macro["weight"] = OPTS["weight"]

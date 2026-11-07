@@ -1,0 +1,47 @@
+{
+  "_doc": "뎃생 돌 목록(2026-11-08, 대표 확정). 공통 3 + 남녀 각 9 = 21종. gender neutral = MakeHuman 성별 0.5. age: 0=1세·0.1875=11세·0.5=25세·1=90세. targets 는 mpfb/data/targets 파일 이름(0~1). 돌 id 는 NTT DOLL_ASSETS 의 id, glb 는 apps/web/public/sketch/dolls/<glb>.glb",
+  "dolls": [
+    { "id": "mh2_sd",       "glb": "mh2_sd",            "name": "SD",         "bodyType": "sd",      "gender": "neutral", "height": 1.00, "age": 0.15, "muscle": 0.4, "weight": 0.55, "proportions": 0.3,
+      "targets": "head-scale-vert-incr=1,head-scale-horiz-incr=1,head-scale-depth-incr=1,measure-neck-height-decr=1,measure-upperleg-height-decr=1,measure-lowerleg-height-decr=1,measure-upperarm-length-decr=1,measure-lowerarm-length-decr=1,torso-scale-vert-decr=0.6" },
+    { "id": "mh2_toddler",  "glb": "mh2_toddler",       "name": "유아",       "bodyType": "child",   "gender": "neutral", "height": 0.90, "age": 0.03, "muscle": 0.4, "weight": 0.55, "proportions": 0.5, "targets": "" },
+    { "id": "mh2_child",    "glb": "mh2_child",         "name": "소아",       "bodyType": "child",   "gender": "neutral", "height": 1.20, "age": 0.11, "muscle": 0.45, "weight": 0.5, "proportions": 0.5, "targets": "" },
+
+    { "id": "mh2_m_teen",   "glb": "mh2_male_teen",     "name": "남자_청소년", "bodyType": "teen",    "gender": "male",   "height": 1.65, "age": 0.27, "muscle": 0.4, "weight": 0.4, "proportions": 0.5, "targets": "" },
+    { "id": "mh2_f_teen",   "glb": "mh2_female_teen",   "name": "여자_청소년", "bodyType": "teen",    "gender": "female", "height": 1.58, "age": 0.27, "muscle": 0.4, "weight": 0.4, "proportions": 0.5, "targets": "" },
+
+    { "id": "mh2_m_model",  "glb": "mh2_male_model",    "name": "남자_모델핏", "bodyType": "model",   "gender": "male",   "height": 1.88, "age": 0.5, "muscle": 0.6, "weight": 0.3, "proportions": 1.0,
+      "targets": "head-scale-vert-decr=0.6,head-scale-horiz-decr=0.4,head-scale-depth-decr=0.3,measure-upperleg-height-incr=0.7,measure-lowerleg-height-incr=0.7,measure-neck-height-incr=0.3,measure-shoulder-dist-incr=0.3" },
+    { "id": "mh2_f_model",  "glb": "mh2_female_model",  "name": "여자_모델핏", "bodyType": "model",   "gender": "female", "height": 1.75, "age": 0.5, "muscle": 0.55, "weight": 0.3, "proportions": 1.0,
+      "targets": "head-scale-vert-decr=0.6,head-scale-horiz-decr=0.4,head-scale-depth-decr=0.3,measure-upperleg-height-incr=0.7,measure-lowerleg-height-incr=0.7,measure-neck-height-incr=0.3" },
+
+    { "id": "mh2_m_fit",    "glb": "mh2_male_fit",      "name": "남자_근육핏", "bodyType": "fit",     "gender": "male",   "height": 1.80, "age": 0.5, "muscle": 0.85, "weight": 0.45, "proportions": 0.7,
+      "targets": "l-upperarm-muscle-incr=0.5,r-upperarm-muscle-incr=0.5,l-upperarm-shoulder-muscle-incr=0.5,r-upperarm-shoulder-muscle-incr=0.5,l-lowerarm-muscle-incr=0.4,r-lowerarm-muscle-incr=0.4,l-upperleg-muscle-incr=0.5,r-upperleg-muscle-incr=0.5,l-lowerleg-muscle-incr=0.5,r-lowerleg-muscle-incr=0.5,stomach-tone-incr=0.6,torso-muscle-pectoral-incr=0.4,measure-shoulder-dist-incr=0.3" },
+    { "id": "mh2_f_fit",    "glb": "mh2_female_fit",    "name": "여자_근육핏", "bodyType": "fit",     "gender": "female", "height": 1.68, "age": 0.5, "muscle": 0.85, "weight": 0.45, "proportions": 0.7,
+      "targets": "l-upperarm-muscle-incr=0.5,r-upperarm-muscle-incr=0.5,l-upperarm-shoulder-muscle-incr=0.5,r-upperarm-shoulder-muscle-incr=0.5,l-lowerarm-muscle-incr=0.4,r-lowerarm-muscle-incr=0.4,l-upperleg-muscle-incr=0.5,r-upperleg-muscle-incr=0.5,l-lowerleg-muscle-incr=0.5,r-lowerleg-muscle-incr=0.5,stomach-tone-incr=0.6,measure-shoulder-dist-incr=0.3" },
+
+    { "id": "mh2_m_hero",   "glb": "mh2_male_hero",     "name": "남자_히어로", "bodyType": "hero",    "gender": "male",   "height": 1.90, "age": 0.5, "muscle": 1.0, "weight": 0.45, "proportions": 1.0,
+      "targets": "head-scale-vert-decr=0.4,head-scale-horiz-decr=0.3,measure-upperleg-height-incr=0.5,measure-lowerleg-height-incr=0.5,measure-shoulder-dist-incr=0.8,torso-vshape-incr=0.8,torso-muscle-pectoral-incr=0.8,torso-muscle-dorsi-incr=0.6,l-upperarm-muscle-incr=1,r-upperarm-muscle-incr=1,l-upperarm-shoulder-muscle-incr=1,r-upperarm-shoulder-muscle-incr=1,l-lowerarm-muscle-incr=0.7,r-lowerarm-muscle-incr=0.7,l-upperleg-muscle-incr=0.6,r-upperleg-muscle-incr=0.6,l-lowerleg-muscle-incr=0.6,r-lowerleg-muscle-incr=0.6,stomach-tone-incr=1,measure-waist-circ-decr=0.4" },
+    { "id": "mh2_f_hero",   "glb": "mh2_female_hero",   "name": "여자_히어로", "bodyType": "hero",    "gender": "female", "height": 1.78, "age": 0.5, "muscle": 0.95, "weight": 0.4, "proportions": 1.0,
+      "targets": "head-scale-vert-decr=0.4,head-scale-horiz-decr=0.3,measure-upperleg-height-incr=0.5,measure-lowerleg-height-incr=0.5,measure-shoulder-dist-incr=0.5,torso-vshape-incr=0.5,l-upperarm-muscle-incr=0.8,r-upperarm-muscle-incr=0.8,l-upperarm-shoulder-muscle-incr=0.8,r-upperarm-shoulder-muscle-incr=0.8,l-lowerarm-muscle-incr=0.6,r-lowerarm-muscle-incr=0.6,l-upperleg-muscle-incr=0.6,r-upperleg-muscle-incr=0.6,l-lowerleg-muscle-incr=0.6,r-lowerleg-muscle-incr=0.6,stomach-tone-incr=1,measure-waist-circ-decr=0.4" },
+
+    { "id": "mh2_m_bb",     "glb": "mh2_male_bb",       "name": "남자_보디빌더", "bodyType": "bodybuilder", "gender": "male",   "height": 1.80, "age": 0.5, "muscle": 1.0, "weight": 0.6, "proportions": 0.6,
+      "targets": "measure-shoulder-dist-incr=0.7,torso-vshape-incr=0.6,torso-muscle-pectoral-incr=1,torso-muscle-dorsi-incr=1,torso-scale-depth-incr=0.3,l-upperarm-muscle-incr=1,r-upperarm-muscle-incr=1,l-upperarm-shoulder-muscle-incr=1,r-upperarm-shoulder-muscle-incr=1,l-lowerarm-muscle-incr=1,r-lowerarm-muscle-incr=1,l-upperleg-muscle-incr=1,r-upperleg-muscle-incr=1,l-lowerleg-muscle-incr=1,r-lowerleg-muscle-incr=1,stomach-tone-incr=1,neck-scale-horiz-incr=0.6,neck-scale-depth-incr=0.6,measure-neck-circ-incr=0.6" },
+    { "id": "mh2_f_bb",     "glb": "mh2_female_bb",     "name": "여자_보디빌더", "bodyType": "bodybuilder", "gender": "female", "height": 1.68, "age": 0.5, "muscle": 1.0, "weight": 0.55, "proportions": 0.6,
+      "targets": "measure-shoulder-dist-incr=0.6,torso-vshape-incr=0.5,torso-muscle-dorsi-incr=0.8,l-upperarm-muscle-incr=1,r-upperarm-muscle-incr=1,l-upperarm-shoulder-muscle-incr=1,r-upperarm-shoulder-muscle-incr=1,l-lowerarm-muscle-incr=1,r-lowerarm-muscle-incr=1,l-upperleg-muscle-incr=1,r-upperleg-muscle-incr=1,l-lowerleg-muscle-incr=1,r-lowerleg-muscle-incr=1,stomach-tone-incr=1,neck-scale-horiz-incr=0.4,measure-neck-circ-incr=0.4" },
+
+    { "id": "mh2_m_fat",    "glb": "mh2_male_fat",      "name": "남자_비만",   "bodyType": "fat",     "gender": "male",   "height": 1.72, "age": 0.5, "muscle": 0.4, "weight": 0.85, "proportions": 0.4,
+      "targets": "stomach-pregnant-incr=0.3,l-upperarm-fat-incr=0.4,r-upperarm-fat-incr=0.4,l-upperleg-fat-incr=0.4,r-upperleg-fat-incr=0.4,neck-double-incr=0.5,hip-scale-horiz-incr=0.3,buttocks-volume-incr=0.4" },
+    { "id": "mh2_f_fat",    "glb": "mh2_female_fat",    "name": "여자_비만",   "bodyType": "fat",     "gender": "female", "height": 1.60, "age": 0.5, "muscle": 0.4, "weight": 0.85, "proportions": 0.4,
+      "targets": "stomach-pregnant-incr=0.2,l-upperarm-fat-incr=0.4,r-upperarm-fat-incr=0.4,l-upperleg-fat-incr=0.5,r-upperleg-fat-incr=0.5,neck-double-incr=0.4,hip-scale-horiz-incr=0.4,buttocks-volume-incr=0.5" },
+
+    { "id": "mh2_m_obese",  "glb": "mh2_male_obese",    "name": "남자_초고도비만", "bodyType": "obese", "gender": "male",   "height": 1.72, "age": 0.5, "muscle": 0.3, "weight": 1.0, "proportions": 0.3,
+      "targets": "stomach-pregnant-incr=0.8,l-upperarm-fat-incr=1,r-upperarm-fat-incr=1,l-lowerarm-fat-incr=0.8,r-lowerarm-fat-incr=0.8,l-upperleg-fat-incr=1,r-upperleg-fat-incr=1,l-lowerleg-fat-incr=0.8,r-lowerleg-fat-incr=0.8,neck-double-incr=1,measure-neck-circ-incr=0.8,hip-scale-horiz-incr=0.7,torso-scale-horiz-incr=0.5,torso-scale-depth-incr=0.6,buttocks-volume-incr=0.8,measure-waist-circ-incr=0.8" },
+    { "id": "mh2_f_obese",  "glb": "mh2_female_obese",  "name": "여자_초고도비만", "bodyType": "obese", "gender": "female", "height": 1.60, "age": 0.5, "muscle": 0.3, "weight": 1.0, "proportions": 0.3,
+      "targets": "stomach-pregnant-incr=0.7,l-upperarm-fat-incr=1,r-upperarm-fat-incr=1,l-lowerarm-fat-incr=0.8,r-lowerarm-fat-incr=0.8,l-upperleg-fat-incr=1,r-upperleg-fat-incr=1,l-lowerleg-fat-incr=0.8,r-lowerleg-fat-incr=0.8,neck-double-incr=1,measure-neck-circ-incr=0.7,hip-scale-horiz-incr=0.8,torso-scale-horiz-incr=0.5,torso-scale-depth-incr=0.6,buttocks-volume-incr=1,measure-waist-circ-incr=0.8" },
+
+    { "id": "mh2_m_elder",  "glb": "mh2_male_elder",    "name": "남자_노인",   "bodyType": "elder",   "gender": "male",   "height": 1.65, "age": 0.9, "muscle": 0.3, "weight": 0.45, "proportions": 0.4,
+      "targets": "torso-trans-forward=0.4,neck-trans-forward=0.5,head-trans-forward=0.3,measure-shoulder-dist-decr=0.3,stomach-pregnant-incr=0.15" },
+    { "id": "mh2_f_elder",  "glb": "mh2_female_elder",  "name": "여자_노인",   "bodyType": "elder",   "gender": "female", "height": 1.52, "age": 0.9, "muscle": 0.3, "weight": 0.45, "proportions": 0.4,
+      "targets": "torso-trans-forward=0.4,neck-trans-forward=0.5,head-trans-forward=0.3,measure-shoulder-dist-decr=0.3,stomach-pregnant-incr=0.15" }
+  ]
+}
