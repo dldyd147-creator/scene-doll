@@ -747,3 +747,39 @@ tt`, 커밋됨): `routes/scene-doll.ts`, `index.ts`(길 연결), `clip_worker/wo
 - Supabase 플랜(저장 용량)과 첫 관리자 계정(dldyd147@gmail.com으로 가정).
 - 함수 배포 때 Supabase CLI 로그인(브라우저 로그인 한 번)과 키 입력(앱 관리자 화면에서 직접).
 - 승인할 아이디 목록과 월 한도.
+
+## 9단계 NTT 통합: '뎃생' 단계로 흡수 (2026-11-07 설계)
+
+8단계(웹 복귀)는 **보류**하고, 씬 돌을 NTT(사내 웹소설→웹툰 각색 도구, `C:\ntt`)의 **글콘티와 원고 사이 '뎃생' 메뉴**로 넣는다. 대표 판단: 글콘티와 직접 연동되면 생산성이 더 높고, 로그인·권한·관리자·서버 저장·CLIP 내보내기가 NTT에 이미 있어 8단계가 새로 만들려던 것 대부분이 필요 없어진다.
+
+### 결정과 근거
+- **NTT 안의 한 메뉴.** `packages/shared/src/menu.ts`의 WORK_MENUS에 `{ key: 'sketch', label: '뎃생', short: '뎃생', group: 'work' }`를 글콘티와 원고 사이에 넣고, `/works/:workId/sketch` 화면을 **지연 로딩(lazy) 조각**으로 둔다. three.js·돌 GLB·프리셋(약 7MB)은 뎃생을 열 때만 내려받는다 → 다른 메뉴는 무거워지지 않는다. 첫 작업에서 실제 조각 크기·첫 화면 시간을 재서 decisions에 적는다.
+- **스택은 NTT 규칙을 따른다.** React 18로 맞춘다(씬 돌은 React 19였으나 19 전용 API를 쓰지 않아 내려도 된다 — 세션이 확인). 새 라이브러리는 three.js 하나이며 `docs/decisions.md`에 이유를 적는다. 엔진은 WebGL이라 StrictMode에서 두 번 뜨지 않게 뎃생 화면의 엔진 생성·정리를 effect 안에서 안전하게 짝 맞춘다.
+- **코드는 NTT 모노레포로 옮긴다.** `packages/sketch-engine`(3D 엔진 `src/engine`, 모델 `src/model`, 생성 순수 로직 `src/generate`의 batch·compose, 서술 `src/describe`, 시험 포함)과 `apps/web/src/features/sketch`(UI). 씬 돌 저장소(`C:\dev\scene-doll`)는 보관하고 웹 배포판은 그대로 둔다(더 손대지 않음).
+- **권한: 관리자가 열어 준 사람만.** 새 표 `sketch_access(user_id pk, can_view, can_edit, can_generate, monthly_limit_usd, note, granted_by, granted_at)`. 뎃생 메뉴는 `can_view`인 사람(관리자는 항상)에게만 보이고, 서버의 모든 `/api/sketch/*`가 이 표 + 기존 `work_access`(작품별 접근)를 함께 검사한다. `can_edit` 없으면 보기만(저장 API 403), `can_generate` 없으면 생성 버튼이 '관리자 승인 필요'. 관리자 화면(기존 `features/admin`)에 '뎃생 권한' 탭: 사용자별 세 개 토글 + 월 한도 + 사용량.
+- **데이터는 NTT의 것을 쓴다(중복 제거).**
+  - 작품 = NTT `works`. 씬 돌의 작품 코드·작품 관리는 없어진다.
+  - 회차 = NTT 웹툰 회차 `webtoon_episodes`, 컷 = 글콘티 `cuts`(시트 `script_sheets`의 행). **컷의 추가·삭제·순서는 글콘티에서만** 바꾼다(원천 하나). 뎃생은 그 컷 목록을 그대로 보여 주고, 글콘티 시트가 없는 회차에서 '컷 만들기'를 누르면 기존 시트 API로 빈 시트와 컷을 만든다.
+  - 뎃생 데이터 = 새 표 `sketch_cuts(cut_id pk → cuts.id, scene_json, aspect, source('doll'|'image'|'prompt'), artwork_path, prompt_override, confirmed, generated_images_json, main_image, updated_by, updated_at)`. `scene_json`은 씬 돌 `Cut`의 돌·소품·카메라·조명·표시 옵션(기존 JSON 그대로). 글콘티 컷이 지워지면 cascade.
+  - 대사·장면 설명 = 글콘티 컷의 `top/mid/bottom_text`(+태그)·`scene`·`memo`를 **그 자리에서 읽고 고친다**(8단계 '글 칸 개편'은 이걸로 대체: 위·중간·아래 대사 세 단과 장면 설명이 글콘티와 같은 값, 비면 접히고 드롭다운으로 연다). 생성 프롬프트는 `sketch_cuts.prompt_override`.
+  - 화면비 = 글콘티 `size`(1~5) → 뎃생 기본 화면비 표(1:1.0 · 1:1.25 · 1:1.5 · 1:1.75 · 1:2.0, `packages/shared`에 상수)에서 오고, 뎃생에서 바꾸면 `sketch_cuts.aspect`가 우선한다. CLIP 칸 높이는 지금 규칙(`clipCutHeight`) 그대로.
+  - 캐릭터 = NTT `characters`(이름·성별·키 체형·외형·썸네일·`character_views` 이미지). 뎃생용 추가값은 `sketch_characters(character_id pk, height_cm, color, doll_id, body_json)`. 레퍼런스는 NTT 캐릭터 시트의 이미지(`character_views`)를 그대로 쓰고, 뎃생의 8칸 슬롯은 그 뷰에 대응시킨다(없으면 성별 기본 돌).
+  - 공용 라이브러리(씬·포즈·손포즈·소품·소품 GLB)와 기본 프리셋 팩 = 서버 `FILES_DIR/sketch/shared/…`에 JSON+PNG+GLB 파일로(씬 돌 경로 모델 유지), 목록은 `sketch_library(id pk, kind, name, tags_json, file_path, thumb_path, updated_by, updated_at)` 표로 검색한다. 프리셋 팩은 서버 첫 실행 때 심는다.
+  - 생성 후보·출력 PNG = `FILES_DIR/sketch/<workId>/<episodeId>/<cutId>/cand_k.png`, `out_*.png`. 기존 이미지 저장 도우미(`lib/image-files.ts`, sharp 썸네일) 사용.
+- **저장 계층 = 서버 API.** 씬 돌의 `StorageBackend`(경로→파일)를 버리고 `features/sketch/api.ts`가 `/api/sketch/*`를 부른다(TanStack Query). 자동 저장은 글콘티처럼 1초 디바운스 PUT. 회차 잠금은 글콘티의 편집 잠금 규칙을 그대로 재사용(같은 시트를 글콘티에서 잠그면 뎃생도 보기 전용). 실시간 갱신은 글콘티와 같은 방식(기존 presence 또는 폴링)으로 맞춘다 — 없으면 30초 폴링.
+- **이미지 생성은 NTT 서버가 부른다.** `lib/ai.ts`의 방식(키는 데이터 폴더 파일에만, 관리자 화면에서 넣고 검증, `ai_usage`에 기록)을 따라 `lib/sketch-generate.ts`: 표 `sketch_apis(id, label, provider('venice'|'bfl'|'openai'|'custom'), model, endpoint, max_images, active, sort)`와 키 파일 `sketch-keys.json`(provider별, 화면에는 설정됨/바꾸기/지우기만). 관리자가 항목을 추가·수정하고 라디오로 켠다(기본 켜짐: 베니스 `flux-3-image-edit`; 미리 넣어 두는 항목: BFL 직접 Flux 3, OpenAI gpt-image-2.5-sunburst, 베니스 Nano Banana Pro/2.1/2). 어댑터는 씬 돌 `src/generate/providers/`를 서버로 옮긴다(이미지 없는 호출도 지원: 베니스 `/image/generate`, BFL images 생략, OpenAI generations). 제출→폴링(BFL)은 서버 작업 표 `sketch_jobs`로 비동기 처리하고 화면이 상태를 묻는다. 사용량은 `sketch_usage(user, work, episode, provider, model, cuts, cost_usd, tokens, ok, error_kind)`에 쓰고 월 한도는 여기서 합산한다. **수위·안전 관련 값은 요청에 넣지 않는다**(원칙 유지). Cloudflare Worker·Supabase 함수는 쓰지 않는다.
+- **CLIP 내보내기는 내부 호출.** 뎃생의 [CLIP 콘티 받기]는 NTT 안에서 `routes/clip.ts`가 이미 하는 일에 컷 그림만 얹는다(토큰·CORS 불필요, `routes/scene-doll.ts` 외부 길은 보관 뒤 폐기). 대사 3단·효과음 태그·컷사이즈는 글콘티 값 그대로라 **엑셀 없이 그대로 된다.**
+- **8단계 기능은 여기에 들어간다.** (a) 글 칸: 글콘티 컷 값 연동 + 접힘/드롭다운 + `prompt_override`. (b) 직접 그리기·프롬프트 전용: `source`·`artwork_path`·그림판(8단계 설계 그대로). (c) 작품 간 가져오기: NTT에는 작품·캐릭터가 이미 있으므로 **뎃생 자산만** 복사한다 — 다른 작품의 `sketch_cuts`(회차 단위·컷 단위)와 `sketch_characters`(캐릭터는 이름으로 매칭, 없으면 NTT 캐릭터까지 복사할지 선택). 검색 창 하나(작품·회차·캐릭터 이름).
+- **기존 씬 돌 데이터 이전.** `.scenedoll` 이동 파일을 서버가 읽어 넣는 가져오기(`/api/sketch/import`): 작품 코드 → NTT 작품 선택, 캐릭터는 이름으로 매칭(없으면 새로), 회차 번호 → 웹툰 회차(없으면 생성), 컷은 글콘티 시트가 없으면 새 시트에 컷을 만들고 대사·지문을 top/bottom·scene에 넣는다. 공용 라이브러리·생성 후보 포함 선택.
+
+### 구현 순서
+0. **시범(하루)**: NTT에 뎃생 메뉴·권한 표·빈 화면 + 지연 로딩 조각으로 씬 돌 엔진을 띄워 돌 하나를 조작한다. React 18 호환, 조각 크기, 첫 로딩 시간, 다른 메뉴 영향 없음을 확인해 decisions에 적는다. 문제가 크면 여기서 멈추고 보고한다.
+1. 스키마(`sketch_access`·`sketch_cuts`·`sketch_characters`·`sketch_library`·`sketch_apis`·`sketch_jobs`·`sketch_usage`, 마이그레이션) · 서버 길 `/api/sketch/*`(권한 미들웨어) · 관리자 '뎃생 권한' 탭 · 뎃생 화면의 저장 계층을 API로 · 컷 목록 = 글콘티 컷 · 캐릭터 = NTT 캐릭터(+추가값) · 공용 라이브러리·프리셋 팩 심기.
+2. 이미지 생성(서버 어댑터·API 목록·키·작업·사용량·월 한도) · 글 칸(글콘티 연동·접힘·드롭다운·prompt_override) · CLIP 내부 호출.
+3. 직접 그리기·프롬프트 전용 컷 · 작품 간 뎃생 자산 가져오기 · `.scenedoll` 이전 가져오기.
+4. e2e(검수 시나리오 추가), 가이드 문서, 운영 배포(`release` 가지), 씬 돌 저장소 README에 '보관(NTT로 이전)' 안내.
+
+### 사용자가 정하거나 할 것
+- 뎃생 권한을 줄 사람과 월 한도, 이미지 생성 키 입력(관리자 화면에서 직접).
+- 운영 서버 디스크 여유(생성 이미지가 쌓인다 — 관리자 화면 서버 상태에 뎃생 용량을 더한다).
+- 글콘티 컷사이즈 ↔ 화면비 기본 표가 사내 규약과 맞는지.
