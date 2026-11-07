@@ -81,7 +81,12 @@ def parse_args():
     argv = sys.argv
     args = argv[argv.index("--") + 1:] if "--" in argv else []
     opts = {"gender": "male", "height": None, "out": None, "log": None, "blend": None, "race": "neutral",
-            "smooth-limbs": "2"}  # Laplacian smoothing iterations (factor 0.5) of the 8 limb groups before the twist split; 0 = off
+            "smooth-limbs": "2",  # Laplacian smoothing iterations (factor 0.5) of the 8 limb groups before the twist split; 0 = off
+            # body-type macros (MakeHuman 0..1, 0.5 = the v2 basic dolls). proportions 1.0 = idealistic (long legs, small head)
+            "age": "0.5", "muscle": "0.5", "weight": "0.5", "proportions": "0.5",
+            # extra MPFB targets on top of the macros: "head/head-scale-vert-decr=0.5,legs/measure-upperleg-height-incr=0.6"
+            # (names relative to mpfb/data/targets, weight 0..1). Applied before the height tuning, baked with the rest pose
+            "targets": ""}
     i = 0
     while i < len(args):
         key = args[i].lstrip("-")
@@ -98,6 +103,15 @@ def parse_args():
     if not opts["out"]:
         raise SystemExit("--out <file.glb> is required")
     opts["smooth-limbs"] = int(opts["smooth-limbs"])
+    for k in ("age", "muscle", "weight", "proportions"):
+        opts[k] = float(opts[k])
+        if not 0.0 <= opts[k] <= 1.0:
+            raise SystemExit("--%s must be between 0 and 1" % k)
+    targets = []
+    for part in [p.strip() for p in opts["targets"].split(",") if p.strip()]:
+        name, _, w = part.partition("=")
+        targets.append((name.strip(), float(w) if w else 1.0))
+    opts["targets"] = targets
     return opts
 
 
@@ -275,10 +289,10 @@ def signed_angle_about_axis(u, v, axis):
 # ----------------------------------------------------------------------------------------------------------------------
 macro = TargetService.get_default_macro_info_dict()
 macro["gender"] = 1.0 if OPTS["gender"] == "male" else 0.0
-macro["age"] = 0.5
-macro["muscle"] = 0.5
-macro["weight"] = 0.5
-macro["proportions"] = 0.5
+macro["age"] = OPTS["age"]
+macro["muscle"] = OPTS["muscle"]
+macro["weight"] = OPTS["weight"]
+macro["proportions"] = OPTS["proportions"]
 macro["height"] = 0.5
 macro["cupsize"] = 0.5
 macro["firmness"] = 0.5
@@ -294,6 +308,16 @@ human = HumanService.create_human(mask_helpers=True, detailed_helpers=True, extr
                                   feet_on_ground=True, scale=0.1, macro_detail_dict=macro)
 log("human:", human.name, "verts", len(human.data.vertices), "polys", len(human.data.polygons))
 REPORT["basemesh_with_helpers"] = {"vertices": len(human.data.vertices), "polygons": len(human.data.polygons)}
+
+# 1b. extra body-type targets (shape keys, baked later together with the macro targets)
+for target_name, target_weight in OPTS["targets"]:
+    full_path = TargetService.target_full_path(os.path.basename(target_name))  # MPFB looks targets up by stem only
+    if not full_path:
+        raise SystemExit("unknown target: " + target_name)
+    TargetService.load_target(human, full_path, weight=target_weight, name=os.path.basename(target_name))
+    log("target", target_name, "=", target_weight)
+bpy.context.view_layer.update()
+REPORT["extra_targets"] = [{"name": n, "weight": w} for n, w in OPTS["targets"]]
 
 # ----------------------------------------------------------------------------------------------------------------------
 # 2. tune height macro
