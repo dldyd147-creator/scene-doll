@@ -7,6 +7,9 @@ build_bodies.py -- bodies.json 의 돌을 모두(또는 고른 것만) Blender �
 
 출력: out/<glb>.glb, logs/build2_<glb>.log|json, preview_v3/<glb>_{front,side,threequarter,bones}.png,
       preview_v3/bodies_<view>.png (전체 비교 띠, 이름 표시).
+
+돌을 다시 만든 뒤에는 NTT 돌 고르기 썸네일(같은 축척, decisions #504)도 다시 찍는다:
+  blender -b --python scripts\render_thumbs.py -- C:\ntt\apps\web\public\sketch\dolls\thumbs out\<glb>.glb ...
 """
 import json
 import os

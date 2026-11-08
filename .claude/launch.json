@@ -33,6 +33,72 @@
         "5175"
       ],
       "port": 5175
+    },
+    {
+      "name": "ntt-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:api",
+        "--prefix",
+        "C:/ntt"
+      ],
+      "port": 3200,
+      "autoPort": false,
+      "env": {
+        "PORT": "3200",
+        "NTT_DATA_DIR": "C:/ntt/data/preview",
+        "NTT_AI_FAKE": "1"
+      }
+    },
+    {
+      "name": "ntt-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:web",
+        "--prefix",
+        "C:/ntt"
+      ],
+      "port": 5373,
+      "autoPort": false,
+      "env": {
+        "WEB_PORT": "5373",
+        "API_TARGET": "http://localhost:3200"
+      }
+    },
+    {
+      "name": "ntt-api-b",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:api",
+        "--prefix",
+        "C:/ntt"
+      ],
+      "port": 3201,
+      "autoPort": false,
+      "env": {
+        "PORT": "3201",
+        "NTT_DATA_DIR": "C:/ntt/data/preview-b",
+        "NTT_AI_FAKE": "1"
+      }
+    },
+    {
+      "name": "ntt-web-b",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:web",
+        "--prefix",
+        "C:/ntt"
+      ],
+      "port": 5374,
+      "autoPort": false,
+      "env": {
+        "WEB_PORT": "5374",
+        "API_TARGET": "http://localhost:3201"
+      }
     }
   ]
 }
