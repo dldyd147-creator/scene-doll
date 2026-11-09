@@ -92,6 +92,7 @@ export const PROPS = [];
 const add = (id, name, tags, kind, build) => PROPS.push({ id, name, tags, kind, build });
 
 // ---------- 무기 ----------
+// 태그 규칙(NTT #505): 첫 태그 = 소품 탭 폴더, 둘째 태그 = 하위 폴더(무기 › 검·도·단검·창·도끼·둔기·방패·활·권총·소총·산탄총·중화기)
 function sword({ handle = 0.14, bladeLen = 0.8, w = 0.05, guard = 0.14, curve = 0, pommel = true, t = 0.008, tip = 0.1, guardType = 'cross', handleColor = LEATHER } = {}) {
   const parts = [cyl(0.014, 0.014, handle, handleColor, [0, 0, 0])];
   if (pommel) parts.push(sph(0.02, GOLD, [0, -handle / 2 - 0.005, 0]));
@@ -102,30 +103,30 @@ function sword({ handle = 0.14, bladeLen = 0.8, w = 0.05, guard = 0.14, curve = 
 }
 add('sword1', '한손검', ['무기', '검'], 'rod', () => sword({ bladeLen: 0.78, w: 0.05, guard: 0.14 }));
 add('sword2', '양손검', ['무기', '검'], 'rod', () => sword({ handle: 0.3, bladeLen: 1.1, w: 0.065, guard: 0.22 }));
-add('katana', '직도', ['무기', '검'], 'rod', () => sword({ handle: 0.24, bladeLen: 0.72, w: 0.032, guard: 0.07, guardType: 'disc', t: 0.007, tip: 0.07, pommel: false, handleColor: DARK }));
-add('saber', '곡도', ['무기', '검'], 'rod', () => sword({ handle: 0.13, bladeLen: 0.75, w: 0.045, curve: 0.11, guard: 0.1, tip: 0.1 }));
-add('tanto', '단도', ['무기', '칼'], 'rod', () => sword({ handle: 0.13, bladeLen: 0.26, w: 0.028, guard: 0.05, guardType: 'disc', tip: 0.1, pommel: false, handleColor: DARK }));
-add('dagger', '단검', ['무기', '칼'], 'rod', () => sword({ handle: 0.1, bladeLen: 0.22, w: 0.034, guard: 0.07, tip: 0.18, t: 0.006 }));
-add('spear', '창', ['무기', '장병기'], 'rod', () =>
+add('katana', '직도', ['무기', '도'], 'rod', () => sword({ handle: 0.24, bladeLen: 0.72, w: 0.032, guard: 0.07, guardType: 'disc', t: 0.007, tip: 0.07, pommel: false, handleColor: DARK }));
+add('saber', '곡도', ['무기', '도'], 'rod', () => sword({ handle: 0.13, bladeLen: 0.75, w: 0.045, curve: 0.11, guard: 0.1, tip: 0.1 }));
+add('tanto', '단도', ['무기', '단검'], 'rod', () => sword({ handle: 0.13, bladeLen: 0.26, w: 0.028, guard: 0.05, guardType: 'disc', tip: 0.1, pommel: false, handleColor: DARK }));
+add('dagger', '단검', ['무기', '단검'], 'rod', () => sword({ handle: 0.1, bladeLen: 0.22, w: 0.034, guard: 0.07, tip: 0.18, t: 0.006 }));
+add('spear', '창', ['무기', '창'], 'rod', () =>
   group(cyl(0.012, 0.012, 1.7, WOOD, [0, 0.2, 0]), plate([[-0.025, 0], [0.025, 0], [0, 0.22]], 0.01, MET, [0, 1.05, 0]), cyl(0.016, 0.016, 0.03, DARK, [0, 1.04, 0])));
-add('axe', '도끼', ['무기', '장병기'], 'rod', () =>
+add('axe', '도끼', ['무기', '도끼'], 'rod', () =>
   group(cyl(0.017, 0.017, 0.8, WOOD, [0, 0.2, 0]), plate([[0, 0.5], [0.16, 0.62], [0.16, 0.38], [0, 0.46]], 0.012, MET)));
-add('hammer', '전투 망치', ['무기', '장병기'], 'rod', () => group(cyl(0.018, 0.018, 0.7, WOOD, [0, 0.15, 0]), box(0.18, 0.1, 0.1, DARK, [0, 0.55, 0])));
-add('bat', '곤봉(방망이)', ['무기', '도구'], 'rod', () => group(cyl(0.035, 0.012, 0.85, WOOD, [0, 0.3, 0]), cyl(0.016, 0.016, 0.02, DARK, [0, -0.1, 0])));
-add('shield', '방패', ['무기', '방어'], 'none', () =>
+add('hammer', '전투 망치', ['무기', '둔기'], 'rod', () => group(cyl(0.018, 0.018, 0.7, WOOD, [0, 0.15, 0]), box(0.18, 0.1, 0.1, DARK, [0, 0.55, 0])));
+add('bat', '곤봉(방망이)', ['무기', '둔기'], 'rod', () => group(cyl(0.035, 0.012, 0.85, WOOD, [0, 0.3, 0]), cyl(0.016, 0.016, 0.02, DARK, [0, -0.1, 0])));
+add('shield', '방패', ['무기', '방패'], 'none', () =>
   group(cyl(0.3, 0.3, 0.03, BLUE, [0, 0, 0], [Math.PI / 2, 0, 0], 24), cyl(0.06, 0.06, 0.05, MET, [0, 0, 0.015], [Math.PI / 2, 0, 0])));
-add('bow', '활', ['무기', '원거리'], 'rod', () =>
+add('bow', '활', ['무기', '활'], 'rod', () =>
   group(tor(0.6, 0.012, WOOD, [-0.5, 0, 0], [0, 0, -Math.PI * 0.28], Math.PI * 0.56), cyl(0.002, 0.002, 1.04, GRAY, [-0.08, 0, 0])));
 
 // 총: 원점=손잡이 중앙, +Y=손잡이 위쪽, +Z=총구 방향
-add('pistol', '권총', ['무기', '총'], 'gun', () =>
+add('pistol', '권총', ['무기', '권총'], 'gun', () =>
   group(
     box(0.03, 0.12, 0.05, DARK, [0, 0, -0.005], [-0.2, 0, 0]),
     box(0.034, 0.045, 0.2, DARK, [0, 0.08, 0.04]),
     box(0.012, 0.03, 0.03, DARK, [0, 0.04, 0.03]),
     cyl(0.008, 0.008, 0.05, MET, [0, 0.085, 0.165], [Math.PI / 2, 0, 0]),
   ));
-add('rifle', '소총', ['무기', '총'], 'gun', () => {
+add('rifle', '소총', ['무기', '소총'], 'gun', () => {
   const Z = Math.PI / 2;
   return group(
     // 손잡이·방아쇠울
@@ -165,7 +166,7 @@ add('rifle', '소총', ['무기', '총'], 'gun', () => {
     tor(0.012, 0.003, MET, [0, 0.07, -0.37], [0, Z, 0]),
   );
 });
-add('shotgun', '산탄총', ['무기', '총'], 'gun', () =>
+add('shotgun', '산탄총', ['무기', '산탄총'], 'gun', () =>
   group(
     box(0.04, 0.12, 0.06, WOOD, [0, 0, 0], [-0.25, 0, 0]),
     box(0.05, 0.07, 0.3, DARK, [0, 0.09, 0.08]),
@@ -173,7 +174,7 @@ add('shotgun', '산탄총', ['무기', '총'], 'gun', () =>
     box(0.05, 0.05, 0.25, WOOD, [0, 0.07, 0.35]),
     box(0.04, 0.09, 0.3, WOOD, [0, 0.07, -0.28], [0.1, 0, 0]),
   ));
-add('bazooka', '바주카', ['무기', '총', '중화기'], 'gun', () =>
+add('bazooka', '바주카', ['무기', '중화기'], 'gun', () =>
   group(
     cyl(0.055, 0.055, 1.1, GREEN, [0, 0.14, 0.2], [Math.PI / 2, 0, 0], 20),
     cyl(0.07, 0.055, 0.12, DARK, [0, 0.14, 0.8], [Math.PI / 2, 0, 0], 20),
@@ -192,14 +193,14 @@ add('mug', '머그컵', ['생활', '컵'], 'rod', () =>
 add('papercup', '종이컵', ['생활', '컵'], 'rod', () => group(cyl(0.04, 0.03, 0.11, LIGHT, [0, 0, 0]), cyl(0.032, 0.032, 0.016, GRAY, [0, 0.06, 0]), cyl(0.04, 0.04, 0.03, RED, [0, 0, 0])));
 add('glass', '유리잔', ['생활', '컵'], 'rod', () => group(cyl(0.032, 0.026, 0.12, '#cfe6f2', [0, 0, 0])));
 add('bottle', '병', ['생활', '컵'], 'rod', () => group(cyl(0.04, 0.04, 0.2, GREEN, [0, 0, 0]), cyl(0.014, 0.04, 0.06, GREEN, [0, 0.13, 0]), cyl(0.014, 0.014, 0.08, GREEN, [0, 0.2, 0]), cyl(0.017, 0.017, 0.02, GOLD, [0, 0.245, 0])));
-add('book', '책', ['생활'], 'flat', () => group(box(0.15, 0.21, 0.03, BLUE, [0, 0, 0]), box(0.14, 0.2, 0.026, WHITE, [0.003, 0, 0]), box(0.004, 0.21, 0.032, DARK, [-0.074, 0, 0])));
+add('book', '책', ['생활', '책'], 'flat', () => group(box(0.15, 0.21, 0.03, BLUE, [0, 0, 0]), box(0.14, 0.2, 0.026, WHITE, [0.003, 0, 0]), box(0.004, 0.21, 0.032, DARK, [-0.074, 0, 0])));
 add('laptop', '노트북', ['생활', '전자기기'], 'none', () =>
   group(box(0.32, 0.015, 0.22, GRAY, [0, 0.0075, 0]), box(0.32, 0.22, 0.012, GRAY, [0, 0.12, -0.105], [-0.25, 0, 0]), box(0.29, 0.19, 0.003, '#1f2b3d', [0, 0.12, -0.098], [-0.25, 0, 0])));
-add('glasses', '안경', ['생활'], 'flat', () =>
+add('glasses', '안경', ['생활', '안경'], 'flat', () =>
   group(tor(0.025, 0.0025, DARK, [-0.035, 0, 0]), tor(0.025, 0.0025, DARK, [0.035, 0, 0]), box(0.02, 0.003, 0.003, DARK, [0, 0.01, 0]), box(0.003, 0.003, 0.13, DARK, [-0.06, 0.01, -0.065]), box(0.003, 0.003, 0.13, DARK, [0.06, 0.01, -0.065])));
-add('umbrella', '우산', ['생활'], 'rod', () =>
+add('umbrella', '우산', ['생활', '우산'], 'rod', () =>
   group(cyl(0.006, 0.006, 0.85, DARK, [0, 0.25, 0]), cone(0.45, 0.2, RED, [0, 0.8, 0]), tor(0.025, 0.006, DARK, [0, -0.2, 0], [0, 0, 0], Math.PI)));
-add('pen', '펜', ['생활'], 'rod', () => group(cyl(0.006, 0.006, 0.14, DARK, [0, 0, 0]), cone(0.006, 0.02, MET, [0, -0.08, 0], [Math.PI, 0, 0])));
+add('pen', '펜', ['생활', '필기구'], 'rod', () => group(cyl(0.006, 0.006, 0.14, DARK, [0, 0, 0]), cone(0.006, 0.02, MET, [0, -0.08, 0], [Math.PI, 0, 0])));
 add('bag', '서류가방', ['생활', '가방'], 'rod', () => group(box(0.4, 0.3, 0.1, LEATHER, [0, -0.2, 0]), tor(0.06, 0.008, DARK, [0, -0.04, 0], [0, 0, 0], Math.PI)));
 add('backpack', '백팩', ['생활', '가방'], 'none', () => group(box(0.3, 0.42, 0.16, GREEN, [0, 0.21, 0]), box(0.24, 0.16, 0.05, DARK, [0, 0.12, 0.1])));
 add('cane', '지팡이', ['생활', '도구'], 'rod', () => group(cyl(0.012, 0.012, 0.9, WOOD, [0, -0.3, 0]), tor(0.05, 0.012, WOOD, [0.05, 0.17, 0], [0, 0, 0], Math.PI)));
@@ -208,8 +209,8 @@ add('cane', '지팡이', ['생활', '도구'], 'rod', () => group(cyl(0.012, 0.0
 const legs = (x, z, h, w, c) => [[-x, -z], [x, -z], [-x, z], [x, z]].map(([px, pz]) => box(w, h, w, c, [px, h / 2, pz]));
 add('chair', '의자', ['가구', '앉기'], 'none', () => group(box(0.42, 0.04, 0.42, WOOD, [0, 0.44, 0]), box(0.42, 0.42, 0.03, WOOD, [0, 0.67, -0.195]), legs(0.19, 0.19, 0.44, 0.035, DARK)));
 add('stool', '스툴', ['가구', '앉기'], 'none', () => group(cyl(0.18, 0.18, 0.04, WOOD, [0, 0.44, 0]), legs(0.12, 0.12, 0.44, 0.035, DARK)));
-add('desk', '책상', ['가구'], 'none', () => group(box(1.2, 0.04, 0.6, WOOD, [0, 0.74, 0]), legs(0.55, 0.26, 0.72, 0.04, DARK)));
-add('table', '식탁', ['가구'], 'none', () => group(box(1.5, 0.05, 0.8, WOOD, [0, 0.72, 0]), legs(0.68, 0.34, 0.7, 0.06, DARK)));
+add('desk', '책상', ['가구', '책상'], 'none', () => group(box(1.2, 0.04, 0.6, WOOD, [0, 0.74, 0]), legs(0.55, 0.26, 0.72, 0.04, DARK)));
+add('table', '식탁', ['가구', '식탁'], 'none', () => group(box(1.5, 0.05, 0.8, WOOD, [0, 0.72, 0]), legs(0.68, 0.34, 0.7, 0.06, DARK)));
 add('bed', '침대', ['가구', '눕기'], 'none', () =>
   group(box(1.0, 0.25, 2.0, DARK, [0, 0.125, 0]), box(0.96, 0.2, 1.9, WHITE, [0, 0.35, 0.02]), box(0.9, 0.12, 0.35, LIGHT, [0, 0.52, -0.75]), box(1.0, 0.55, 0.06, WOOD, [0, 0.5, -1.0])));
 add('sofa', '소파', ['가구', '앉기'], 'none', () =>
@@ -235,7 +236,7 @@ add('door', '문(닫힘)', ['가구', '배경'], 'none', () => doorProp(0));
 add('door_half', '문(반쯤 열림)', ['가구', '배경'], 'none', () => doorProp(50));
 add('door_open', '문(완전히 열림)', ['가구', '배경'], 'none', () => doorProp(100));
 add('stairs', '계단', ['가구', '배경'], 'none', () => group(...[0, 1, 2, 3, 4].map((i) => box(1.0, 0.18, 0.28, GRAY, [0, 0.09 + 0.18 * i, -0.28 * i]))));
-add('bicycle', '자전거', ['탈것'], 'none', () =>
+add('bicycle', '자전거', ['탈것', '자전거'], 'none', () =>
   group(
     tor(0.34, 0.015, DARK, [0, 0.34, 0.55], [0, Math.PI / 2, 0]),
     tor(0.34, 0.015, DARK, [0, 0.34, -0.55], [0, Math.PI / 2, 0]),
